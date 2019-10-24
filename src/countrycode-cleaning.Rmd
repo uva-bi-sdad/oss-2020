@@ -1,5 +1,5 @@
 ---
-title: "Country Analyses"
+title: "Country Code Recoding Process"
 author: "Brandon, Bayoan, Gizem"
 date: "10/11/2019"
 output: html_document
@@ -1198,7 +1198,21 @@ length(oss_logins_final$login)
 length(oss_logins_final$login) - length(oss_logins_original$login)  
 ```
 
-Ok, we finally have all the our new total for users with country codes (n = 725,258) and the number of entries saved (n = 53,575). Now, let's make some networks... 
+Ok, we finally have all the our new total for users with country codes (n = 725,258) and the number of entries saved (n = 53,575).
+
+```{r country counts of our recoding sample}
+# country counts after re-coding  
+oss_data_final %>%
+  dplyr::filter(!is.na(new_country_code)) %>% 
+  dplyr::count(new_country_code, sort = TRUE)
+# unique users 
+length(oss_data_final$login)
+# number of users with multiple country codes 
+oss_data_final %>%
+  dplyr::filter(grepl("_", new_country_code))
+```
+
+When we look at the breakdown by country, we see that the US is the most represented country followed by China, the UK, Germany and India. 
 
 
 
