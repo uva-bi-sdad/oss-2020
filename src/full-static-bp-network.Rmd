@@ -117,6 +117,7 @@ str_split collapse
 
 rds file = how big is it? 
 saveRDS()
+small update.
 
 
 
