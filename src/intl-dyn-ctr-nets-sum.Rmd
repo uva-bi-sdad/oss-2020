@@ -1,0 +1,173 @@
+---
+title: "International Collaboration Networks"
+author: "Brandon Kramer, José Bayoán Santiago Calderón and Gizem Korkmaz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
+              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra")) {library(pkg, character.only = TRUE)}
+
+setwd("~/Documents/OSS/Data")
+global_netstats_yxy <- read_rds("global_netstats_yxy.rds")
+full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
+global_netstats_cum <- read_rds("global_netstats_cum.rds")
+#full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
+setwd("~/Documents/OSS/oss-2020")
+
+global_netstats_yxy <- global_netstats_yxy %>% 
+  transmute(year = year, node_count_yxy = node_count, edge_count_yxy = edge_count, 
+            commit_count_yxy = commit_count, density_yxy = density, 
+            transitivity_yxy = transitivity, modularity_yxy = modularity)
+
+global_netstats_cum <- global_netstats_cum %>% 
+  transmute(year_cum = year, node_count_cum = node_count, edge_count_cum = edge_count, 
+            commit_count_cum = commit_count, density_cum = density, 
+            transitivity_cum = transitivity, modularity_cum = modularity)
+
+```
+
+```{r bar graphs by year, fig.width=9.5}
+network_nodes <- global_netstats_yxy %>% 
+  ggplot( aes(year, node_count_yxy), y=node_count_yxy) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = node_count_yxy), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) +
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) 
+
+network_edges <- global_netstats_yxy %>% 
+  ggplot( aes(year, edge_count_yxy), y=edge_count_yxy) +
+  geom_bar(stat="identity", fill = "#eaaa31", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = edge_count_yxy), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) +
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) 
+
+network_commits <- global_netstats_yxy %>% 
+  ggplot( aes(year, commit_count_yxy), y=commit_count_yxy) +
+  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = commit_count_yxy), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+grid.arrange(network_nodes, network_edges, network_commits, nrow=1, 
+             top="Year-by-Year Node, Edge and Commit Counts for GitHub Networks")
+```
+
+```{r global_networks_yxy descriptive trends, fig.width=9.5}
+p <- ggplot(global_netstats_yxy) + 
+  geom_line(aes(x=year, y=node_count_yxy, group=1, colour= "Nodes"), size=2) 
+p <- p + geom_line(aes(x=year, y=edge_count_yxy/50, 
+                       group=2, colour= "Edges"), size=2) + 
+  geom_line(aes(x=year, y=commit_count_yxy/50, 
+                       group=2, colour= "Commits"), size=2) +  
+  scale_x_continuous(name="Year", breaks=seq(2008,2018,1)) + 
+  scale_y_continuous(sec.axis = sec_axis(~.*150, name = "Edge Count / Total Commits (in Tens of Millions)"),
+                     breaks=seq(0,1400000,250000)) + 
+  scale_colour_manual(values = c( "#1d7c6b", "#eaaa31", "#628ed8")) + 
+  labs(y = "Node Count", x = "Year", colour = "", 
+       title = "Year-by-Year Growth in GitHub Networks") + theme_minimal() 
+p
+```
+
+```{r bar graphs by cum, fig.width=9.5}
+network_nodes <- global_netstats_cum %>% 
+  ggplot( aes(year_cum, node_count_cum), y=node_count_cum) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = node_count_cum), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) 
+
+network_edges <- global_netstats_cum %>% 
+  ggplot( aes(year_cum, edge_count_cum), y=edge_count_cum) +
+  geom_bar(stat="identity", fill = "#eaaa31", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = edge_count_cum), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) +
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) 
+
+network_commits <- global_netstats_cum %>% 
+  ggplot( aes(year_cum, commit_count_cum), y=commit_count_cum) +
+  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + scale_y_continuous(trans='log') + 
+  geom_text(aes(label = commit_count_cum), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) +
+  theme(axis.title.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+grid.arrange(network_nodes, network_edges, network_commits, nrow=1, 
+             top="Cumulative Growth in Node, Edge and Commit Counts for GitHub Networks")
+```
+
+```{r global_networks_cum descriptive trends, fig.width=9.5}
+p <- ggplot(global_netstats_cum) + 
+  geom_line(aes(x=year_cum, y=node_count_cum, group=1, colour= "Nodes"), size=2) 
+p <- p + geom_line(aes(x=year_cum, y=edge_count_cum/150, 
+                       group=2, colour= "Edges"), size=2) + 
+  geom_line(aes(x=year_cum, y=commit_count_cum/150, 
+                       group=2, colour= "Commits"), size=2) +  
+  #scale_x_continuous(name="Year", breaks=seq(2008,2008-18,1)) + 
+  scale_y_continuous(sec.axis = sec_axis(~.*150, name = "Edge Count / Total Commits (in Tens of Millions)"),
+                     breaks=seq(0,2500000,500000)) + 
+  scale_colour_manual(values = c( "#1d7c6b", "#eaaa31", "#628ed8")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Cumulative Growth in GitHub Networks") + theme_minimal()
+p
+```
+
+```{r density yxy & cum, fig.width=9.5, fig.height=3}
+density_yxy<-ggplot(global_netstats_yxy) + 
+  geom_line(aes(x=year, y=density_yxy), size=2) + 
+  labs(y = "Density (Year-by-Year)", x = "Year", colour = "") + theme_minimal() +
+  scale_x_continuous(breaks=seq(2008,2018,1))
+density_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=year_cum, y=density_cum,group=1), size=2) + 
+  labs(y = "Density (Cumulative)", x = "Year", colour = "") + theme_minimal()
+grid.arrange(density_yxy, density_cum, nrow=1, 
+             top="Density of GitHub Networks") 
+```
+
+```{r transitivity yxy & cum, fig.width=9.5, fig.height=3}
+transitivity_yxy<-ggplot(global_netstats_yxy) + 
+  geom_line(aes(x=year, y=transitivity_yxy), size=2) + 
+  labs(y = "Transitivity (Year-by-Year)", x = "Year", colour = "") + theme_minimal() +
+  scale_x_continuous(breaks=seq(2008,2018,1))
+transitivity_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=year_cum, y=transitivity_cum,group=1), size=2) + 
+  labs(y = "Transitivity (Cumulative)", x = "Year", colour = "") + theme_minimal()
+grid.arrange(transitivity_yxy, transitivity_cum, nrow=1, 
+             top="Transitivity of GitHub Networks")  
+```
+
+```{r modularity yxy & cum, fig.width=9.5, fig.height=3}
+modularity_yxy<-ggplot(global_netstats_yxy) + 
+  geom_line(aes(x=year, y=modularity_yxy), size=2) + 
+  labs(y = "Modularity (Year-by-Year)", x = "Year", colour = "") + theme_minimal() +
+  scale_x_continuous(breaks=seq(2008,2018,1))
+modularity_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=year_cum, y=modularity_cum,group=1), size=2) + 
+  labs(y = "Modularity (Cumulative)", x = "Year", colour = "") + theme_minimal()
+grid.arrange(modularity_yxy, modularity_cum, nrow=1, 
+             top="Modularity of GitHub Networks")  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
