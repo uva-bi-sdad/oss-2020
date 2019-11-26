@@ -1,0 +1,166 @@
+---
+title: "Company Counts on GitHub"
+author: "Brandon L. Kramer"
+date: "11/26/2019"
+output: html_document
+---
+
+```{r loading data}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+users_gh <- dbGetQuery(conn, "SELECT login, company, created_at 
+                              FROM github.users_gh")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r company counts}
+#company_counts <- 
+
+users_gh %>% 
+  # remove all na's 
+  drop_na(company) %>% filter(company != "" | company != "-") %>% 
+  # convert to lower case 
+  mutate(new_company = str_to_lower(company)) %>% 
+  # remove @ from start of names 
+  mutate(new_company = str_replace_all(new_company, "@", " ")) %>% 
+  mutate(new_company = str_replace_all(new_company, "\\b(inc|inc.)\\b", " ")) %>%
+  mutate(new_company = str_trim(new_company)) %>% 
+  # variations on major corporations 
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(microsoft|microsoft corporation)\\b"), 
+                              yes = "microsoft", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(ibm|ibm research)\\b"), 
+                              yes = "ibm", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(apple|apple inc.|apple inc)\\b"), 
+                              yes = "apple", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(amazon|amazon web services|aws|amazon.com|amzn)\\b"), 
+                              yes = "amazon", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(red hat|red hat, inc.|redhat|red hat, inc|red hat inc.|red hat inc)\\b"), 
+                              yes = "red hat", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(google|google inc.|google, inc.|google inc|googlecloudplatform)\\b"), 
+                              yes = "google", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(salesforce|salesforce.com)\\b"), 
+                              yes = "salesforce", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(yahoo|yahoo!)\\b"), 
+                              yes = "yahoo", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(alibaba|alibaba group)\\b"), 
+                              yes = "alibaba", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(adobe|adobe systems)\\b"), 
+                              yes = "adobe", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(thoughtworks|thoughtworksinc)\\b"), 
+                              yes = "thoughtworks", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(intel|intel coroporation)\\b"), 
+                              yes = "intel", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(wix|wix.com)\\b"), 
+                              yes = "wix", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(hewlett packard enterprise|hewlett packard)\\b"), 
+                              yes = "hewlett packard", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(samsung|samsung electronics)\\b"), 
+                              yes = "samsung", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(cyberagent|cyberagent, .)\\b"), 
+                              yes = "cyberagent", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(bloomberg|bloomberg l.p.)\\b"), 
+                              yes = "bloomberg", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(baidu .|baidu|baidu, .)\\b"), 
+                              yes = "baidu", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(slack|slackhq)\\b"), 
+                              yes = "slack", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(cisco|cisco systems|cisco systems, .)\\b"), 
+                              yes = "cisco systems", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(mozilla|mozilla corporation)\\b"), 
+                              yes = "mozilla", no = new_company)) %>%
+  # universities 
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of texas at austin|university of texas|the university of texas at austin)\\b"), 
+                              yes = "university of texas", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of college london|ucl)\\b"), 
+                              yes = "university of college london", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(new york university|nyu)\\b"), 
+                              yes = "new york university", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(stanford university|stanford)\\b"), 
+                              yes = "stanford university", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of california, san diego|university of california san diego|ucsd)\\b"), 
+                              yes = "university of california san diego", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of california berkeley|uc berkeley|university of california, berkeley)\\b"), 
+                              yes = "university of california berkeley", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of california davis|university of california, davis)\\b"), 
+                              yes = "university of california davis", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of california irvine|university of california, irvine)\\b"), 
+                              yes = "university of california irvine", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(georgia institute of technology|georgia tech)\\b"), 
+                              yes = "georgia tech", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(university of british columbia|ubc)\\b"), 
+                              yes = "university of british columbia", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(harvard medical school|harvard|harvard university)\\b"), 
+                              yes = "harvard university", no = new_company)) %>%
+  # freelancer, individual, null 
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(freelancer|freelance)\\b"), 
+                              yes = "freelancer", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(self|personal|home|private|individual|myself|me|independent|independent contractor)\\b"), 
+                              yes = "individual", no = new_company)) %>%
+  mutate(new_company = ifelse(test = str_detect(string = new_company, 
+                              pattern = "\\b(?i)(n/a|-|--|none|null|no|na|...)\\b"),      
+                              yes = "none/null", no = new_company)) %>% filter(new_company != "none/null") %>% 
+  rename(organization = new_company) %>% group_by(organization) %>% count() %>% arrange(-n) 
+
+# need to figure out the "..." "-" and other issues = develop new regex snippets 
+
+#saveRDS(company_counts, "company_counts.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
