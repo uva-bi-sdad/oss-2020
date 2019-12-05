@@ -21,7 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                  password = Sys.getenv("db_pwd"))
 
 # query the static edgelist data from github data 
-static_edgelist <- dbGetQuery(conn, "SELECT login, slug, count FROM github.st_bp_edgelist_osi")
+static_edgelist <- dbGetQuery(conn, "SELECT login, slug, count FROM github.st_bp_edgelist")
 
 # query the static edgelist data from github data 
 node_attributes <- dbGetQuery(conn, "SELECT login, country_code FROM github.users_gh_cc")
@@ -30,7 +30,7 @@ node_attributes <- dbGetQuery(conn, "SELECT login, country_code FROM github.user
 dbDisconnect(conn)
 ```
 
-Let's make a network and add the country codes and degree centrality totals to the nodelist. 
+Let's make a network and add the country codes to the nodelist. 
 
 ```{r}
 # renaming columms for igraph 
@@ -51,9 +51,9 @@ static_nodelist <- dplyr::full_join(static_nodelist, node_attributes, by = c("nN
 # renaming multiple countries 
 static_nodelist <- static_nodelist %>% 
   dplyr::mutate(country_code_vis = ifelse(test = str_detect(string = static_nodelist$country_code,
-                                      pattern = "_"), paste("multiple"), no = country_code)) %>% 
+                                      pattern = ","), paste("multiple"), no = country_code)) %>% 
   dplyr::mutate(country_code_di = ifelse(test = str_detect(string = static_nodelist$country_code,
-                                      pattern = "_"), paste("multiple"), no = "single")) %>% 
+                                      pattern = ","), paste("multiple"), no = "single")) %>% 
   dplyr::select(ID, name, country_code_di, country_code, country_code_vis)
 
 # trimming white space (just in case)
@@ -64,12 +64,6 @@ static_nodelist$country_code_vis <- stringi::stri_trim_both(static_nodelist$coun
 # getting a count of countries and repos 
 static_nodelist %>% 
   dplyr::count(country_code, sort = TRUE) 
-
-# calculating degree centrality 
-static_nodelist <- cbind(static_nodelist, nodeDegree=igraph::degree(g, v = igraph::V(g), mode = "all"))
-
-static_nodelist %>% 
-  dplyr::arrange(-nodeDegree)
 ```
 
 Let's write the nodelist and edgelist back to the database to pull that later. 
@@ -91,38 +85,7 @@ dbWriteTable(conn, c("github", "intl_st_bp_edges"), static_edgelist)
 dbDisconnect(conn)
 ```
 
-The next logical step is to run betweenness centrality and community detection, but both are so computationally intensive that we haven't actually gotten them to run yet. As of 10/24/19, we are testing these in Rivanna. 
-
-```{r betweenness and community detection}
-
-# ALL OF THIS MUST BE RUN ON RIVANNA BECAUSE REGULAR (TESTING NOW)
-
-# calculating betweenness centrality 
-static_nodelist <- cbind(static_nodelist, nodeBetweenness=igraph::betweenness(g, v = igraph::V(g), directed=TRUE))
-
-betAll <- igraph::betweenness(g, v = igraph::V(g), directed = FALSE) / (((igraph::vcount(g) - 1) * (igraph::vcount(g)-2)) / 2)
-betAll.norm <- (betAll - min(betAll))/(max(betAll) - min(betAll))
-static_nodelist <- cbind(static_nodelist, nodeBetweenness=betAll.norm) 
-rm(betAll, betAll.norm)
-
-# calculating group membership using cluster_walktrap in igraph  
-wc <- cluster_walktrap(g)
-members <- membership(wc)                                                    # this kills the session 
-clusters <- igraph_to_networkD3(g, group = members)
-static_nodelist <- cbind(static_nodelist, cluster=clusters$nodes$group)
-
-
-
-```
-
-
-3 columns for cc 
-str_split collapse 
-
-
-rds file = how big is it? 
-saveRDS()
-small update.
+The next logical step is to run more analyses on the networks, but these analyses are are so computationally intensive that we have to use UVA's Rivanna system. See the next files for that code. 
 
 
 

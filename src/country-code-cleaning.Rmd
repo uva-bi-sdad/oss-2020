@@ -190,8 +190,8 @@ jo	<- "\\b(?i)(Jordan(?!, U))\\b"
 kz	<- "\\b(?i)(Kazakhstan)\\b"
 ke	<- "\\b(?i)(Kenya|Nairobi)\\b"
 ki	<- "\\b(?i)(Kiribati)\\b"
-kp	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
-kr	<- "\\b(?i)(North Korea|Pyongyang)\\b"
+kp	<- "\\b(?i)(North Korea|Pyongyang)\\b"
+kr	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
 xk  <- "\\b(?i)(Kosovo|Kosova|^Prishtina|^Prishtine|^Pristina)\\b"
 kw	<- "\\b(?i)(Kuwait)\\b"
 kg	<- "\\b(?i)(Kyrgyzstan)\\b"
@@ -601,7 +601,12 @@ oss_temp[detected_country == "" | detected_country == NA,]
 Let's look at your country counts for the sample. We found that US and China comprise the most users on GitHub.  
 
 ```{r country counts of our recoding sample}
-# country counts after re-coding  
+# raw counts with combined countries included 
+oss_temp %>%
+  dplyr::filter(!is.na(detected_country)) %>% 
+  dplyr::count(detected_country, sort = TRUE)
+
+# country counts after re-coding and string splitting multiple countries  
 oss_temp %>%
   dplyr::mutate(new_country_code = strsplit(as.character(detected_country), ",")) %>% 
   unnest() %>% 
@@ -730,8 +735,8 @@ jo	<- "\\b(?i)(Jordan(?!, U))\\b"
 kz	<- "\\b(?i)(Kazakhstan)\\b"
 ke	<- "\\b(?i)(Kenya|Nairobi)\\b"
 ki	<- "\\b(?i)(Kiribati)\\b"
-kp	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
-kr	<- "\\b(?i)(North Korea|Pyongyang)\\b"
+kp	<- "\\b(?i)(North Korea|Pyongyang)\\b"
+kr	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
 xk  <- "\\b(?i)(Kosovo|Kosova|^Prishtina|^Prishtine|^Pristina)\\b"
 kw	<- "\\b(?i)(Kuwait)\\b"
 kg	<- "\\b(?i)(Kyrgyzstan)\\b"
@@ -1137,6 +1142,7 @@ oss_data_recoded  <- oss_data_recoded %>%
 
 # getting rid of any white space just in case 
 oss_data_recoded$country_code <- trimws(oss_data_recoded$country_code)
+oss_data_recoded$new_country_code <- trimws(oss_data_recoded$new_country_code)
 oss_data_recoded <- oss_data_recoded %>% 
   dplyr::mutate(new_country_code = dplyr::na_if(new_country_code, "")) 
 
@@ -1157,7 +1163,8 @@ Uh oh! This tells us that we actually lost entries after the recoding process. G
 
 ```{r}
 # let's check for the total count again 
-oss_data_recoded %>% dplyr::mutate(country_comps = ifelse(oss_data_recoded$country_code == oss_data_recoded$new_country_code, yes = TRUE, no = FALSE)) %>% 
+oss_data_recoded %>% 
+  dplyr::mutate(country_comps = ifelse(oss_data_recoded$country_code == oss_data_recoded$new_country_code, yes = TRUE, no = FALSE)) %>% 
   dplyr::filter(!is.na(country_code)) %>% 
   dplyr::filter(is.na(new_country_code)) %>% 
   dplyr::select(login, country_code, new_country_code, city, state, location, country_comps)
@@ -1196,6 +1203,10 @@ oss_logins_final <- oss_data_final %>%
 length(oss_logins_original$login)   
 length(oss_logins_final$login)      
 length(oss_logins_final$login) - length(oss_logins_original$login)  
+# calculating the number with multiple country codes 
+length(oss_logins_final$login) - length(unique(oss_logins_final$login))
+length(unique(oss_logins_final$login)) / length(oss_logins_final$login)
+(length(unique(oss_logins_final$login)) / length(oss_logins_final$login)) / 2143407
 ```
 
 Ok, we finally have all the our new total for users with country codes (n = 725,258) and the number of entries saved (n = 53,575).
@@ -1207,13 +1218,17 @@ oss_data_final %>%
   dplyr::count(new_country_code, sort = TRUE)
 # unique users 
 length(oss_data_final$login)
-# number of users with multiple country codes 
-oss_data_final %>%
-  dplyr::filter(grepl("_", new_country_code))
 ```
 
 When we look at the breakdown by country, we see that the US is the most represented country followed by China, the UK, Germany and India. 
 
+```{r output to csv}
+# output to csv
+oss_output <- oss_data_final %>%
+  dplyr::filter(!is.na(new_country_code)) %>% 
+  dplyr::count(new_country_code, sort = TRUE)
+write.csv(oss_output, "oss_countrycode_totals.csv")
+```
 
 
 
