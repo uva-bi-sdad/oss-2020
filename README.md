@@ -6,4 +6,4 @@ This folder contains a series of files of .Rmd files that wrangle, recode, and c
 
 
 
-#oss_countrycode_cleaning.Rmd# outlines our strategy for boosting the sample size of users with country codes in the GH Torrent data.
+## oss_countrycode_cleaning.Rmd ##outlines our strategy for boosting the sample size of users with country codes in the GH Torrent data.
