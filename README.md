@@ -4,7 +4,7 @@
 
 This folder contains a series of files of .Rmd files that wrangle, recode, and compute networks statistics for the GH Torrent GitHub data that is included on the PostgreSQL (postgis_2) database. In operational order, these files include:
 
-***International Analyses***
+**International Analyses**
 
 **country-code-cleaning.Rmd:** Provides the code to ingest raw GH Torrent data from PostgreSQL, recode location, state and city data into valid country codes, find the counts of users from each country, and the amount of users that list multiple countries. 
 
@@ -18,7 +18,7 @@ This folder contains a series of files of .Rmd files that wrangle, recode, and c
 
 **intl-repo-nets.Rmd:** This file ingests the nodelist and edgelists, creates a bipartite network, transposes the network into only a repository network. This file is still incomplete.
 
-***Organizational Analyses*** 
+**Organizational Analyses**
 
 **org-code-cleaning.Rmd:** Provides the code to ingest raw GH Torrent data from PostgreSQL, recode company code data into valid organizational codes, find the counts of users from each organization, and totals from both academic and non-academic institutions. 
 
