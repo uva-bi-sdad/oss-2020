@@ -16,6 +16,8 @@ This folder contains a series of files of .Rmd files that wrangle, recode, and c
 
 **intl-dyn-ctr-nets-sum.Rmd:** This files ingests the global and node-level statistics computed in the previous files and then graphs the variation in year-by-year and cumulative networks over time.  
 
+**intl-dyn-ctr-powerlaws.Rmd:** This file looks at the node-level (weighted and unweighted) degree distribution to determine the magnitude of the power laws on a year-by-year and cumulative basis.
+
 **intl-repo-nets.Rmd:** This file ingests the nodelist and edgelists, creates a bipartite network, transposes the network into only a repository network. This file is still incomplete.
 
 **Organizational Analyses**
