@@ -25,17 +25,19 @@ conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data",
 # query the bipartite edgelist data from github data  
 bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight 
                                  FROM github.intl_dyn_bp_edges 
-                                 WHERE year > 2007 AND year < 2011")
-                                 #WHERE year > 2007 AND year < 2012")
-                                 #WHERE year > 2007 AND year < 2013")
-                                 #WHERE year > 2007 AND year < 2014")
-                                 #WHERE year > 2007 AND year < 2015")
-                                 #WHERE year > 2007 AND year < 2016")
-                                 #WHERE year > 2007 AND year < 2017")
-                                 #WHERE year > 2007 AND year < 2018")
-                                 #WHERE year > 2007 AND year < 2019")
-                                 #WHERE year = 2008")
-                                 #WHERE year > 2007 AND year < 2010")
+                                
+                                
+                                WHERE year > 2007 AND year < 2019")
+                                #WHERE year = 2008")
+                                #WHERE year > 2007 AND year < 2010")
+                                #WHERE year > 2007 AND year < 2011")
+                                #WHERE year > 2007 AND year < 2012")
+                                #WHERE year > 2007 AND year < 2013")
+                                #WHERE year > 2007 AND year < 2014")
+                                #WHERE year > 2007 AND year < 2015")
+                                #WHERE year > 2007 AND year < 2016")
+                                #WHERE year > 2007 AND year < 2017")
+                                #WHERE year > 2007 AND year < 2018")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -103,7 +105,7 @@ In this snippet, we calculate various network statistics at the global level of 
 #time_log <- readRDS("time_log.rds")
 net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
 time_log <- rbind(time_log, net_stats_start); rm(net_stats_start)
-network_stats <- data.frame(year="2008-10")                                          
+network_stats <- data.frame(year="2008-18")                                          
 
 # node and edge counts  
 network_stats$node_count <- gorder(login_network)  
@@ -113,19 +115,24 @@ network_stats$commits <- sum(bp_edgelist$weight)
 # isolates, dyads and triads 
 network_stats$isolates <- sum(degree(login_network)==0)
 network_stats$dyads <- dyad_census(login_network)[1]
-oss_triads <- triad_census(login_network)
-network_stats$triads_003 <- oss_triads[1] 
-network_stats$triads_102 <- oss_triads[3]
-network_stats$triads_201 <- oss_triads[11]
-network_stats$triads_300 <- oss_triads[16]
+#oss_triads <- triad.census(login_network)
+#network_stats$triads_003 <- oss_triads[1] 
+#network_stats$triads_102 <- oss_triads[3]
+#network_stats$triads_201 <- oss_triads[11]
+#network_stats$triads_300 <- oss_triads[16]
 net_counts <- data.frame(event="net_counts", time=now("EST"))
-time_log <- rbind(time_log, net_counts); rm(net_counts, oss_triads)
+time_log <- rbind(time_log, net_counts); rm(net_counts)
 
 # density and transitivity
 network_stats$density <- edge_density(login_network, loops=FALSE) 
 network_stats$transitivity <- transitivity(login_network)
 net_globals <- data.frame(event="net_globals", time=now("EST"))
 time_log <- rbind(time_log, net_globals); rm(net_globals)
+
+# saving just in case 
+setwd("~/intl-dyn-ctr-nets-cum")
+saveRDS(network_stats, "global_netstats_2008-17.rds") 
+saveRDS(time_log, "timelog_2008-18.rds")
 
 # diameter and mean distance (very computationally intensive)
 #network_stats$diameter <- diameter(login_network)
@@ -137,10 +144,10 @@ network_stats$louvain <- modularity(louvain)
 network_stats$louvain_scaled <- modularity(louvain) / gorder(login_network)
 network_stats$louvain_logged <- modularity(louvain) / log(gorder(login_network))
 # community detection (using fast & greedy method)
-fstgrdy <- fastgreedy.community(login_network)
-network_stats$fstgrdy <- modularity(louvain)
-network_stats$fstgrdy_scaled <- modularity(louvain) / gorder(login_network)
-network_stats$fstgrdy_logged <- modularity(louvain) / log(gorder(login_network))
+#fstgrdy <- fastgreedy.community(login_network)
+#network_stats$fstgrdy <- modularity(fstgrdy)
+#network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(login_network)
+#network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(login_network))
 
 # decomposition statistics 
 decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
@@ -160,18 +167,18 @@ nodelist$k_core <- coreness(login_network)
 #louvain <- cluster_louvain(login_network)
 nodelist$louvain_comm <- louvain$membership
 #fstgrdy <- fastgreedy.community(login_network)
-nodelist$fstgrdy_comm <- fstgrdy$membership
+#nodelist$fstgrdy_comm <- fstgrdy$membership
 components <- components(login_network)
 nodelist$component <- components$membership
 
 node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
-setwd("~/oss-2020/src/international-network-analysis/intl-dyn-ctr-nets-cum")
-saveRDS(network_stats, "global_netstats_2008-10.rds")  
-saveRDS(decomposition_stats, "decomposition_stats_2008-10.rds") 
-saveRDS(nodelist, "nodelist_2008-10.rds")  
-saveRDS(time_log, "timelog_2008-10.rds")              
+setwd("~/intl-dyn-ctr-nets-cum")
+saveRDS(network_stats, "global_netstats_2008-18.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008-18.rds") 
+saveRDS(nodelist, "nodelist_2008-18.rds")  
+saveRDS(time_log, "timelog_2008-18.rds")
 ```
 
 ## Aggregating Statistics 
@@ -180,15 +187,15 @@ Once we got those statistics calculated, we aggregated them together using this 
 
 ```{r concatenating global_netstats_cum}
 
-setwd("~/oss-2020/src/international-network-analysis/intl-dyn-ctr-nets-cum")
+setwd("~/intl-dyn-ctr-nets-cum")
 #setwd("~/2008")
-global_netstats_2008 <- readRDS("global_netstats_2008.rds")
+global_netstats_2008 <- readRDS("global_netstats_2008.rds") 
 #setwd("~/2008-09")
-global_netstats_200809 <- readRDS("global_netstats_2008-09.rds")
+global_netstats_200809 <- readRDS("global_netstats_2008-09.rds") 
 #setwd("~/2008-10")
-global_netstats_200810 <- readRDS("global_netstats_2008-10.rds")
+global_netstats_200810 <- readRDS("global_netstats_2008-10.rds") 
 #setwd("~/2008-11")
-global_netstats_200811 <- readRDS("global_netstats_2008-11.rds")
+global_netstats_200811 <- readRDS("global_netstats_2008-11.rds") 
 #setwd("~/2008-12")
 global_netstats_200812 <- readRDS("global_netstats_2008-12.rds")
 #setwd("~/2008-13")
@@ -204,7 +211,10 @@ global_netstats_200817 <- readRDS("global_netstats_2008-17.rds")
 #setwd("~/2008-18")
 global_netstats_200818 <- readRDS("global_netstats_2008-18.rds")
 
-global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809)
+global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809, global_netstats_200810, global_netstats_200811) %>% 
+  select(-triads_003, -triads_102, -triads_201, -triads_300) %>% 
+  rbind(global_netstats_200812, global_netstats_200813)
+  
 
 global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809, global_netstats_200810, global_netstats_200811, global_netstats_200812, 
                          global_netstats_200813, global_netstats_200814, global_netstats_200815, global_netstats_200816, global_netstats_200817, global_netstats_200818)
@@ -225,28 +235,29 @@ And then aggregated them together into one file.
 ```{r binding cum nodelists}
 # read nodelists
 rm(list = ls())
-setwd("~/oss_networks_cum/2008")
+setwd("~/intl-dyn-ctr-nets-cum")
+#setwd("~/oss_networks_cum/2008")
 nodelist_2008 <- readRDS("nodelist_2008.rds")
-setwd("~/oss_networks_cum/2008-09")
-nodelist_200809 <- readRDS("nodelist_2008_09.rds")
-setwd("~/oss_networks_cum/2008-10")
-nodelist_200810 <- readRDS("nodelist_2008_10.rds")
-setwd("~/oss_networks_cum/2008-11")
-nodelist_200811 <- readRDS("nodelist_2008_11.rds")
-setwd("~/oss_networks_cum/2008-12")
-nodelist_200812 <- readRDS("nodelist_2008_12.rds")
-setwd("~/oss_networks_cum/2008-13")
-nodelist_200813 <- readRDS("nodelist_2008_13.rds")
-setwd("~/oss_networks_cum/2008-14")
-nodelist_200814 <- readRDS("nodelist_2008_14.rds")
-setwd("~/oss_networks_cum/2008-15")
-nodelist_200815 <- readRDS("nodelist_2008_15.rds")
-setwd("~/oss_networks_cum/2008-16")
-nodelist_200816 <- readRDS("nodelist_2008_16.rds")
-setwd("~/oss_networks_cum/2008-17")
-nodelist_200817 <- readRDS("nodelist_2008_17.rds")
-setwd("~/oss_networks_cum/2008-18")
-nodelist_200818 <- readRDS("nodelist_2008_18.rds")
+#setwd("~/oss_networks_cum/2008-09")
+nodelist_200809 <- readRDS("nodelist_2008-09.rds")
+#setwd("~/oss_networks_cum/2008-10")
+nodelist_200810 <- readRDS("nodelist_2008-10.rds")
+#setwd("~/oss_networks_cum/2008-11")
+nodelist_200811 <- readRDS("nodelist_2008-11.rds")
+#setwd("~/oss_networks_cum/2008-12")
+nodelist_200812 <- readRDS("nodelist_2008-12.rds")
+#setwd("~/oss_networks_cum/2008-13")
+nodelist_200813 <- readRDS("nodelist_2008-13.rds")
+#setwd("~/oss_networks_cum/2008-14")
+nodelist_200814 <- readRDS("nodelist_2008-14.rds")
+#setwd("~/oss_networks_cum/2008-15")
+nodelist_200815 <- readRDS("nodelist_2008-15.rds")
+#setwd("~/oss_networks_cum/2008-16")
+nodelist_200816 <- readRDS("nodelist_2008-16.rds")
+#setwd("~/oss_networks_cum/2008-17")
+nodelist_200817 <- readRDS("nodelist_2008-17.rds")
+#setwd("~/oss_networks_cum/2008-18")
+nodelist_200818 <- readRDS("nodelist_2008-18.rds")
 
 full_nodelist <- nodelist_2008 %>% 
   select(-id) %>% 
@@ -255,6 +266,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg08 = wtd_degree, 
          kcore08 = k_core,
          louvain08 = louvain_comm,
+         fstgrdy08 = fstgrdy_comm, 
          comp08 = component) %>%     
   right_join(nodelist_200809, by = "login") %>% 
   select(-id) %>% 
@@ -262,6 +274,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0809 = wtd_degree, 
          kcore0809 = k_core,
          louvain0809 = louvain_comm,
+         fstgrdy0809 = fstgrdy_comm,
          comp0809 = component) %>% 
   right_join(nodelist_200810, by = "login") %>% 
   select(-id) %>% 
@@ -269,6 +282,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0810 = wtd_degree, 
          kcore0810 = k_core,
          louvain0810 = louvain_comm,
+         fstgrdy0810 = fstgrdy_comm,
          comp0810 = component) %>% 
   right_join(nodelist_200811, by = "login") %>% 
   select(-id) %>% 
@@ -276,6 +290,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0811 = wtd_degree, 
          kcore0811 = k_core,
          louvain0811 = louvain_comm,
+         fstgrdy0811 = fstgrdy_comm,
          comp0811 = component) %>% 
   right_join(nodelist_200812, by = "login") %>% 
   select(-id) %>% 
@@ -283,6 +298,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0812 = wtd_degree, 
          kcore0812 = k_core,
          louvain0812 = louvain_comm,
+         fstgrdy0812 = fstgrdy_comm,
          comp0812 = component) %>% 
   right_join(nodelist_200813, by = "login") %>% 
   select(-id) %>% 
@@ -290,6 +306,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0813 = wtd_degree, 
          kcore0813 = k_core,
          louvain0813 = louvain_comm,
+         fstgrdy0813 = fstgrdy_comm,
          comp0813 = component) %>% 
   right_join(nodelist_200814, by = "login") %>% 
   select(-id) %>% 
@@ -297,6 +314,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0814 = wtd_degree, 
          kcore0814 = k_core,
          louvain0814 = louvain_comm,
+         fstgrdy0814 = fstgrdy_comm,
          comp0814 = component) %>% 
   right_join(nodelist_200815, by = "login") %>% 
   select(-id) %>% 
@@ -304,6 +322,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0815 = wtd_degree, 
          kcore0815 = k_core,
          louvain0815 = louvain_comm,
+         fstgrdy0815 = fstgrdy_comm,
          comp0815 = component) %>% 
   right_join(nodelist_200816, by = "login") %>% 
   select(-id) %>% 
@@ -311,6 +330,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0816 = wtd_degree, 
          kcore0816 = k_core,
          louvain0816 = louvain_comm,
+         fstgrdy0816 = fstgrdy_comm,
          comp0816 = component) %>% 
   right_join(nodelist_200817, by = "login") %>% 
   select(-id) %>% 
@@ -318,6 +338,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0817 = wtd_degree, 
          kcore0817 = k_core,
          louvain0817 = louvain_comm,
+         fstgrdy0817 = fstgrdy_comm,
          comp0817 = component) %>% 
   right_join(nodelist_200818, by = "login") %>% 
   select(-id) %>% 
@@ -325,6 +346,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg0818 = wtd_degree, 
          kcore0818 = k_core,
          louvain0818 = louvain_comm,
+         fstgrdy0818 = fstgrdy_comm,
          comp0818 = component) 
 
 setwd("~/oss_networks_cum")
