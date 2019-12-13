@@ -13,12 +13,14 @@ rm(list = ls())
 for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
               "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra")) {library(pkg, character.only = TRUE)}
 
-setwd("~/Documents/OSS/Data")
+#setwd("~/Documents/OSS/Data")
+setwd("~/intl-dyn-ctr-nets-cum")
 global_netstats_yxy <- read_rds("global_netstats_yxy.rds")
 full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
 full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
-setwd("~/Documents/OSS/oss-2020")
+#setwd("~/Documents/OSS/oss-2020")
+setwd("~/intl-dyn-ctr-nets-cum")
 
 global_netstats_yxy <- global_netstats_yxy %>% 
   transmute(year = year, node_count_yxy = node_count, edge_count_yxy = edge_count, 

@@ -1,0 +1,194 @@
+---
+title: "International Collaboration Networks"
+author: "Brandon Kramer, José Bayoán Santiago Calderón and Gizem Korkmaz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
+              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra")) {library(pkg, character.only = TRUE)}
+
+#setwd("~/Documents/OSS/Data")
+setwd("~/intl-dyn-ctr-nets-cum")
+global_netstats_cum <- read_rds("global_netstats_cum.rds")
+full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
+#setwd("~/Documents/OSS/oss-2020")
+setwd("~/intl-dyn-ctr-nets-cum")
+
+global_netstats_cum <- global_netstats_cum %>% 
+  transform(dyads = as.numeric(dyads))
+
+```
+
+```{r bar graphs by cum, fig.width=9.5, fig.height=8}
+network_nodes <- global_netstats_cum %>% 
+  ggplot( aes(time, node_count), y=node_count) +
+  geom_bar(stat="identity", fill = "#990000", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank())
+
+network_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, edge_count), y=edge_count) +
+  geom_bar(stat="identity", fill = "#D96403", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank()) 
+
+network_wtd_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, wtd_edge_count), y=wtd_edge_count) +
+  geom_bar(stat="identity", fill = "#eaaa31", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank())
+
+network_commits <- global_netstats_cum %>% 
+  ggplot( aes(time, commits), y=commits) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank())
+
+network_isolates <- global_netstats_cum %>% 
+  ggplot( aes(time, isolates), y=isolates) +
+  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank())
+
+network_dyads <- global_netstats_cum %>% 
+  ggplot( aes(time, dyads), y=dyads) +
+  geom_bar(stat="identity", fill = "#600080", width = 0.7) + theme_bw() + 
+  #geom_text(aes(label = node_count), size = 3, colour="black", fontface="bold", hjust = 0.5, vjust = -0.5) + 
+  theme(axis.title.x = element_blank())
+
+grid.arrange(network_nodes, network_commits, 
+             network_edges,  network_isolates,  
+             network_wtd_edges, network_dyads, nrow=3, ncol=2,
+             top="Cumulative Growth in Node, Edge and Commit Counts for GitHub Networks")
+```
+
+When examining year-by-year trends in the number of nodes, edges and commits, we found that each of these patterns increase exponentially. This is in no way a surprise given what other research on open-source software has shown. 
+
+```{r global_networks_cum descriptive trends, fig.width=9.5}
+
+ggplot(global_netstats_cum, aes(time)) + 
+  geom_line(aes(y = node_count, colour = "node_count", group= 1), size=2) + 
+  geom_line(aes(y = edge_count/100, colour = "edge_count/100", group= 2), size=2) +
+  geom_line(aes(y = wtd_edge_count/1000, colour = "wtd_edge_count/1000", group= 2), size=2) +
+  geom_line(aes(y = commits/100, colour = "commits/100", group= 3), size=2) +   
+  geom_line(aes(y = isolates, colour = "isolates", group = 4), size=2) +
+  geom_line(aes(y = dyads/100, colour = "dyads/100", group = 5), size=0.5) + 
+  scale_colour_manual(values = c( "#990000", "#D96403", "#eaaa31", "#628ed8", "#1d7c6b", "#600080")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Cumulative Growth in GitHub Networks") + theme_minimal()
+```
+
+```{r density yxy & cum, fig.width=9.5, fig.height=8}
+density_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=density,group=1), size=2) + 
+  labs(y = "Density (Cumulative)", x = "Year", colour = "#990000") + theme_minimal()
+
+transitivity_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=transitivity, group=1), size=2) + 
+  labs(y = "Transitivity (Cumulative)", x = "Year", colour = "#D96403") + theme_minimal()
+
+all_others<-ggplot(global_netstats_cum, aes(time)) + 
+  geom_line(aes(y = node_count, colour = "nodes", group= 1), size=2) + 
+  geom_line(aes(y = edge_count/100, colour = "edges", group= 2), size=2) +
+  geom_line(aes(y = wtd_edge_count/1000, colour = "weighted", group= 2), size=2) +
+  geom_line(aes(y = commits/100, colour = "commits", group= 3), size=2) +   
+  geom_line(aes(y = isolates, colour = "isolates", group = 4), size=2) +
+  geom_line(aes(y = dyads/100, colour = "dyads", group = 5), size=0.5) + 
+  scale_colour_manual(values = c( "#990000", "#D96403", "#eaaa31", "#628ed8", "#1d7c6b", "#600080")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Cumulative Growth in GitHub Networks") + theme_minimal() 
+
+louvain_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain, group=1), size=2) + 
+  labs(y = "Modularity (Cumulative)", x = "Year", colour = "#628ed8") + theme_minimal()
+louvain_cum_scaled<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain_scaled, group=1), size=2) + 
+  labs(y = "Modularity (Scaled)", x = "Year", colour = "#1d7c6b") + theme_minimal()
+louvain_cum_logged<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain_logged, group=1), size=2) + 
+  labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + theme_minimal()
+
+
+grid.arrange(density_cum, louvain_cum, 
+             transitivity_cum, louvain_cum_scaled,  
+             all_others, louvain_cum_logged, nrow=3, ncol=2,
+             top="Network Measures")
+```
+
+Over time, we see the cumulative network's density drop with a more marked decline in the first half of the decade before tapering off after 2013. As the network grows, we find that network becomes more sparse with a smaller proportion of potential contributors collaborating together. 
+
+```{r transitivity yxy & cum, fig.width=9.5, fig.height=3}
+
+
+```
+
+Transitivity (or the global clustering coeffecient) refers to the ratio connected triangles exist in the graph in any given period. In the cumulative network, transitivity follows a nonlinear trend. While transitivity increases from 2008 to 2011, it declines almost back to baseline levels by 2014 before increasing to its plateau in 2016 and declining again in 2017 and 2018. This trend means that GitHub's growth from 2018-2011 seems to have occured in a more centralized fashion with a greater proportion of contributors working on open source software together at the core of the network. From 2011-2014, these trends reversed, suggesting that new users were opening GitHub accounts but not contributing to common repositories. From 2015-2016, there once again seems to be a surge in the global clustering coeffecient, suggesting that GitHub contributors began to collaborate more often before this trend reverts in 2017-2018. 
+
+[IS THERE ANYTHING TO HELP EXPLAIN THESE NONLINEAR TRENDS IN INTERNATIONAL COLLABORATION? THESE TRENDS COULD BE DUE TO CLUSTERING HAPPENING WITHIN SOME LANGUAGES OVER OTHERS OR SOME COUNTRIES OVER OTHERS. IT IS POSSIBLE TO TEST THE COUNTRIES EASILY BUT WE DON'T HAVE THE LANGUAGE COMMUNITIES AS RELIABLY.]
+
+```{r modularity yxy & cum, fig.width=9.5, fig.height=3}
+modularity_yxy<-ggplot(global_netstats_yxy) + 
+  geom_line(aes(x=year, y=modularity_yxy), size=2) + 
+  labs(y = "Modularity (Year-by-Year)", x = "Year", colour = "") + theme_minimal() +
+  scale_x_continuous(breaks=seq(2008,2018,1))
+modularity_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=year_cum, y=modularity_cum,group=1), size=2) + 
+  labs(y = "Modularity (Cumulative)", x = "Year", colour = "") + theme_minimal()
+grid.arrange(modularity_yxy, modularity_cum, nrow=1, 
+             top="Modularity of GitHub Networks")  
+```
+
+While the global clustering coeffecients were somewhat complex, the network has become increasingly more modular over time. This means that subsets of the network have begun to cluster into smaller communities more as time passes. This is not surprising given that GitHub is comprised of several semi-autonomous groups based on the use of different languages, topics and geographic locations. 
+
+[I HAVE THE LOUVAIN CLUSTERS FOR THESE GROUPS. IS THERE A WAY TO TEST WHETHER COUNTRY, LANGUAGE OR TOPIC SOMEHOW BEST PREDICTS THE COMMUNITY?]
+
+```{r global_networks_yxy power law fitting}
+
+data <- full_nodelist_yxy %>% select(deg08) %>% drop_na(deg08)
+data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
+data.dist <- data.dist[data.dist$p_k>0,]
+ggplot(data.dist) + geom_point(aes(x=k, y=p_k)) + theme_bw()
+
+m_pl <- displ$new(data)
+est_pl <- estimate_xmin(m_pl)
+est_pl$xmin # initial estimation of kmin 
+est_pl$pars # initial estimation of γ
+est_pl$gof # calculate D with Kolgomorov-Smirnov test
+
+# finish remainder of process using https://rpubs.com/lgadar/power-law
+
+power_law_end <- data.frame(event="power_law_end", time=now("EST"))
+time_log <- rbind(time_log, power_law_end); rm(power_law_end)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
