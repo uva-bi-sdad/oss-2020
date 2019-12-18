@@ -1,9 +1,11 @@
 ---
-title: "Untitled"
+title: "OSS Cost PostgreSQL Code"
 author: "Brandon L. Kramer"
 date: "12/18/2019"
 output: html_document
 ---
+
+In this snippet, I am creating a new table in PostgreSQL that joins the raw commit data from GH Torrent with the country codes that I recoded for the network analyses. Below, this data creates a new table (commit_data_cc). 
 
 ```{sql}
 
@@ -27,6 +29,8 @@ FROM commit_data_cc;
 
 ```
 
+Drawing from that table, we create a new table that is grouped by slug. 
+
 ```{sql cars}
 --create merged table 
 create table github.forcost_bylogin as (
@@ -35,6 +39,8 @@ FROM github.commit_data_cc
 GROUP BY slug, login, country_code
 );
 ```
+
+And then another that is grouped by country code. 
 
 ```{sql cars}
 --create merged table 
