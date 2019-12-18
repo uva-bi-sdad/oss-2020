@@ -1,0 +1,55 @@
+---
+title: "Untitled"
+author: "Brandon L. Kramer"
+date: "12/18/2019"
+output: html_document
+---
+
+```{sql}
+
+--checking to see if commits_summary & commits_data match (they do!)
+SELECT COUNT (DISTINCT slug)
+FROM commits_data;
+SELECT COUNT (DISTINCT slug)
+FROM commits_summary; 
+
+--create merged table 
+create table github.commit_data_cc as (
+SELECT slug, commit_data.login, year, users_gh_cc.country_code, additions, deletions, (additions + deletions) AS lines_add, (additions - deletions) AS lines_sub
+FROM github.commit_data
+RIGHT JOIN github.users_gh_cc
+ON commit_data.login = users_gh_cc.login
+);  
+
+--checking to see if commits_summary & commits_data_cc match (they do not bc valid cc's reduces distinct logins)
+SELECT COUNT (DISTINCT slug)
+FROM commit_data_cc; 
+
+```
+
+```{sql cars}
+--create merged table 
+create table github.forcost_bylogin as (
+SELECT slug, login, country_code, SUM(additions) as additions, SUM(deletions) as deletions
+FROM github.commit_data_cc
+GROUP BY slug, login, country_code
+);
+```
+
+```{sql cars}
+--create merged table 
+create table github.forcost_bycc as (
+SELECT slug, country_code, SUM(additions) as additions, SUM(deletions) as deletions
+FROM github.commit_data_cc
+GROUP BY slug, country_code
+); 
+```
+
+```{sql}
+
+
+
+```
+
+
+
