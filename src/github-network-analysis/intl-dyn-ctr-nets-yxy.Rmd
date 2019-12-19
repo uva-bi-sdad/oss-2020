@@ -180,62 +180,6 @@ saveRDS(nodelist, "nodelist_2017.rds")
 saveRDS(time_log, "timelog_2017.rds")
 ```
 
-Once we got those statistics calculated for each year, we aggregated them together using this code chunk. 
-
-```{r concatenating global_netstats_yxy}
-
-setwd("~/intl-dyn-ctr-nets-yxy")
-global_netstats_2008 <- read_rds("global_netstats_2008.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2009 <- read_rds("global_netstats_2009.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2010 <- read_rds("global_netstats_2010.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2011 <- read_rds("global_netstats_2011.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2012 <- read_rds("global_netstats_2012.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2013 <- read_rds("global_netstats_2013.rds") #%>% select(-mean_distance)
-global_netstats_2014 <- read_rds("global_netstats_2014.rds") #%>% select(-mean_distance)
-global_netstats_2015 <- read_rds("global_netstats_2015.rds") #%>% select(-mean_distance)
-global_netstats_2016 <- read_rds("global_netstats_2016.rds")
-global_netstats_2017 <- read_rds("global_netstats_2017.rds")
-global_netstats_2018 <- read_rds("global_netstats_2018.rds")
-
-global_netstats_2012 <- global_netstats_2012 %>% select(-triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged)
-
-global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011) %>% 
-  select(-triads_003, -triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged) %>% 
-  rbind(global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015, global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
-  transform(dyads = as.numeric(dyads))
-
-setwd("~/intl-dyn-ctr-nets-yxy")
-saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
-
-```
-
-```{r}
-
-is.connected(login_network)
-
-comps <- decompose.graph(login_network)
-
-table(sapply(comps, vcount))
-table(sapply(comps, vcount))[1] / gorder(login_network)
-table(sapply(comps, vcount))[8]
-3976 / gorder(login_network)
-
-table(sapply(cliques(login_network), length))
-
-table(sapply(cliques(login_network), length) == 4) #12:08 - 
-table(sapply(cliques(login_network), length) == 5)
-table(sapply(cliques(login_network), length) == 6)
-
-```
-
-## Calculating Node Level Network Statistics 
-
-*Year-by-Year Node Level Statistics.* We used this code to construct node-level statistics for the year-by-year networks, including the degree centrality measure (both weight and unweighted), the k-core measure, the Louvain cluster grouping, and the component grouping.
-
-
-
-And then aggregated them together into one file. 
-
 ```{r binding yxy nodelists}
 # read nodelists
 rm(list = ls())
@@ -355,6 +299,152 @@ full_nodelist <- nodelist_2008 %>%
 
 setwd("~/intl-dyn-ctr-nets-yxy")
 saveRDS(full_nodelist, "full_nodelist_yxy.rds")
+```
+
+```{r concatenating global_netstats_yxy}
+
+rm(list = ls())
+setwd("~/intl-dyn-ctr-nets-yxy")
+global_netstats_2008 <- read_rds("global_netstats_2008.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2009 <- read_rds("global_netstats_2009.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2010 <- read_rds("global_netstats_2010.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2011 <- read_rds("global_netstats_2011.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2012 <- read_rds("global_netstats_2012.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2013 <- read_rds("global_netstats_2013.rds") #%>% select(-mean_distance)
+global_netstats_2014 <- read_rds("global_netstats_2014.rds") #%>% select(-mean_distance)
+global_netstats_2015 <- read_rds("global_netstats_2015.rds") #%>% select(-mean_distance)
+global_netstats_2016 <- read_rds("global_netstats_2016.rds")
+global_netstats_2017 <- read_rds("global_netstats_2017.rds")
+global_netstats_2018 <- read_rds("global_netstats_2018.rds")
+
+global_netstats_2012 <- global_netstats_2012 %>% select(-triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged)
+
+global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011) %>% 
+  select(-triads_003, -triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged) %>% 
+  rbind(global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015, global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
+  transform(dyads = as.numeric(dyads))
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
+
+edges <- as_tibble(c(sum(full_nodelist_yxy$deg08/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg09/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg10/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg11/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg12/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg13/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg14/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg15/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg16/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg17/ 2, na.rm = TRUE), 
+            sum(full_nodelist_yxy$deg18/ 2, na.rm = TRUE))) 
+
+weighted <- as_tibble(c(sum(full_nodelist_yxy$wtddeg08, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg09, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg10, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg11, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg12, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg13, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg14, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg15, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg16, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg17, na.rm = TRUE), 
+            sum(full_nodelist_yxy$wtddeg18, na.rm = TRUE))) 
+
+global_netstats_yxy <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+                                   "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
+  bind_cols(global_netstats_yxy) %>% # select(-year) %>% 
+  rename(time = value)
+
+colnames(weighted) <- "wtd_edge_count"
+global_netstats_yxy <- cbind(global_netstats_yxy, weighted) 
+global_netstats_yxy <- global_netstats_yxy %>% 
+  select(time, year, node_count, edge_count, wtd_edge_count, everything()) %>% 
+  transform(dyads = as.numeric(dyads))
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
+
+```
+
+```{r k_core}
+
+rm(list = ls())
+setwd("~/intl-dyn-ctr-nets-yxy")
+full_nodelist <- readRDS("full_nodelist_yxy.rds")
+global_netstats_yxy <- readRDS("global_netstats_yxy.rds")
+
+# get k_core data from nodelist
+k08<-full_nodelist %>% drop_na(kcore08) %>% 
+  count(kcore08) %>% rename(core = kcore08, k08 = n)
+k09<-full_nodelist %>% drop_na(kcore09) %>% 
+  count(kcore09) %>% rename(core = kcore09, k09 = n)
+k10<-full_nodelist %>% drop_na(kcore10) %>% 
+  count(kcore10) %>% rename(core = kcore10, k10 = n)
+k11<-full_nodelist %>% drop_na(kcore11) %>% 
+  count(kcore11) %>% rename(core = kcore11, k11 = n)
+k12<-full_nodelist %>% drop_na(kcore12) %>% 
+  count(kcore12) %>% rename(core = kcore12, k12 = n)
+k13<-full_nodelist %>% drop_na(kcore13) %>% 
+  count(kcore13) %>% rename(core = kcore13, k13 = n)
+k14<-full_nodelist %>% drop_na(kcore14) %>% 
+  count(kcore14) %>% rename(core = kcore14, k14 = n)
+k15<-full_nodelist %>% drop_na(kcore15) %>% 
+  count(kcore15) %>% rename(core = kcore15, k15 = n)
+k16<-full_nodelist %>% drop_na(kcore16) %>% 
+  count(kcore16) %>% rename(core = kcore16, k16 = n)
+k17<-full_nodelist %>% drop_na(kcore17) %>% 
+  count(kcore17) %>% rename(core = kcore17, k17 = n)
+k18<-full_nodelist %>% drop_na(kcore18) %>% 
+  count(kcore18) %>% rename(core = kcore18, k18 = n)
+
+# join it all together 
+kcore_data <- right_join(k08,k09, by = "core")  
+kcore_data <- right_join(kcore_data,k10, by = "core")  
+kcore_data <- right_join(kcore_data,k11, by = "core")
+kcore_data <- right_join(kcore_data,k12, by = "core")
+kcore_data <- right_join(kcore_data,k13, by = "core")
+kcore_data <- right_join(kcore_data,k14, by = "core")
+kcore_data <- right_join(kcore_data,k15, by = "core")
+kcore_data <- right_join(kcore_data,k16, by = "core")
+kcore_data <- right_join(kcore_data,k17, by = "core")
+kcore_data <- right_join(kcore_data,k18, by = "core")
+
+# adding max_kcore to df 
+kmax_df = data.frame()
+kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
+                               "2013","2014","2015","2016","2017","2018"))
+kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
+                               max(k12$core),max(k13$core),max(k14$core),max(k15$core),
+                               max(k16$core),max(k17$core),max(k18$core)))
+
+global_netstats_yxy <- right_join(global_netstats_yxy,kmax_df, by = "time")
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+write_rds(kcore_data, "kcore_data_yxy.rds")
+write_rds(global_netstats_yxy, "global_netstats_yxy.rds")
+
+```
+
+```{r decomp_stats}
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomposition_stats_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomposition_stats_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+
+decomp_data_yxy <- right_join(dc08,dc09, by = "decomp")  
+decomp_data_yxy <- right_join(decomp_data_yxy,dc10, by = "decomp")  
+decomp_data_yxy <- right_join(decomp_data_yxy,dc11, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc12, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc13, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc14, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc15, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc16, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc17, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc18, by = "decomp")
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+write_rds(decomp_data_yxy, "decomp_data_yxy.rds")
+
 ```
 
 ##################################################### 
