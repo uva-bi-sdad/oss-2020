@@ -17,57 +17,11 @@ setwd("~/Documents/OSS/Data")
 #setwd("~/intl-dyn-ctr-nets-cum")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
 full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
-#setwd("~/Documents/OSS/oss-2020")
-#setwd("~/intl-dyn-ctr-nets-cum")
+kcore_data <- read_rds("kcore_data_cum.rds")
+decomp_data <- read_rds("decomp_data_cum.rds")
 
 global_netstats_cum <- global_netstats_cum %>% 
   transform(dyads = as.numeric(dyads))
-
-# get k_core data from nodelist
-k08<-full_nodelist_cum %>% drop_na(kcore08) %>% 
-  count(kcore08) %>% rename(core = kcore08, k08 = n)
-k09<-full_nodelist_cum %>% drop_na(kcore0809) %>% 
-  count(kcore0809) %>% rename(core = kcore0809, k09 = n)
-k10<-full_nodelist_cum %>% drop_na(kcore0810) %>% 
-  count(kcore0810) %>% rename(core = kcore0810, k10 = n)
-k11<-full_nodelist_cum %>% drop_na(kcore0811) %>% 
-  count(kcore0811) %>% rename(core = kcore0811, k11 = n)
-k12<-full_nodelist_cum %>% drop_na(kcore0812) %>% 
-  count(kcore0812) %>% rename(core = kcore0812, k12 = n)
-k13<-full_nodelist_cum %>% drop_na(kcore0813) %>% 
-  count(kcore0813) %>% rename(core = kcore0813, k13 = n)
-k14<-full_nodelist_cum %>% drop_na(kcore0814) %>% 
-  count(kcore0814) %>% rename(core = kcore0814, k14 = n)
-k15<-full_nodelist_cum %>% drop_na(kcore0815) %>% 
-  count(kcore0815) %>% rename(core = kcore0815, k15 = n)
-k16<-full_nodelist_cum %>% drop_na(kcore0816) %>% 
-  count(kcore0816) %>% rename(core = kcore0816, k16 = n)
-k17<-full_nodelist_cum %>% drop_na(kcore0817) %>% 
-  count(kcore0817) %>% rename(core = kcore0817, k17 = n)
-k18<-full_nodelist_cum %>% drop_na(kcore0818) %>% 
-  count(kcore0818) %>% rename(core = kcore0818, k18 = n)
-
-# join it all together 
-kcore_data <- right_join(k08,k09, by = "core")  
-kcore_data <- right_join(kcore_data,k10, by = "core")  
-kcore_data <- right_join(kcore_data,k11, by = "core")
-kcore_data <- right_join(kcore_data,k12, by = "core")
-kcore_data <- right_join(kcore_data,k13, by = "core")
-kcore_data <- right_join(kcore_data,k14, by = "core")
-kcore_data <- right_join(kcore_data,k15, by = "core")
-kcore_data <- right_join(kcore_data,k16, by = "core")
-kcore_data <- right_join(kcore_data,k17, by = "core")
-kcore_data <- right_join(kcore_data,k18, by = "core")
-
-# adding max_kcore to df 
-kmax_df = data.frame()
-kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
-                               "2013","2014","2015","2016","2017","2018"))
-kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
-                               max(k12$core),max(k13$core),max(k14$core),max(k15$core),
-                               max(k16$core),max(k17$core),max(k18$core)))
-global_netstats_cum <- right_join(global_netstats_cum,kmax_df, by = "time")
-
 
 ```
 
@@ -94,17 +48,17 @@ network_kmax <- global_netstats_cum %>%
 
 network_commits <- global_netstats_cum %>% 
   ggplot( aes(time, commits), y=commits) +
-  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + 
+  geom_bar(stat="identity", fill = "#000058", width = 0.7) + 
   theme_bw() + theme(axis.title.x = element_blank())
 
 network_isolates <- global_netstats_cum %>% 
   ggplot( aes(time, isolates), y=isolates) +
-  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + 
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + 
   theme_bw() + theme(axis.title.x = element_blank())
 
 network_dyads <- global_netstats_cum %>% 
   ggplot( aes(time, dyads), y=dyads) +
-  geom_bar(stat="identity", fill = "#600080", width = 0.7) + 
+  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + 
   theme_bw() + theme(axis.title.x = element_blank())
 
 grid.arrange(network_nodes, network_commits, 
@@ -125,7 +79,7 @@ all_others<-ggplot(global_netstats_cum, aes(time)) +
   geom_line(aes(y = isolates, colour = "isolates", group = 6), size=2) +
   geom_line(aes(y = dyads/100, colour = "dyads/100", group = 7), size=0.5) + 
   scale_colour_manual(values = 
-  c("#990000","#DA3330","#D96403","#eaaa31","#628ed8","#1d7c6b","#600080")) +                   
+  c("#990000","#DA3330","#D96403","#eaaa31","#000058","#628ed8","#1d7c6b")) +                   
   #c( "#990000", "#D96403", "#eaaa31", "#628ed8", "#1d7c6b", "#600080", "#DA3330")) + 
   labs(y = "Node Count", x = "Year", colour = "",
        title = "Cumulative Growth in GitHub Networks") +
@@ -225,24 +179,80 @@ paged_table(percentage_change, options= list(rows.print = 15))
 ```{r k_core_graph, echo=FALSE, fig.width=9.5}
 # graph all values 
 kcore_graph <- kcore_data %>% 
+  #drop_na() %>%
+  ggplot(aes(core)) + 
+  geom_line(aes(y = k08, colour = "k08", group= 1), size=0.5) + 
+  geom_line(aes(y = k09, colour = "k09", group= 2), size=0.5) +
+  geom_line(aes(y = k10, colour = "k10", group= 3), size=0.5) +
+  geom_line(aes(y = k11, colour = "k11", group= 4), size=0.5) +
+  geom_line(aes(y = k12, colour = "k12", group= 5), size=0.5) +
+  geom_line(aes(y = k13, colour = "k13", group= 6), size=0.5) +
+  geom_line(aes(y = k14, colour = "k14", group= 7), size=0.5) +
+  geom_line(aes(y = k15, colour = "k15", group= 8), size=0.5) +
+  geom_line(aes(y = k16, colour = "k16", group= 9), size=0.5) +
+  geom_line(aes(y = k17, colour = "k17", group= 10), size=0.5) +
+  geom_line(aes(y = k18, colour = "k18", group= 11), size=0.5) +
+  labs(title = "K-Core Distributions for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
+```{r k_core_graph_2, echo=FALSE, fig.width=9.5}
+kcore_graph <- kcore_data %>% 
   drop_na() %>%
   ggplot(aes(core)) + 
-  geom_point(aes(y = k08, colour = "k08", group= 1), size=0.5) + 
-  geom_point(aes(y = k09, colour = "k09", group= 2), size=0.5) +
-  geom_point(aes(y = k10, colour = "k10", group= 3), size=0.5) +
-  geom_point(aes(y = k11, colour = "k11", group= 4), size=0.5) +
-  geom_point(aes(y = k12, colour = "k12", group= 5), size=0.5) +
-  geom_point(aes(y = k13, colour = "k13", group= 6), size=0.5) +
-  geom_point(aes(y = k14, colour = "k14", group= 7), size=0.5) +
-  geom_point(aes(y = k15, colour = "k15", group= 8), size=0.5) +
-  geom_point(aes(y = k16, colour = "k16", group= 9), size=0.5) +
-  geom_point(aes(y = k17, colour = "k17", group= 10), size=0.5) +
-  geom_point(aes(y = k18, colour = "k18", group= 11), size=0.5) +
+  geom_line(aes(y = k08, colour = "k08", group= 1), size=0.5) + 
+  geom_line(aes(y = k09, colour = "k09", group= 2), size=0.5) +
+  geom_line(aes(y = k10, colour = "k10", group= 3), size=0.5) +
+  geom_line(aes(y = k11, colour = "k11", group= 4), size=0.5) +
+  geom_line(aes(y = k12, colour = "k12", group= 5), size=0.5) +
+  geom_line(aes(y = k13, colour = "k13", group= 6), size=0.5) +
+  geom_line(aes(y = k14, colour = "k14", group= 7), size=0.5) +
+  geom_line(aes(y = k15, colour = "k15", group= 8), size=0.5) +
+  geom_line(aes(y = k16, colour = "k16", group= 9), size=0.5) +
+  geom_line(aes(y = k17, colour = "k17", group= 10), size=0.5) +
+  geom_line(aes(y = k18, colour = "k18", group= 11), size=0.5) +
   labs(title = "K-Core Distributions for Cumulative GitHub Networks") + 
   theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
 ```
 
+```{r decomp_graph, echo=FALSE, fig.width=9.5}
+# graph all values 
+decomp_graph <- decomp_data %>% 
+  #drop_na() %>%
+  ggplot(aes(order(decomp))) + 
+  geom_point(aes(y = dc08, colour = "dc08", group= 1), size=0.5) + 
+  geom_point(aes(y = dc09, colour = "dc09", group= 2), size=0.5) +
+  geom_point(aes(y = dc10, colour = "dc10", group= 3), size=0.5) +
+  geom_point(aes(y = dc11, colour = "dc11", group= 4), size=0.5) +
+  geom_point(aes(y = dc12, colour = "dc12", group= 5), size=0.5) +
+  geom_point(aes(y = dc13, colour = "dc13", group= 6), size=0.5) +
+  geom_point(aes(y = dc14, colour = "dc14", group= 7), size=0.5) +
+  geom_point(aes(y = dc15, colour = "dc15", group= 8), size=0.5) +
+  geom_point(aes(y = dc16, colour = "dc16", group= 9), size=0.5) +
+  geom_point(aes(y = dc17, colour = "dc17", group= 10), size=0.5) +
+  geom_point(aes(y = dc18, colour = "dc18", group= 11), size=0.5) +
+  labs(title = "Decomposition Tendencies for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
 
+```{r decomp_graph_2, echo=FALSE, fig.width=9.5}
+# graph all values 
+decomp_graph <- decomp_data %>% 
+  drop_na() %>%
+  ggplot(aes(decomp)) + 
+  geom_line(aes(y = dc08, colour = "dc08", group= 1), size=0.5) + 
+  geom_line(aes(y = dc09, colour = "dc09", group= 2), size=0.5) +
+  geom_line(aes(y = dc10, colour = "dc10", group= 3), size=0.5) +
+  geom_line(aes(y = dc11, colour = "dc11", group= 4), size=0.5) +
+  geom_line(aes(y = dc12, colour = "dc12", group= 5), size=0.5) +
+  geom_line(aes(y = dc13, colour = "dc13", group= 6), size=0.5) +
+  geom_line(aes(y = dc14, colour = "dc14", group= 7), size=0.5) +
+  geom_line(aes(y = dc15, colour = "dc15", group= 8), size=0.5) +
+  geom_line(aes(y = dc16, colour = "dc16", group= 9), size=0.5) +
+  geom_line(aes(y = dc17, colour = "dc17", group= 10), size=0.5) +
+  geom_line(aes(y = dc18, colour = "dc18", group= 11), size=0.5) +
+  labs(title = "Decomposition Tendencies for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
 
 
 

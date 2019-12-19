@@ -17,9 +17,9 @@ FROM commits_summary;
 
 --create merged table 
 create table github.commit_data_cc as (
-SELECT slug, commit_data.login, year, users_gh_cc.country_code, additions, deletions, (additions + deletions) AS lines_add, (additions - deletions) AS lines_sub
+SELECT slug, commit_data.login, year, users_gh_cc.country_code, additions, deletions, (additions + deletions) AS add_lines, (additions - deletions) AS sub_lines
 FROM github.commit_data
-RIGHT JOIN github.users_gh_cc
+FULL JOIN github.users_gh_cc
 ON commit_data.login = users_gh_cc.login
 );  
 
