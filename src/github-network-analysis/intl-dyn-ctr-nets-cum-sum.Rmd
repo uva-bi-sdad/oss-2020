@@ -254,10 +254,39 @@ decomp_graph <- decomp_data %>%
   theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
 ```
 
+```{r}
+library(data.table)
+kcore_data <- kcore_data[,-1]
+test <- kcore_data
+test[,12] <- rownames(test)
+test <- test %>% rename(core = V12)
+test$core <- paste0("deg", test$core, sep="") 
+test <- test %>% select(core, everything())
+test <- test %>% remove_rownames %>% column_to_rownames(var="core")
+test <- as.data.frame(t(test))
+test <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+            "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
+  bind_cols(test) %>% 
+  rename(time = value)  
 
+kcore_trends <- ggplot(test, mapping = aes(x = time)) + 
+  geom_line(aes(y = deg1, colour = "deg1", group= 1), size=0.5) +
+  geom_line(aes(y = deg2, colour = "deg2", group= 2), size=0.5) +
+  geom_line(aes(y = deg3, colour = "deg3", group= 3), size=0.5) +
+  geom_line(aes(y = deg4, colour = "deg4", group= 4), size=0.5) +
+  geom_line(aes(y = deg5, colour = "deg5", group= 5), size=0.5) +
+  geom_line(aes(y = deg6, colour = "deg6", group= 6), size=0.5) +
+  geom_line(aes(y = deg7, colour = "deg7", group= 7), size=0.5) +
+  geom_line(aes(y = deg8, colour = "deg8", group= 8), size=0.5) +
+  geom_line(aes(y = deg9, colour = "deg9", group= 9), size=0.5) +
+  geom_line(aes(y = deg10, colour = "deg10", group= 10), size=0.5) +
+  geom_line(aes(y = deg11, colour = "deg11", group= 11), size=0.5) +
+  geom_line(aes(y = deg12, colour = "deg12", group= 12), size=0.5) +
+  geom_line(aes(y = deg13, colour = "deg13", group= 13), size=0.5) +
+  geom_line(aes(y = deg14, colour = "deg14", group= 14), size=0.5) +
+  geom_line(aes(y = deg15, colour = "deg15", group= 15), size=0.5); ggplotly()
 
-
-
+```
 
 
 

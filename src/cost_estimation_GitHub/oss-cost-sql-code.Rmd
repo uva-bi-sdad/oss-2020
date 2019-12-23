@@ -33,8 +33,8 @@ Drawing from that table, we create a new table that is grouped by slug.
 
 ```{sql cars}
 --create merged table 
-create table github.forcost_bylogin as (
-SELECT slug, login, country_code, SUM(additions) as additions, SUM(deletions) as deletions
+create table github.forcost_bylogin2 as (
+SELECT slug, login, country_code, COUNT(*), SUM(additions) as additions, SUM(deletions) as deletions
 FROM github.commit_data_cc
 GROUP BY slug, login, country_code
 );
@@ -44,8 +44,8 @@ And then another that is grouped by country code.
 
 ```{sql cars}
 --create merged table 
-create table github.forcost_bycc as (
-SELECT slug, country_code, SUM(additions) as additions, SUM(deletions) as deletions
+create table github.forcost_bycc2 as (
+SELECT slug, country_code, COUNT(*), SUM(additions) as additions, SUM(deletions) as deletions
 FROM github.commit_data_cc
 GROUP BY slug, country_code
 ); 
