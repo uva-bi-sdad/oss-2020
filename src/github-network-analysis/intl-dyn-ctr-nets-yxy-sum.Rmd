@@ -160,7 +160,7 @@ global_netstats_yxy %>% filter(time != 2008) %>% ggplot(aes(time)) +
   geom_line(aes(y = isolates_pctcng, colour = "isolates_pctcng", group = 6), size=2) +
   geom_line(aes(y = dyads_pctcng, colour = "dyads_pctcng", group = 7), size=0.5) + 
   scale_colour_manual(values = 
-  c("#990000","#DA3330","#D96403","#eaaa31","#000058","#628ed8","#1d7c6b")) + 
+  c("#990000","#DA3330","#D96403","#eaaa31","#628ed8","#1d7c6b","#600080")) + 
   labs(y = "Node Count", x = "Year", colour = "",
        title = "Year-by-Year Change in Descriptive Measures for GitHub Networks") + 
   theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.78,0.8))

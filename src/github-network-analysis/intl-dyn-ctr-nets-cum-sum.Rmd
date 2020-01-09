@@ -25,6 +25,37 @@ global_netstats_cum <- global_netstats_cum %>%
 
 ```
 
+```{r}
+
+ggplot(global_netstats_cum, aes(x=node_count, y=louvain)) +
+    geom_point(shape=1) 
+
+ggplot(global_netstats_cum, aes(x=log(node_count), y=louvain)) +
+    geom_point(shape=1)
+
+cor(global_netstats_cum$node_count, global_netstats_cum$louvain)
+
+constant <- rep(0.5, 11)
+
+growth <- c(0.1, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9)
+decline <- c(0.9, 0.8, 0.7, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2, 0.1)
+growth_scaled <- growth / global_netstats_cum$node_count
+growth_logged <- growth / log(global_netstats_cum$node_count)
+decline_scaled <- decline / global_netstats_cum$node_count
+decline_logged <- decline / log(global_netstats_cum$node_count)
+time <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+
+test_data <- as.data.frame(cbind(growth, decline,g_vector, g_logged, d_vector, d_logged, time))
+
+a <- ggplot(test_data, aes(x=time, y=growth_scaled)) + geom_line(shape=1)
+b <- ggplot(test_data, aes(x=time, y=growth_logged)) + geom_line(shape=1)
+c <- ggplot(test_data, aes(x=time, y=decline_scaled)) + geom_line(shape=1)
+d <- ggplot(test_data, aes(x=time, y=decline_logged)) + geom_line(shape=1)
+
+grid.arrange(a, b, c, d, nrow=2, ncol=2)
+
+```
+
 ```{r bar graphs by cum, fig.width=9.5, fig.height=8, echo=FALSE}
 network_nodes <- global_netstats_cum %>% 
   ggplot( aes(time, node_count), y=node_count) +
@@ -138,6 +169,7 @@ grid.arrange(density_cum, louvain_cum,
 network_descriptives <- global_netstats_cum %>% 
   select(year, density, transitivity,louvain, louvain_logged, louvain_scaled)
 paged_table(network_descriptives, options = list(rows.print = 15))
+
 ```
 
 ```{r percentage-change, echo=FALSE, fig.width=9.5}
