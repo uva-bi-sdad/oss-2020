@@ -12,7 +12,7 @@ This folder contains a series of files of .Rmd files that wrangle, recode, and c
 
 **03_repository-networks Folder:** Contains .Rmd files for conducting year-by-year and cumulative network analysis at the repository level. 
 
-**04_country-to-country-networks Folder:** Contains .Rmd files for conducting year-by-year and cumulative network analysis at the country level. 
+**04_country-networks Folder:** Contains .Rmd files for conducting year-by-year and cumulative network analysis at the country level. 
 
 
 **PostgreSQL Data**
