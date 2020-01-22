@@ -11,7 +11,7 @@ rm(list = ls())
 
 # load packages 
 for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
-              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra", "rmarkdown")) {library(pkg, character.only = TRUE)}
+              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
 
 setwd("~/Documents/OSS/Data")
 #setwd("~/intl-dyn-ctr-nets-cum")
@@ -99,6 +99,143 @@ grid.arrange(network_nodes, network_commits,
              top="Cumulative Growth in Node, Edge and Commit Counts for GitHub Networks")
 ```
 
+```{r, fig.width=9.5, fig.height=3, echo=FALSE}
+network_nodes <- global_netstats_cum %>% 
+  ggplot( aes(time, node_count), y=node_count) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + theme(axis.title.x = element_blank(),
+                          axis.text=element_text(size=24),
+                          axis.title=element_text(size=26)) +
+  labs(y = "Node Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0,  500000, 1000000, 1500000,  2000000), 
+                                labels = c(0, 0.5, 1, 1.5, 2))
+
+network_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, edge_count), y=edge_count) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.6) + 
+  theme_minimal() + theme(axis.title.x = element_blank(),
+                          axis.text=element_text(size=24),
+                          axis.title=element_text(size=26)) + 
+  labs(y = "Edge Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 250000000, 300000000), 
+                                labels = c(0,  50, 100, 150,  200, 250,  300))
+
+network_commits <- global_netstats_cum %>% 
+  ggplot( aes(time, commits), y=commits) +
+  geom_bar(stat="identity", fill = "#D96403", width = 0.6) + 
+  theme_minimal() + 
+  theme(axis.title.x = element_blank(),
+        axis.text=element_text(size=24),axis.title=element_text(size=26)) +
+  labs(y = "Commit Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 
+                                250000000, 300000000, 350000000, 400000000), 
+                                labels = c(0, 50, 100, 150, 200, 250, 300, 350, 400))
+
+figure <- grid.arrange(network_nodes, network_edges, network_commits, 
+             nrow=1, ncol=3,
+             top=
+             textGrob("Cumulative Growth in Node, Edge and Commit Counts for GitHub Contributor Networks (2008-2018)",
+                        gp=gpar(fontsize=30)))
+             
+
+
+ggsave("nodes_edges_commits.png", plot = figure)
+
+```
+
+```{r}
+
+library(rworldmap) 
+library(tidyverse)
+library(countrycode)
+
+setwd("~/Documents/OSS/Data/Country-Country Networks")
+edgelist <- read_csv("country_edgelist_2008-18.csv")
+network <- graph.data.frame(edgelist, directed = FALSE)
+plot(network)
+
+gorder(network)  
+gsize(network)
+mean(degree(network))
+mean(betweenness(network))
+diameter(network)
+edge_density(network, loops = FALSE)
+ 
+nodelist <- data.frame(id = c(1:(igraph::vcount(network))), country = igraph::V(network)$name)
+
+fstgrdy <- fastgreedy.community(network)
+nodelist$modularity_class <- fstgrdy$membership
+
+nodelist$country_code <- countrycode(nodelist$country, origin = "country.name", destination = "iso3c")
+
+nodelist$country <- as.character(nodelist$country)
+
+nodelist <- nodelist %>% 
+  mutate(country_code = ifelse(test = str_detect(string = country, pattern = "Kosovo"), yes = "UNK", no = country_code)) 
+
+nodelist <- nodelist %>% 
+  mutate(modularity_class = recode(modularity_class, 
+                                   `5` = 4,`6` = 4,`7` = 4,`8` = 4,`9` = 4,`10` = 4,
+                                   `11` = 4,`12` = 4,`13` = 4,`14` = 4,`15` = 4,
+                                   `16` = 4,`17` = 4,`18` = 4,`19` = 4,`20` = 4,
+                                   `21` = 4,`22` = 4,`23` = 4,`24` = 4,`25` = 4))
+
+modMap <- joinCountryData2Map(nodelist, joinCode = "NAME",
+                              nameJoinColumn = "country_code")
+
+
+mapCountryData(modMap, 
+               nameColumnToPlot="modularity_class", 
+               catMethod = "categorical",
+               missingCountryCol = gray(.8), 
+               mapTitle = "Modularity Groups for GitHub Country-Country Networks",
+               addLegend = FALSE,
+               colourPalette = c("#ffcb0c", 
+                                 "#D96403",
+                                 "#628ed8", 
+                                 "#232D4B"  
+                                 ))
+nodelist <- nodelist %>% 
+  select(-id) %>% 
+  rename(ID = country)
+
+
+setwd("~/Documents/OSS/Data/Country-Country Networks")
+write_csv(nodelist, "nodelist_0818_mod.csv")
+
+#####
+
+
+```
+
+```{r}
+setwd("~/Documents/OSS/Country Network Viz")
+raw_data <- read_csv("mod_data.csv")
+
+new_data <- raw_data %>% 
+  rename(country = Id) %>% 
+  select(country, modularity_class)
+
+new_data$country_code <- countrycode(new_data$country, origin = "country.name", destination = "iso3c")
+  
+?countrycode
+malMap4 <- joinCountryData2Map(new_data, joinCode = "NAME",
+                              nameJoinColumn = "country_code")
+?mapCountryData
+mapCountryData(malMap4, 
+               nameColumnToPlot="modularity_class", 
+               catMethod = "categorical",
+               missingCountryCol = gray(.8), 
+               mapTitle = "Modularity Groups for GitHub Country-Country Networks",
+               addLegend = FALSE,
+               colourPalette = c("#D96403", "#628ed8"))
+```
 ```{r global_networks_cum descriptive trends, fig.width=9.5, echo=FALSE, layout="l-body-outset"}
 
 all_others<-ggplot(global_netstats_cum, aes(time)) + 
@@ -121,6 +258,22 @@ all_others
 descriptives <- global_netstats_cum %>% select(year, node_count, edge_count, 
                                wtd_edge_count, commits, isolates, dyads,kmax)
 paged_table(descriptives, options = list(rows.print = 15))
+```
+
+```{r}
+
+119.7 / 22.4 # 5 fold increase 
+
+277 / 22 # 13 fold increase 
+
+114 / 35
+
+12015 / 236
+
+12029 / 1926
+
+1987352 / 5391
+
 ```
 
 ```{r density cum, fig.width=9.5, fig.height=8, echo=FALSE, layout="l-body-outset"}
@@ -320,11 +473,24 @@ kcore_trends <- ggplot(test, mapping = aes(x = time)) +
 
 ```
 
+```{r}
+full_nodelist_cum %>% drop_na(deg08) %>% mutate(avg_deg = mean(deg08)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0809) %>% mutate(avg_deg = mean(deg0809)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0810) %>% mutate(avg_deg = mean(deg0810)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0811) %>% mutate(avg_deg = mean(deg0811)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0812) %>% mutate(avg_deg = mean(deg0812)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0813) %>% mutate(avg_deg = mean(deg0813)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0814) %>% mutate(avg_deg = mean(deg0814)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0815) %>% mutate(avg_deg = mean(deg0815)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0816) %>% mutate(avg_deg = mean(deg0816)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0817) %>% mutate(avg_deg = mean(deg0817)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0818) %>% mutate(avg_deg = mean(deg0818)) %>% select(avg_deg)
 
 
 
 
 
+```
 
 
 

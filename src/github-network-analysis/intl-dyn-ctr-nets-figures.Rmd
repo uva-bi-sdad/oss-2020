@@ -261,5 +261,8 @@ ggsave(file="percent_change.png", percent_change_comb, width = 13, height = 4)
 
 ```
 
+```{r}
 
+full_nodelist_cum %>% filter(login == "null")
+```
 
