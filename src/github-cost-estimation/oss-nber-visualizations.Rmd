@@ -1,0 +1,209 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", 
+              "bc3net", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate", "linkprediction", 
+              "poweRlaw")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", port = 5436, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+
+licenses <- dbGetQuery(conn, "SELECT name, spdx 
+                    FROM github.licenses")
+
+# query the bipartite edgelist data from github data  
+repos <- dbGetQuery(conn, "SELECT slug, created_at, spdx, cnt 
+                    FROM github.repos")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+repos <- repos %>% 
+  mutate(year = format(as.Date(created_at, format="%Y/%m/%d"),"%Y")) 
+  
+totals <- repos %>% 
+  filter(year != 2007 & year != 2019) %>%
+  group_by(year) %>% 
+  count() 
+
+totals
+
+repos %>% 
+  group_by(spdx) %>% 
+  count() %>% arrange(-n)
+
+
+
+```
+
+```{r, fig.width=8.5}
+bar_version1 <- ggplot(data=totals, aes(x=year, y=n)) +
+  geom_bar(stat="identity", fill = "#232D4B")+
+  theme(plot.title = (element_text("Number of New Repositories Created on GitHub (2008-2018)", 
+                                   colour="#232D4B", hjust = .5, size = 18)),
+        panel.background = element_rect(fill = "white", colour = "white",
+                                        size = 2, linetype = "solid"),
+        panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                        colour = "white"),
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                        colour = "white"),
+        axis.title.x = element_blank(),
+        axis.text=element_text(colour="#232D4B", size = 18),
+        axis.title = element_text(colour="#232D4B", size = 20)) + 
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  labs(title="Number of New Repositories Created on GitHub (2008-2018)", x="Year", y = "Repositories (in Millions)") +
+  scale_y_continuous(limits = c(0, 1400000), breaks = seq(0, 1400000, by = 200000),
+                     labels = c("0","0.2","0.4","0.6","0.8","1.0","1.2","1.4")) 
+
+bar_version1
+
+setwd("~/")
+ggsave("bar_version1.png", width = 9.5)
+
+
+```
+
+```{r}
+
+repos %>% filter(year=="2018")
+
+# Get all licenses from 2018
+all_year18 <- repos %>% filter(year=="2018")
+#all_year3$repo_slug <- paste(all_year3$login,"/",all_year3$reponame,sep="")
+all_year18 <- all_year18 %>%
+  select(slug,spdx)
+all_year18$year <- "2018"
+all_year18 <- unique(all_year18)
+
+
+# and 2012
+all_year08 <- repos %>% filter(year=="2008")
+#all_year$repo_slug <- paste(all_year$login,"/",all_year$reponame,sep="")
+all_year08 <- all_year08 %>%
+  select(slug,spdx)
+all_year08$year <- "2008"
+all_year08 <- unique(all_year08)
+
+
+
+
+# combine to usable format
+a<- table(all_year08$spdx)
+a <- data.table(a)
+a <- a[a$V1 %chin% c("MIT","GPL-3.0","Apache-2.0","BSD-3-Clause","GPL-2.0")]
+a$percent <- a$N / sum(a$N)
+a$year <- 2008
+b<- table(all_year18$spdx)
+b <- data.table(b)
+b <- b[b$V1 %chin% a$V1]
+b$percent <- b$N / sum(b$N)
+b$year <- 2018
+licenseBreakdown <- rbindlist(list(a,b))
+licensesNice <- data.frame( Year = as.factor(licenseBreakdown$year),
+                            licenses = as.factor(licenseBreakdown$V1),
+                            Percent = as.numeric(round(licenseBreakdown$percent * 100,2)))
+# Plot it
+license_change <- ggplot(data = licensesNice, aes(x = Year, y = Percent, group = licenses)) +
+  geom_line(aes(color = licenses), size = 2) +
+  scale_color_manual(values=c("#5ebdc8","#dadada","#242c49","#abd4a8","#d7762c")) +
+  geom_point(aes(color = licenses), size = 4) +
+  #  Labelling as desired
+  scale_x_discrete(position = "top") +
+  theme_bw() +
+  theme(panel.border = element_blank()) +
+  theme(panel.grid.major.x = element_blank()) +
+  theme(panel.grid.major.y = element_blank()) +
+  theme(panel.grid.minor.y = element_blank()) +
+  theme(axis.ticks       = element_blank()) +
+  labs(
+    title = "Change in Open Source License Proportion, 2008-2018",
+    caption = "based on a query of the top 5 OSS licenses on Github"
+  )
+
+
+setwd("~/")
+ggsave("license_change.png")
+
+all_year08 %>% group_by(spdx) %>% count() %>% arrange(-n)
+all_year18 %>% group_by(spdx) %>% count() %>% arrange(-n)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

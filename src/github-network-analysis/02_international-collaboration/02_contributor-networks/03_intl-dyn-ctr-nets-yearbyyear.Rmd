@@ -1,0 +1,559 @@
+---
+title: "International Contributor Networks: Year by Year Stats"
+author: "Brandon L. Kramer"
+output: html_document
+---
+
+## Loading Data 
+
+We used this code to pull data (year-by-year and then cumulutively) for the construction of Github network data.
+
+```{r loading edgelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate", "linkprediction", "poweRlaw")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", port = 5436, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight 
+                                 FROM github.intl_dyn_bp_edgelist
+                                 WHERE year = 2017")
+                                 #WHERE year = 2009")
+                                 #WHERE year = 2010")
+                                 #WHERE year = 2010")
+                                 #WHERE year = 2011")
+                                 #WHERE year = 2012")
+                                 #WHERE year = 2013")
+                                 #WHERE year = 2014")
+                                 #WHERE year = 2015")
+                                 #WHERE year = 2016")
+                                 #WHERE year = 2017")
+                                 #WHERE year = 2018")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+## Constructing Single Mode Contributor Networks 
+
+In this snippet of code, we transpose the original bipartite networks into single mode networks. In this case, those single mode networks are only composed of contributors. These steps include (1) creating a biadjacency matrix of contributors and repos, (2) transposing the biadjacency matrix into a regular adjacency matrix of just contributors,  (3) creating a network from that matrix, and (4) removing any of the loops. At each step, I create a start and end time stamp so we know how long these processes take and whether we need to take another approach for calculating certain statistics. 
+
+```{r network stats}
+# in this snippet, we will be logging start/end times 
+mat_start <- data.frame(event="mat_start", time=now("EST"))
+
+# this code is taken from network scientists to reduce bipartite networks to single mode networks 
+bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
+              ncol=length(unique(bp_edgelist$slug)),
+              i = as.numeric(factor(bp_edgelist$login)),
+              j = as.numeric(factor(bp_edgelist$slug)),
+              x = rep(1, length(as.numeric(bp_edgelist$login))))
+row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
+colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
+#rm(bp_edgelist) # trying to minimize weight on RAM 
+
+# logging the times and saving the work in RDS files 
+mat_end <- data.frame(event="mat_end", time=now("EST"))
+time_log <- rbind(mat_start, mat_end); rm(mat_start, mat_end)
+#saveRDS(bp_matrix, "bp_matrix.rds")
+saveRDS(time_log, "time_log.rds")
+
+# logging the times 
+mm_start <- data.frame(event="mm_start", time=now("EST"))
+time_log <- rbind(time_log, mm_start)
+
+# we then multiply these incidence matrices and impute zeroes to prevent self loops 
+login_matrix <- tcrossprod(bp_matrix)
+diag(login_matrix) <- 0
+rm(bp_matrix)
+
+# logging the times and saving the work in RDS files 
+mm_end <- data.frame(event="mm_end", time=now("EST"))
+time_log <- rbind(time_log, mm_end); rm(mm_start, mm_end)
+#saveRDS(login_matrix, "login_matrix.rds")
+saveRDS(time_log, "time_log.rds")
+
+# convert it into a network and removing the loops 
+net_start <- data.frame(event="net_start", time=now("EST"))
+time_log <- rbind(time_log, net_start); rm(net_start)
+login_network <- graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE)
+login_network <- simplify(login_network, remove.loops = TRUE)
+
+# logging the times and saving the work in RDS files 
+net_end <- data.frame(event="net_end", time=now("EST"))
+time_log <- rbind(time_log, net_end); rm(net_end)
+#saveRDS(login_network, "login_network.rds")
+saveRDS(time_log, "time_log.rds")
+```
+
+## Calculating Global Network Statistics 
+
+In this snippet, we calculate various network statistics at the global level of the network, including the node count, edge count, the number of commits, the network density, transitivity, and modularity. These were all calculated using the standard function in R's igraph package with the only exception being that we calculated the modularity with the Louvain method (Blondel et al. 2008). As we went through and calculated the statistics for each network, we ran into a number of computational challenges. While a standard laptop computer will suffice to run the original few networks, we ultimately migrated to an instance (i.e. UVA's Rivanna supercomputing platform) to calculate these statistics. Even then, we ultimately ended up not running the diameter measures for 2014-2018 or the mean distance for 2016-2018 because of our own time limitations and lack of patience. We will likely come back to calculate these measures at a later date, but for now we decided to allocate our efforts elsewhere.
+
+```{r global network stats}
+# loading the network (if the instance crashes while doing network_stats)
+#login_network <- readRDS("login_network.rds")
+#time_log <- readRDS("time_log.rds")
+net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
+time_log <- rbind(time_log, net_stats_start); rm(net_stats_start)
+network_stats <- data.frame(year="2017")                                          
+
+# node and edge counts  
+network_stats$node_count <- gorder(login_network)  
+network_stats$edge_count <- gsize(login_network)
+network_stats$commits <- sum(bp_edgelist$weight)
+
+# isolates, dyads and triads 
+network_stats$isolates <- sum(degree(login_network)==0)
+network_stats$dyads <- dyad_census(login_network)[1]
+#oss_triads <- triad.census(login_network)
+#network_stats$triads_003 <- oss_triads[1] 
+#network_stats$triads_102 <- oss_triads[3]
+#network_stats$triads_201 <- oss_triads[11]
+#network_stats$triads_300 <- oss_triads[16]
+net_counts <- data.frame(event="net_counts", time=now("EST"))
+time_log <- rbind(time_log, net_counts); rm(net_counts)
+
+# density and transitivity
+network_stats$density <- edge_density(login_network, loops=FALSE) 
+network_stats$transitivity <- transitivity(login_network)
+net_globals <- data.frame(event="net_globals", time=now("EST"))
+time_log <- rbind(time_log, net_globals); rm(net_globals)
+
+# saving just in case 
+#setwd("~/intl-dyn-ctr-nets-cum")
+#saveRDS(network_stats, "global_netstats_2008.rds") 
+#saveRDS(time_log, "timelog_2008.rds")
+
+# diameter and mean distance (very computationally intensive)
+#network_stats$diameter <- diameter(login_network)
+#network_stats$mean_distance <- mean_distance(login_network, directed=FALSE)
+
+# community detection (using louvain method)
+louvain <- cluster_louvain(login_network)
+network_stats$louvain <- modularity(louvain)
+network_stats$louvain_scaled <- modularity(louvain) / gorder(login_network)
+network_stats$louvain_logged <- modularity(louvain) / log(gorder(login_network))
+# community detection (using fast & greedy method)
+#fstgrdy <- fastgreedy.community(login_network)
+#network_stats$fstgrdy <- modularity(fstgrdy)
+#network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(login_network)
+#network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(login_network))
+
+# decomposition statistics 
+decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
+
+net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
+time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
+
+# now, we need to construct a nodelist 
+nodelist <- data.frame(id = c(1:(igraph::vcount(login_network))), login = igraph::V(login_network)$name)
+
+# degree, weighted degree, k core and modularity 
+node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
+time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
+nodelist$degree <- degree(login_network)
+nodelist$wtd_degree <- strength(login_network)
+nodelist$k_core <- coreness(login_network)
+#louvain <- cluster_louvain(login_network)
+nodelist$louvain_comm <- louvain$membership
+#fstgrdy <- fastgreedy.community(login_network)
+#nodelist$fstgrdy_comm <- fstgrdy$membership
+components <- components(login_network)
+nodelist$component <- components$membership
+
+node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
+time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+saveRDS(network_stats, "global_netstats_2017.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2017.rds") 
+saveRDS(nodelist, "nodelist_2017.rds")  
+saveRDS(time_log, "timelog_2017.rds")
+```
+
+```{r binding yxy nodelists}
+# read nodelists
+rm(list = ls())
+#setwd("~/2008")
+setwd("~/intl-dyn-ctr-nets-yxy")
+nodelist_2008 <- read_rds("nodelist_2008.rds")
+#setwd("~/2009")
+nodelist_2009 <- read_rds("nodelist_2009.rds")
+#setwd("~/2010")
+nodelist_2010 <- read_rds("nodelist_2010.rds")
+#setwd("~/2011")
+nodelist_2011 <- read_rds("nodelist_2011.rds")
+#setwd("~/2012")
+nodelist_2012 <- read_rds("nodelist_2012.rds")
+#setwd("~/2013")
+nodelist_2013 <- read_rds("nodelist_2013.rds")
+#setwd("~/2014")
+nodelist_2014 <- read_rds("nodelist_2014.rds")
+#setwd("~/2015")
+nodelist_2015 <- read_rds("nodelist_2015.rds")
+#setwd("~/2016")
+nodelist_2016 <- read_rds("nodelist_2016.rds")
+#setwd("~/2017")
+nodelist_2017 <- read_rds("nodelist_2017.rds")
+#setwd("~/2018")
+nodelist_2018 <- read_rds("nodelist_2018.rds")
+
+full_nodelist <- nodelist_2008 %>% 
+  select(-id) %>% 
+  mutate(login = as.character(login)) %>% 
+  rename(deg08 = degree,
+         wtddeg08 = wtd_degree, 
+         kcore08 = k_core,
+         louvain08 = louvain_comm,
+         fstgrdy08 = fstgrdy_comm,
+         comp08 = component) %>%     
+  right_join(nodelist_2009, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg09 = degree,
+         wtddeg09 = wtd_degree, 
+         kcore09 = k_core,
+         louvain09 = louvain_comm,
+         fstgrdy09 = fstgrdy_comm,
+         comp09 = component) %>% 
+  right_join(nodelist_2010, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg10 = degree,
+         wtddeg10 = wtd_degree, 
+         kcore10 = k_core,
+         louvain10 = louvain_comm,
+         fstgrdy10 = fstgrdy_comm,
+         comp10 = component) %>% 
+  right_join(nodelist_2011, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg11 = degree,
+         wtddeg11 = wtd_degree, 
+         kcore11 = k_core,
+         louvain11 = louvain_comm,
+         fstgrdy11 = fstgrdy_comm,
+         comp11 = component) %>% 
+  right_join(nodelist_2012, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg12 = degree,
+         wtddeg12 = wtd_degree, 
+         kcore12 = k_core,
+         louvain12 = louvain_comm,
+         fstgrdy12 = fstgrdy_comm,
+         comp12 = component) %>% 
+  right_join(nodelist_2013, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg13 = degree,
+         wtddeg13 = wtd_degree, 
+         kcore13 = k_core,
+         louvain13 = louvain_comm,
+         #fstgrdy13 = NA,
+         comp13 = component) %>% 
+  right_join(nodelist_2014, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg14 = degree,
+         wtddeg14 = wtd_degree, 
+         kcore14 = k_core,
+         louvain14 = louvain_comm,
+         #fstgrdy14 = NA,
+         comp14 = component) %>% 
+  right_join(nodelist_2015, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg15 = degree,
+         wtddeg15 = wtd_degree, 
+         kcore15 = k_core,
+         louvain15 = louvain_comm,
+         #fstgrdy15 = NA,
+         comp15 = component) %>% 
+  right_join(nodelist_2016, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg16 = degree,
+         wtddeg16 = wtd_degree, 
+         kcore16 = k_core,
+         louvain16 = louvain_comm,
+         #fstgrdy16 = NA,
+         comp16 = component) %>% 
+  right_join(nodelist_2017, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg17 = degree,
+         wtddeg17 = wtd_degree, 
+         kcore17 = k_core,
+         louvain17 = louvain_comm,
+         #fstgrdy17 = NA,
+         comp17 = component) %>% 
+  right_join(nodelist_2018, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg18 = degree,
+         wtddeg18 = wtd_degree, 
+         kcore18 = k_core,
+         louvain18 = louvain_comm,
+         #fstgrdy18 = NA,
+         comp18 = component) 
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+saveRDS(full_nodelist, "full_nodelist_yxy.rds")
+```
+
+```{r concatenating global_netstats_yxy}
+
+rm(list = ls())
+setwd("~/intl-dyn-ctr-nets-yxy")
+global_netstats_2008 <- read_rds("global_netstats_2008.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2009 <- read_rds("global_netstats_2009.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2010 <- read_rds("global_netstats_2010.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2011 <- read_rds("global_netstats_2011.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2012 <- read_rds("global_netstats_2012.rds") #%>% select(-diameter, -mean_distance)
+global_netstats_2013 <- read_rds("global_netstats_2013.rds") #%>% select(-mean_distance)
+global_netstats_2014 <- read_rds("global_netstats_2014.rds") #%>% select(-mean_distance)
+global_netstats_2015 <- read_rds("global_netstats_2015.rds") #%>% select(-mean_distance)
+global_netstats_2016 <- read_rds("global_netstats_2016.rds")
+global_netstats_2017 <- read_rds("global_netstats_2017.rds")
+global_netstats_2018 <- read_rds("global_netstats_2018.rds")
+
+global_netstats_2012 <- global_netstats_2012 %>% select(-triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged)
+
+global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011) %>% 
+  select(-triads_003, -triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged) %>% 
+  rbind(global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015, global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
+  transform(dyads = as.numeric(dyads))
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
+
+edges <- as_tibble(c(sum(full_nodelist_yxy$deg08/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg09/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg10/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg11/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg12/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg13/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg14/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg15/ 2, na.rm = TRUE),
+            sum(full_nodelist_yxy$deg16/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg17/ 2, na.rm = TRUE), 
+            sum(full_nodelist_yxy$deg18/ 2, na.rm = TRUE))) 
+
+weighted <- as_tibble(c(sum(full_nodelist_yxy$wtddeg08, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg09, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg10, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg11, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg12, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg13, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg14, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg15, na.rm = TRUE),
+            sum(full_nodelist_yxy$wtddeg16, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg17, na.rm = TRUE), 
+            sum(full_nodelist_yxy$wtddeg18, na.rm = TRUE))) 
+
+global_netstats_yxy <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+                                   "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
+  bind_cols(global_netstats_yxy) %>% # select(-year) %>% 
+  rename(time = value)
+
+colnames(weighted) <- "wtd_edge_count"
+global_netstats_yxy <- cbind(global_netstats_yxy, weighted) 
+global_netstats_yxy <- global_netstats_yxy %>% 
+  select(time, year, node_count, edge_count, wtd_edge_count, everything()) %>% 
+  transform(dyads = as.numeric(dyads))
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
+
+```
+
+```{r k_core}
+
+rm(list = ls())
+setwd("~/intl-dyn-ctr-nets-yxy")
+full_nodelist <- readRDS("full_nodelist_yxy.rds")
+global_netstats_yxy <- readRDS("global_netstats_yxy.rds")
+
+# get k_core data from nodelist
+k08<-full_nodelist %>% drop_na(kcore08) %>% 
+  count(kcore08) %>% rename(core = kcore08, k08 = n)
+k09<-full_nodelist %>% drop_na(kcore09) %>% 
+  count(kcore09) %>% rename(core = kcore09, k09 = n)
+k10<-full_nodelist %>% drop_na(kcore10) %>% 
+  count(kcore10) %>% rename(core = kcore10, k10 = n)
+k11<-full_nodelist %>% drop_na(kcore11) %>% 
+  count(kcore11) %>% rename(core = kcore11, k11 = n)
+k12<-full_nodelist %>% drop_na(kcore12) %>% 
+  count(kcore12) %>% rename(core = kcore12, k12 = n)
+k13<-full_nodelist %>% drop_na(kcore13) %>% 
+  count(kcore13) %>% rename(core = kcore13, k13 = n)
+k14<-full_nodelist %>% drop_na(kcore14) %>% 
+  count(kcore14) %>% rename(core = kcore14, k14 = n)
+k15<-full_nodelist %>% drop_na(kcore15) %>% 
+  count(kcore15) %>% rename(core = kcore15, k15 = n)
+k16<-full_nodelist %>% drop_na(kcore16) %>% 
+  count(kcore16) %>% rename(core = kcore16, k16 = n)
+k17<-full_nodelist %>% drop_na(kcore17) %>% 
+  count(kcore17) %>% rename(core = kcore17, k17 = n)
+k18<-full_nodelist %>% drop_na(kcore18) %>% 
+  count(kcore18) %>% rename(core = kcore18, k18 = n)
+
+# join it all together 
+kcore_data <- right_join(k08,k09, by = "core")  
+kcore_data <- right_join(kcore_data,k10, by = "core")  
+kcore_data <- right_join(kcore_data,k11, by = "core")
+kcore_data <- right_join(kcore_data,k12, by = "core")
+kcore_data <- right_join(kcore_data,k13, by = "core")
+kcore_data <- right_join(kcore_data,k14, by = "core")
+kcore_data <- right_join(kcore_data,k15, by = "core")
+kcore_data <- right_join(kcore_data,k16, by = "core")
+kcore_data <- right_join(kcore_data,k17, by = "core")
+kcore_data <- right_join(kcore_data,k18, by = "core")
+
+# adding max_kcore to df 
+kmax_df = data.frame()
+kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
+                               "2013","2014","2015","2016","2017","2018"))
+kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
+                               max(k12$core),max(k13$core),max(k14$core),max(k15$core),
+                               max(k16$core),max(k17$core),max(k18$core)))
+
+global_netstats_yxy <- right_join(global_netstats_yxy,kmax_df, by = "time")
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+write_rds(kcore_data, "kcore_data_yxy.rds")
+write_rds(global_netstats_yxy, "global_netstats_yxy.rds")
+
+```
+
+```{r decomp_stats}
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomposition_stats_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomposition_stats_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+
+decomp_data_yxy <- right_join(dc08,dc09, by = "decomp")  
+decomp_data_yxy <- right_join(decomp_data_yxy,dc10, by = "decomp")  
+decomp_data_yxy <- right_join(decomp_data_yxy,dc11, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc12, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc13, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc14, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc15, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc16, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc17, by = "decomp")
+decomp_data_yxy <- right_join(decomp_data_yxy,dc18, by = "decomp")
+
+setwd("~/intl-dyn-ctr-nets-yxy")
+write_rds(decomp_data_yxy, "decomp_data_yxy.rds")
+
+```
+
+##################################################### 
+#####################################################
+##################################################### NOT DONE YET 
+#####################################################
+#####################################################
+
+## Calculating Power Laws Based on Degree Distribution of Networks (Not Done)
+
+```{r fitting power laws}
+power_law_start <- data.frame(event="power_law_start", time=now("EST"))
+time_log <- rbind(time_log, power_law_start); rm(power_law_start)
+
+data <- nodelist$degree
+data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
+data.dist <- data.dist[data.dist$p_k>0,]
+ggplot(data.dist) + geom_point(aes(x=k, y=p_k)) + theme_bw()
+
+m_pl <- displ$new(data)
+est_pl <- estimate_xmin(m_pl)
+est_pl$xmin # initial estimation of kmin 
+est_pl$pars # initial estimation of γ
+est_pl$gof # calculate D with Kolgomorov-Smirnov test
+
+# finish remainder of process using https://rpubs.com/lgadar/power-law
+
+power_law_end <- data.frame(event="power_law_end", time=now("EST"))
+time_log <- rbind(time_log, power_law_end); rm(power_law_end)
+```
+
+## Normalizing Degree Distribributions with Cosine Similarity Scores (Not Done Yet)
+
+```{r normalizing networks}
+cos_norm <- proxfun(login_network, method="cos", value="edgelist") %>% 
+  filter(from < to) %>% 
+  rename(cos_norm = value)
+```
+
+## Testing for Assortativity and Homophily (Not Done Yet)
+
+```{r testing patterns in assortativity and homophily}
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", port = 5436, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+node_attributes <- dbGetQuery(conn, "SELECT name, country_code_vis
+                                 FROM github.intl_st_bp_nodes")
+# disconnect from postgresql
+dbDisconnect(conn); rm(conn)
+
+# adding country codes to the nodelist 
+nodelist <- dplyr::full_join(nodelist, node_attributes, by = c("nName" = "login")) %>% 
+  dplyr::mutate(new_col = ifelse(test = is.na(x = country_code), yes = paste("repo"), no = country_code)) %>% 
+  dplyr::select(-country_code) %>% 
+  dplyr::rename(name = nName, country_code = new_col)
+
+# testing homophily based on country_code
+assortativity_nominal(net, V(net)$media.type, directed=F)
+
+# using linkprediction to test for structural homophily 
+
+
+
+```
+
+## References 
+
+Blondel, V. D., Guillaume, J. L., Lambiotte, R., & Lefebvre, E. (2008). Fast unfolding of communities in large networks. Journal of statistical mechanics: theory and experiment, 2008(10), P10008.
+
+http://pablobarbera.com/big-data-upf/html/02b-networks-descriptive-analysis.html
+https://igraph.org/r/doc/cluster_louvain.html
+https://kateto.net/networks-r-igraph 
+https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
+https://rpubs.com/lgadar/power-law 
+http://recon.icm.edu.pl/wp-content/uploads/2019/05/linkprediction.pdf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

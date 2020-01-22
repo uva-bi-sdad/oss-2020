@@ -1,0 +1,874 @@
+---
+title: "International Collaboration Networks"
+author: "Brandon L. Kramer"
+date: "10/21/2019"
+output: html_document
+---
+
+This file outlines the process by which we reduced the OSS international data into network format. 
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+oss_data <- dbGetQuery(conn, "SELECT login, created_at, country_code, location 
+                              FROM github.users_gh")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+
+
+## Recoding Country Codes and Writing New Table to SQL ##########################################################################################
+
+This code simply repeats the final recoding step in the country-cleaning.Rmd file.
+
+```{r recoding all of the country codes}
+# first we have to recode all the strings that could arise in the location colunmn as country codes 
+af	<- "\\b(?i)(Afghanistan)\\b"
+ax	<- "\\b(?i)(Åland Islands|Aland Islands)\\b"
+al	<- "\\b(?i)(Albania)\\b"
+dz	<- "\\b(?i)(Algeria)\\b"
+as	<- "\\b(?i)(American Samoa)\\b"
+ad	<- "\\b(?i)(Andorra)\\b"
+ao	<- "\\b(?i)(Angola)\\b"
+ai	<- "\\b(?i)(Anguilla)\\b"
+aq	<- "\\b(?i)(Antarctica|Antartica)\\b"
+ag	<- "\\b(?i)(Antigua|Barbuda)\\b"
+ar	<- "\\b(?i)(Argentina|Buenos Aires|La plata)\\b"
+am	<- "\\b(?i)(Armenia)\\b"
+aw	<- "\\b(?i)(Aruba)\\b"
+au	<- "\\b(?i)(Australia|Melbourne(?!, )FL|Sydney(?!, Nova)|Wollongong|Brisbane|Canberra)\\b"
+at  <- "\\b(?i)(Austria|Vienna(?!, V))\\b"
+az	<- "\\b(?i)(Azerbaijan)\\b"
+bh	<- "\\b(?i)(Bahrain)\\b"
+bs	<- "\\b(?i)(Bahamas)\\b"
+bd	<- "\\b(?i)(Bangladesh|Dhaka)\\b"
+bb	<- "\\b(?i)(Barbados)\\b"
+by	<- "\\b(?i)(Belarus)\\b"
+be  <- "\\b(?i)(Belgium|Brussels)\\b"
+bz	<- "\\b(?i)(Belize)\\b"
+bj	<- "\\b(?i)(Benin(?! City))\\b"
+bm	<- "\\b(?i)(Bermuda)\\b"
+bt	<- "\\b(?i)(Bhutan)\\b"
+bo	<- "\\b(?i)(Bolivia)\\b"
+bq	<- "\\b(?i)(Bonaire)\\b"
+ba	<- "\\b(?i)(Bosnia|Herzegovina)\\b"
+bw	<- "\\b(?i)(Botswana)\\b"
+bv	<- "\\b(?i)(Bouvet Island)\\b"
+br  <- "\\b(?i)(Brazil|Brasil|Aracaju|Sao Paulo|San Paulo|Rio de Janeiro|Brasilia|Brasília|Fortaleza|Araraquara|Barueri|Belo Horizonte|BR,|Brazilian|Campina Grande|Florianpolis|Fortaleza|Goinia-GO|Goinia|Joo Pessoa|Porto Alegre|Rio de |Rio Grande|So Jos dos|So Paulo)\\b"
+bn	<- "\\b(?i)(Brunei Darussalam|Brunei)\\b"
+bg  <- "\\b(?i)(Bulgaria)\\b"
+bf	<- "\\b(?i)(Burkina Faso)\\b"
+bi	<- "\\b(?i)(Burundi)\\b"
+kh	<- "\\b(?i)(Cambodia)\\b"
+cm	<- "\\b(?i)(Cameroon)\\b"
+ca  <- "\\b(?i)(Canada|Ontario(?!, CA)|Quebec|nova scotia|new brunswick(?!, N)|manitoba|british columbia|, BC|prince edward island|saskatchewan|alberta|newfoundland|toronto|Vancouver(?!\\, W)|, ON|Winnipeg|, B.C.|,ON|Victoria|Burnaby|Fredericton|Montreal|Qubec)\\b"
+cv	<- "\\b(?i)(Cape Verde)\\b"
+ky	<- "\\b(?i)(Cayman Islands)\\b"
+cf	<- "\\b(?i)(Central African Republic)\\b"
+td	<- "\\b(?i)(Chad)\\b"
+cl	<- "\\b(?i)(Chile)\\b"
+cn  <- "\\b(?i)(China|Beijing|GuangZhou|Shanghai|Tianjin|Shenzhen|Chengdu|Dongguan|Chongqing|Guangdong|ZhuHaiChina|Zhu haiChina|Zhengzhou|ZheJiang|HangZhou|zh-cn|(?<![Zurich|Lausanne]), CH|, CHN|Xiamen|Wuhan|beijingchina|Changsha|Hunan|ChengduChina|chinabeijing|ChinaShenzhen|^guang|^Hangz|Harbin Institute|Hefei|Hunan|^jiang|^Nanjing|^ShenZhen)\\b"
+cx	<- "\\b(?i)(Christmas Island)\\b"
+cc	<- "\\b(?i)(Cocos Islands)\\b"
+co	<- "\\b(?i)(Colombia|Bogataa|Medellin)\\b"
+km	<- "\\b(?i)(Comoros)\\b"
+cg	<- "\\b(?i)((?<!Democratic Republic of the )Congo)\\b"
+cd	<- "\\b(?i)(Democratic Republic of the Congo|Brazzaville)\\b"
+ck	<- "\\b(?i)(Cook Islands)\\b"
+cr	<- "\\b(?i)(Costa Rica)\\b"
+ci	<- "\\b(?i)(Côte dIvoire|Cote dIvoire|Cote d'Ivoire)\\b"
+hr	<- "\\b(?i)(Croatia|Zagreb)\\b"
+cu	<- "\\b(?i)(Cuba)\\b"
+cw	<- "\\b(?i)(Curaçao)\\b"
+cy	<- "\\b(?i)(Cyprus)\\b"
+cz	<- "\\b(?i)(Czech Republic|Czech|Czechia|Prague|Brno|CzechRepublic)\\b"
+dk	<- "\\b(?i)(Denmark|Copenhagen)\\b"
+dj	<- "\\b(?i)(Djibouti)\\b"
+dm	<- "\\b(?i)(Dominica)\\b"
+do	<- "\\b(?i)(Dominican Republic|, DR|dominican|Dominican)\\b"
+ec	<- "\\b(?i)(Ecuador)\\b"
+eg	<- "\\b(?i)(Egypt)\\b"
+sv	<- "\\b(?i)(El Salvador)\\b"
+gq	<- "\\b(?i)(Equatorial Guinea)\\b"
+er	<- "\\b(?i)(Eritrea)\\b"
+ee	<- "\\b(?i)(Estonia)\\b"
+et	<- "\\b(?i)(Ethiopia)\\b"
+fk	<- "\\b(?i)(Falkland Islands|Malvinas)\\b"
+fo	<- "\\b(?i)(Faroe Islands|Faroe)\\b"
+fj	<- "\\b(?i)(Fiji)\\b"
+fi	<- "\\b(?i)(Finland|Helsinki)\\b"
+fr	<- "\\b(?i)(France|Paris|, FR|Toulouse|French Riviera|French Alps|Lille|Lyon|Sophia Antipolis)\\b"
+gf	<- "\\b(?i)(French Guiana)\\b"
+pf	<- "\\b(?i)(French Polynesia)\\b"
+tf	<- "\\b(?i)(French Southern Territories)\\b"
+ga	<- "\\b(?i)(Gabon)\\b"
+gm	<- "\\b(?i)(Gambia)\\b"
+# we decided to code instances of "georgia" as us since there was no easy way to demarcate and most seemed like they from the us 
+ge	<- "\\b(?i)(Tbilisi|Batumi|Kutaisi)\\b" #"\\b(?i)((?<!, )Georgia(?!, U)|Tbilisi)\\b"
+de <- "\\b(?i)(Germany|German|Deutschland|Berlin|Bavaria|Bayern|Munich|Dresden|Frankfurt|Hamburg)\\b"
+gh	<- "\\b(?i)(Ghana)\\b"
+gi	<- "\\b(?i)(Gibraltar)\\b"
+gr	<- "\\b(?i)(Greece)\\b"
+gl	<- "\\b(?i)(Greenland)\\b"
+gd	<- "\\b(?i)(Grenada)\\b"
+gp	<- "\\b(?i)(Guadeloupe)\\b"
+gu	<- "\\b(?i)(Guam)\\b"
+gt	<- "\\b(?i)(Guatemala)\\b"
+gg	<- "\\b(?i)(Guernsey)\\b"
+gn	<- "\\b(?i)(Guinea)\\b"
+gw	<- "\\b(?i)(Guinea-Bissau)\\b"
+gy	<- "\\b(?i)(Guyana)\\b"
+ht	<- "\\b(?i)(Haiti)\\b"
+hm	<- "\\b(?i)(Heard Island|McDonald Islands)\\b"
+va	<- "\\b(?i)(Holy See|Vatican)\\b"
+hn	<- "\\b(?i)(Honduras)\\b"
+hk	<- "\\b(?i)(Hong Kong)\\b"
+hu	<- "\\b(?i)(Hungary|Budapest)\\b"
+is	<- "\\b(?i)(Iceland)\\b"
+id	<- "\\b(?i)(Indonesia|Yogyakarta|Bandung|Jakarta)\\b"
+ir	<- "\\b(?i)(Iran)\\b"
+iq	<- "\\b(?i)(Iraq)\\b"
+ie	<- "\\b(?i)(Ireland|Dublin(?!, [OC]))\\b"
+im	<- "\\b(?i)(Isle of Man)\\b"
+il	<- "\\b(?i)(Israel)\\b"
+it	<- "\\b(?i)(Italy|Rome(?!, GA)|Milan|Milano|Turin|Trieste|Bologna)\\b"
+jm	<- "\\b(?i)(Jamaica(?! Plain))\\b"
+jp  <- "\\b(?i)(Japan|Tokyo|Kyoto|Osaka|Yokohama|ja|ja_jp|ja-jp|Tsukuba)\\b"
+jo	<- "\\b(?i)(Jordan(?!, U))\\b"
+kz	<- "\\b(?i)(Kazakhstan)\\b"
+ke	<- "\\b(?i)(Kenya|Nairobi)\\b"
+ki	<- "\\b(?i)(Kiribati)\\b"
+kp	<- "\\b(?i)(North Korea|Pyongyang)\\b"
+kr	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
+xk  <- "\\b(?i)(Kosovo|Kosova|^Prishtina|^Prishtine|^Pristina)\\b"
+kw	<- "\\b(?i)(Kuwait)\\b"
+kg	<- "\\b(?i)(Kyrgyzstan)\\b"
+la	<- "\\b(?i)(Lao Peoples Democratic Republic|Laos)\\b"
+lv <- "\\b(?i)(Latvia)\\b"
+lb	<- "\\b(?i)(Lebanon(?! , NH))\\b"
+ls	<- "\\b(?i)(Lesotho)\\b"
+lr	<- "\\b(?i)(Liberia)\\b"
+ly	<- "\\b(?i)(Libya)\\b"
+li	<- "\\b(?i)(Liechtenstein)\\b"
+lu <- "\\b(?i)(Luxembourg)\\b"
+lt <- "\\b(?i)(Lithuania)\\b"
+mo	<- "\\b(?i)(Macao)\\b"
+mk	<- "\\b(?i)(Macedonia)\\b"
+mg	<- "\\b(?i)(Madagascar)\\b"
+mw	<- "\\b(?i)(Malawi)\\b"
+my	<- "\\b(?i)(Malaysia)\\b"
+mv	<- "\\b(?i)(Maldives)\\b"
+ml	<- "\\b(?i)(Mali)\\b"
+mt <- "\\b(?i)(Malta)\\b"
+mh	<- "\\b(?i)(Marshall Islands)\\b"
+mq	<- "\\b(?i)(Martinique)\\b"
+mr	<- "\\b(?i)(Mauritania)\\b"
+mu	<- "\\b(?i)(Mauritius)\\b"
+yt	<- "\\b(?i)(Mayotte)\\b"
+mx	<- "\\b(?i)((?<!New )Mexico|(?<!New )Mxico|Zacatecas|Mex.|, MX|Villahermosa|Colima)\\b"
+fm	<- "\\b(?i)(Micronesia)\\b"
+md <- "\\b(?i)(Moldova)\\b"
+mc <- "\\b(?i)(Monaco)\\b"
+mn	<- "\\b(?i)(Mongolia)\\b"
+me	<- "\\b(?i)(Montenegro)\\b"
+ms	<- "\\b(?i)(Montserrat)\\b"
+ma	<- "\\b(?i)(Morocco)\\b"
+mz	<- "\\b(?i)(Mozambique)\\b"
+mm	<- "\\b(?i)(Myanmar)\\b"
+na	<- "\\b(?i)(Namibia)\\b"
+nr	<- "\\b(?i)(Nauru)\\b"
+np	<- "\\b(?i)(Nepal)\\b"
+nl <- "\\b(?i)(Netherlands|Amsterdam|Holland(?!, [MO])|Zwolle|Willemstad|Curacao|Curaao|Utrecht|Breda|Eindhoven|Groningen)\\b"
+nc	<- "\\b(?i)(New Caledonia)\\b"
+nz	<- "\\b(?i)(New Zealand|Auckland|NZ|NZL)\\b"
+ni	<- "\\b(?i)(Nicaragua)\\b"
+ne	<- "\\b(?i)(Niger)\\b"
+ng	<- "\\b(?i)(Nigeria|Lagos)\\b"
+nu	<- "\\b(?i)(Niue)\\b"
+nf	<- "\\b(?i)(Norfolk Island)\\b"
+mp	<- "\\b(?i)(Northern Mariana Islands)\\b"
+no	<- "\\b(?i)(Norway)\\b"
+om	<- "\\b(?i)(Oman)\\b"
+pk	<- "\\b(?i)(Pakistan)\\b"
+pw	<- "\\b(?i)(Palau)\\b"
+ps	<- "\\b(?i)(Palestine|Gaza)\\b"
+pa	<- "\\b(?i)(Panama(?! City))\\b"
+pg	<- "\\b(?i)(Papua New Guinea)\\b"
+py	<- "\\b(?i)(Paraguay)\\b"
+pe	<- "\\b(?i)(Peru|Arequipa)\\b"
+ph	<- "\\b(?i)(Philippines)\\b"
+pn	<- "\\b(?i)(Pitcairn)\\b"
+pl <- "\\b(?i)(Poland|Warsaw|Wrocaw)\\b"
+pt <- "\\b(?i)(Portugal|Lisboa|Lisbon|Azores|Porto(?! Alegre)|Faro)\\b"
+pr	<- "\\b(?i)(Puerto Rico)\\b"
+qa	<- "\\b(?i)(Qatar)\\b"
+re	<- "\\b(?i)(Réunion)\\b"
+ro <- "\\b(?i)(Romania|Bucharest)\\b"
+ru <- "\\b(?i)(Russia|Russian|Moscow(?!, I)|Yekaterinburg|Petersburg(?!, F)|St-Petersburg(?!, F)|RU, )\\b"
+rw	<- "\\b(?i)(Rwanda)\\b"
+bl	<- "\\b(?i)(Saint Barthélemy)\\b"
+sh	<- "\\b(?i)(Saint Helena)\\b"
+kn	<- "\\b(?i)(Saint Kitts|Nevis)\\b"
+lc	<- "\\b(?i)(Saint Lucia)\\b"
+mf	<- "\\b(?i)(Saint Martin)\\b"
+pm	<- "\\b(?i)(Saint Pierre|Miquelon)\\b"
+vc	<- "\\b(?i)(Saint Vincent|Grenadines)\\b"
+ws	<- "\\b(?i)(Samoa)\\b"
+sm	<- "\\b(?i)(San Marino)\\b"
+st	<- "\\b(?i)(Sao Tome|Principe)\\b"
+sa	<- "\\b(?i)(Saudi Arabia)\\b"
+sn <- "\\b(?i)(Senegal)\\b"
+rs	<- "\\b(?i)(Serbia)\\b"
+sc	<- "\\b(?i)(Seychelles)\\b"
+sl	<- "\\b(?i)(Sierra Leone)\\b"
+sg	<- "\\b(?i)(Singapore)\\b"
+sx	<- "\\b(?i)(Sint Maarten)\\b"
+sk <- "\\b(?i)(Slovak Republic|Slovakia)\\b"
+si <- "\\b(?i)(Slovenia)\\b"
+sb	<- "\\b(?i)(Solomon Islands)\\b"
+so	<- "\\b(?i)(Somalia)\\b"
+za	<- "\\b(?i)(South Africa|Cape Town|Johannesburg)\\b"
+gs	<- "\\b(?i)(South Georgia|South Sandwich Islands|South Sandwich|Sandwich Islands)\\b"
+ss	<- "\\b(?i)(South Sudan)\\b"
+es <- "\\b(?i)(Spain|Madrid|Barcelona|Granada|Sevilla|Mallorca|Ibiza|Bilbao|Espana|Espaa|Zaragoza|Catalunya|Basque|Valencia(?!, [C|Ven])|Catalonia|Galicia)\\b"
+lk	<- "\\b(?i)(Sri Lanka|Srilanka)\\b"
+sd	<- "\\b(?i)(Sudan)\\b"
+sr	<- "\\b(?i)(Suriname)\\b"
+sj	<- "\\b(?i)(Svalbard|Jan Mayen)\\b"
+sz	<- "\\b(?i)(Swaziland)\\b"
+se <- "\\b(?i)(Sweden|Stockholm)\\b"
+ch	<- "\\b(?i)(Switzerland|Zurich|Zrich|Lausanne)\\b"
+sy	<- "\\b(?i)(Syrian Arab Republic|syria)\\b"
+tw	<- "\\b(?i)(Taiwan|^Taipei)\\b"
+tj	<- "\\b(?i)(Tajikistan)\\b"
+tz	<- "\\b(?i)(Tanzania)\\b"
+th	<- "\\b(?i)(Thailand)\\b"
+tl	<- "\\b(?i)(Timor-Leste)\\b"
+tg	<- "\\b(?i)(Togo)\\b"
+tk	<- "\\b(?i)(Tokelau)\\b"
+to	<- "\\b(?i)(Tonga)\\b"
+tt	<- "\\b(?i)(Trinidad|Tobago)\\b"
+tn	<- "\\b(?i)(Tunisia)\\b"
+tr	<- "\\b(?i)(Turkey|Istanbul|Trkiye|Estambul)\\b"
+tm	<- "\\b(?i)(Turkmenistan)\\b"
+tc	<- "\\b(?i)(Turks|Caicos Islands)\\b"
+tv	<- "\\b(?i)(Tuvalu)\\b"
+ug	<- "\\b(?i)(Uganda)\\b"
+ua	<- "\\b(?i)(Ukraine|Ukrane|Kyiv|Kiev|Zaporozhye|Dnepr|Dnipro)\\b"
+ae	<- "\\b(?i)(United Arab|Emirates|UAE|Abu Dhabi)\\b"
+gb <- "\\b(?i)(UK|UK,|United Kingdom|united-kingdom|London|(?<!New )England|Wales|U.K.|Aberdeen|Cardiff(?!, CA)|Scotland|Edinburgh|Glasglow|Brighton(?!, [M|C]))\\b"
+us	<- "\\b(?i)(?:Ala(?:(?:bam|sk)a)|American Samoa|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Guam|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Miss(?:(?:issipp|our)i)|Montana|Nebraska|Nevada|New (?:Hampshire|Jersey|Mexico|York)|North (?:(?:Carolin|Dakot)a)|Ohio|Oklahoma|Oregon|Pennsylvania|Puerto Rico|Rhode Island|South (?:(?:Carolin|Dakot)a)|Tennessee|Texas|Utah|Vermont|Virgin(?:ia| Island(s?))|Washington|West Virginia|Wisconsin|Wyoming|United States|A[KLRSZ]|C[AOT]|D[CE]|FL|G[AU]|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|P[AR]|RI|S[CD]|T[NX]|UT|V[AIT]|W[AIVY]|NYC|DC|D.C.|US|USA|Seattle|San Francisco|Chicago|Philly|Philadelphia|Los Angeles|Portland|Houston|Phoenix|San Antonio|San Diego|Oakland|Boston|Bay Area|Berkeley|Stanford|Harvard|Dallas|Silicon|San Jose|USC|Twin Cities|NYU|Yale|, Mass| Mass|newyork|new_york|U.S.|Atlanta|Austin|Albany|Manhattan|Brooklyn|Bronx|Cal|Cape Cod|Cleveland|Denver|Detroit|East Bay|Pittsburgh|Salt Lake|St. Louis|Honolulu|Miami|Minneapolis|Palo Alto|^san fran|socal)\\b"
+uy	<- "\\b(?i)(Uruguay)\\b"
+uz	<- "\\b(?i)(Uzbekistan)\\b"
+vu	<- "\\b(?i)(Vanuatu)\\b"
+ve	<- "\\b(?i)(Venezuela)\\b"
+vn	<- "\\b(?i)(Viet Nam|Vietnam)\\b"
+vg	<- "\\b(?i)(Virgin Islands, British|British Virgin Islands)\\b"
+vi	<- "\\b(?i)(Virgin Islands, U.S.|Virgin Islands, US| US Virgin Islands)\\b"
+wf	<- "\\b(?i)(Wallis and Futuna)\\b"
+eh	<- "\\b(?i)(Western Sahara)\\b"
+ye	<- "\\b(?i)(Yemen)\\b"
+zm	<- "\\b(?i)(Zambia)\\b"
+zw	<- "\\b(?i)(Zimbabwe)\\b"
+asia <- "\\b(?i)(Asia)\\b"
+africa <- "\\b(?i)(Africa|West Africa)\\b"
+europe <- "\\b(?i)(Europe|Central Europe|Eastern Europe|EU|Europa|European|Scandinavia)\\b"
+americas <- "\\b(?i)(South America|Latin America|North America)\\b"
+
+# let's recode all of the strings and put them in a new data.table 
+users_gh_cc <- data.table(oss_data) %>%
+  # we want to recode these weird ones first so if a more specific code is available it will recode the entry as the most relevant 
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = asia), yes = "asia", no = "")) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = africa), 
+                                      paste("africa", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = europe), 
+                                      paste("europe", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = americas), 
+                                      paste("americas", detected_country, sep=","), no = detected_country)) %>%
+  # now we are adding all of the country codes 
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = af), paste("af", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ax), paste("ax", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = al), paste("al", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = dz), paste("dz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = as), paste("as", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ad), paste("ad", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ao), paste("ao", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ai), paste("ai", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = aq), paste("aq", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ag), paste("ag", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ar), paste("ar", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = am), paste("am", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = aw), paste("aw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = au), paste("au", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = at), paste("at", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = be), paste("be", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bg), paste("bg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = br), paste("br", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = az), paste("az", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bh), paste("bh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bs), paste("bs", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bd), paste("bd", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bb), paste("bb", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = by), paste("by", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bz), paste("bz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bj), paste("bj", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bm), paste("bm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bt), paste("bt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bo), paste("bo", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bq), paste("bq", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ba), paste("ba", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bw), paste("bw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bv), paste("bv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bn), paste("bn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bf), paste("bf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bi), paste("bi", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cy), paste("cy", detected_country, sep=","), no = detected_country)) %>% 
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cz), paste("cz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cn), paste("cn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kh), paste("kh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cm), paste("cm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ca), paste("ca", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cv), paste("cv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ky), paste("ky", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cf), paste("cf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = td), paste("td", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cl), paste("cl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cx), paste("cx", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cc), paste("cc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = co), paste("co", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = km), paste("km", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ck), paste("ck", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cr), paste("cr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ci), paste("ci", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = hr), paste("hr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cu), paste("cu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = cw), paste("cw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = dk), paste("dk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ee), paste("ee", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fi), paste("fi", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fr), paste("fr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = dj), paste("dj", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = dm), paste("dm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = do), paste("do", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ec), paste("ec", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = eg), paste("eg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sv), paste("sv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gq), paste("gq", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = er), paste("er", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = et), paste("et", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fk), paste("fk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fo), paste("fo", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fj), paste("fj", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = de), paste("de", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gr), paste("gr", detected_country, sep=","), no = detected_country)) %>% 
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gf), paste("gf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pf), paste("pf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tf), paste("tf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ga), paste("ga", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gm), paste("gm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ge), paste("ge", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gh), paste("gh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gi), paste("gi", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gl), paste("gl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gd), paste("gd", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gp), paste("gp", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gu), paste("gu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gt), paste("gt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gg), paste("gg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gn), paste("gn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gw), paste("gw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gy), paste("gy", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = hu), paste("hu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ie), paste("ie", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = it), paste("it", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ht), paste("ht", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = hm), paste("hm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = va), paste("va", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = hn), paste("hn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = hk), paste("hk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = is), paste("is", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = id), paste("id", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ir), paste("ir", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = iq), paste("iq", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = im), paste("im", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = il), paste("il", detected_country, sep=","), no = detected_country)) %>%
+  # i did india down here so that i didn't have to name a variable "in", which created problems 
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = "\\b(?i)(India|Mumbai|Delhi|Kolkata|Chennai|Bangalore|Hyderabad|Ahmedabad|Pune|VIT |NIT |Amritsar|(?<!Lahore[ ,])Punjab(?! Pakistan)|Bhubaneswar|Gandhinagar|Gujarat|^IIT |Indian|Jaipur|jammu|kashmir|^MNNIT)\\b"), paste("in", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = jp), paste("jp", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lv), paste("lv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lu), paste("lu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lt), paste("lt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = jm), paste("jm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = jo), paste("jo", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kz), paste("kz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ke), paste("ke", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ki), paste("ki", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kp), paste("kp", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kr), paste("kr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kw), paste("kw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kg), paste("kg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = xk), paste("xk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = la), paste("la", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lb), paste("lb", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ls), paste("ls", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lr), paste("lr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ly), paste("ly", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = li), paste("li", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mt), paste("mt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mo), paste("mo", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mk), paste("mk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mg), paste("mg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mw), paste("mw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = my), paste("my", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mv), paste("mv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ml), paste("ml", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mh), paste("mh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mq), paste("mq", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mr), paste("mr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mu), paste("mu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mx), paste("mx", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = yt), paste("yt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = fm), paste("fm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = md), paste("md", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mc), paste("mc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mn), paste("mn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = me), paste("me", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ms), paste("ms", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ma), paste("ma", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mz), paste("mz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mm), paste("mm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = na), paste("na", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nr), paste("nr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = np), paste("np", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nl), paste("nl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nc), paste("nc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nz), paste("nz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ni), paste("ni", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ne), paste("ne", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ng), paste("ng", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nu), paste("nu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = nf), paste("nf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mp), paste("mp", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = no), paste("no", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = om), paste("om", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pk), paste("pk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pw), paste("pw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ps), paste("ps", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pa), paste("pa", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pg), paste("pg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = py), paste("py", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pe), paste("pe", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ph), paste("ph", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pn), paste("pn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pl), paste("pl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pt), paste("pt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pr), paste("pr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = qa), paste("qa", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = re), paste("re", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ro), paste("ro", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ru), paste("ru", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = rw), paste("rw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = bl), paste("bl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sh), paste("sh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = kn), paste("kn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lc), paste("lc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = mf), paste("mf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = pm), paste("pm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = vc), paste("vc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ws), paste("ws", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sm), paste("sm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = st), paste("st", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sa), paste("sa", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sn), paste("sn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = rs), paste("rs", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sc), paste("sc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sl), paste("sl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sg), paste("sg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sx), paste("sx", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sk), paste("sk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = si), paste("si", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sb), paste("sb", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = so), paste("so", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = za), paste("za", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gs), paste("gs", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ss), paste("ss", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = es), paste("es", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lk), paste("lk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sd), paste("sd", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sr), paste("sr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sj), paste("sj", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sz), paste("sz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = se), paste("se", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ch), paste("ch", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = sy), paste("sy", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tw), paste("tw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tj), paste("tj", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tz), paste("tz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = th), paste("th", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tl), paste("tl", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tg), paste("tg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tk), paste("tk", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = to), paste("to", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tt), paste("tt", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tn), paste("tn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tr), paste("tr", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tm), paste("tm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tc), paste("tc", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = tv), paste("tv", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ug), paste("ug", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ua), paste("ua", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ae), paste("ae", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = gb), paste("gb", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = uy), paste("uy", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = uz), paste("uz", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = vu), paste("vu", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ve), paste("ve", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = vn), paste("vn", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = vg), paste("vg", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = vi), paste("vi", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = wf), paste("wf", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = eh), paste("eh", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ye), paste("ye", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = zm), paste("zm", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = zw), paste("zw", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = us), paste("us", detected_country, sep=","), no = detected_country)) %>% 
+  dplyr::rename(new_country_code = detected_country)
+
+# removing the commas at the end of the strings from the column just created
+users_gh_cc$new_country_code <- gsub("\\,$", "", users_gh_cc$new_country_code)
+users_gh_cc$new_country_code <- trimws(users_gh_cc$new_country_code)
+```
+
+First, we want to get the total counts of countries even when they are listed more than once.
+
+```{r}
+users_gh_cc %>% 
+  # remove all black spaced entries 
+  dplyr::mutate(new_country_code = dplyr::na_if(new_country_code, "")) %>% 
+  # insert all of the gh_torrent country codes when our code didn't catch them 
+  dplyr::mutate(new_country_code = ifelse(test = is.na(x = new_country_code), 
+                                          yes = country_code, no = new_country_code)) %>%
+  # separate multiple countries 
+  separate_rows(new_country_code, sep = "," , convert = FALSE) %>% 
+  # trim ws 
+  dplyr::mutate(new_country_code = trimws(new_country_code)) %>% 
+  # remove missing data 
+  dplyr::filter(!is.na(new_country_code)) %>% 
+  # rename to country_code 
+  dplyr::mutate(country_code = new_country_code) %>% 
+  # count and arrange by n 
+  dplyr::count(country_code) %>% arrange(-n)
+```
+
+Here, we see that the US, China, the UK, Germany and India have the highest totals, which aligns with what we found in our original cleaning documents. 
+
+Next, this next snippet removes all of the missing data, imputes the country codes from the gh_torrent data when our recode didn't capture the country code, and renames the column to "country_code" so that others have an easier time interpreting the data on the database. Note that we end up with a different row count then our last snippet because we did not separate the logins with multiple countries 
+
+```{r}
+users_gh_cc <- users_gh_cc %>% 
+  dplyr::mutate(new_country_code = dplyr::na_if(new_country_code, "")) %>% 
+  dplyr::mutate(new_country_code = ifelse(test = is.na(x = new_country_code), yes = country_code, no = new_country_code)) %>%
+  dplyr::filter(!is.na(new_country_code)) %>% 
+  dplyr::select(login, new_country_code) %>%
+  dplyr::rename(country_code = new_country_code)
+```
+
+```{r country counts of our recoding sample}
+# country counts after re-coding  
+users_gh_cc %>%
+  dplyr::filter(!is.na(country_code)) %>% 
+  dplyr::count(country_code, sort = TRUE)
+# unique users 
+length(users_gh_cc$login)
+# number of users with multiple country codes 
+users_gh_cc %>% dplyr::filter(grepl(",", country_code))
+```
+
+Now that the countries have been recoded, let's write that table to PostgreSQL.
+
+```{r writing filtered gh_users data back to database}
+# reconnecting to the database 
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# writing the new users_gh_cc table to postgis_2
+dbWriteTable(conn, c("github", "users_gh_cc"), users_gh_cc)
+
+# disconnect from postgresql database  
+dbDisconnect(conn)
+```
+
+
+
+## Downloading the Edgelist with Country Codes ##########################################################################################
+
+After writing the recoded country codes nodelist to PostgreSQL, we tried downloading the entirety of our edgelist data, which did not go well. We had ~410 million rows of data, which is far too much to work with in R. Instead, we joined that our users_gh_cc data with our commit_data, filtering by logins with country codes. We used the following SQL commands to reduce the size of the commit_data from about 410 million rows to about 217 million rows. 
+
+```{sql, echo=FALSE}
+create table github.commit_login_data as (
+select a.login, a.slug, a.year, from github.commit_data a join
+    github.users_gh_cc b on a.login = b.login
+);
+```
+
+However, this dataset was still not small enough to work with in R. Given how big this edgelist still is, we wanted to reduce our dataset even further. To minimize the size of these data, we removed duplicate rows by just getting the count of commmits from each user to a repo for a given year rather than including the number of additions and deletions from each year, which can be used later to understand multiplex network dynamics. The next logical step was to try a group by command to get the users, repos and number of commits each year. Unforuntately, that was still too big so we took an additional step to group by to get the total number of commits for each combination of logins and repos. The major downside is that we cannot look at network dynamics over time, but we can get a decent understanding of how that the overall static network looks like to start. We used this code to download a static contributor-repo network. 
+
+Looks like we will be working with ~18.2 million rows. Let's write this to the database so that we don't have to run this GROUP BY query each time. 
+
+```{sql, echo=FALSE}
+create table github.st_bp_edgelist as (
+select login, slug, count (*) from github.commit_data 
+group by login, slug
+);
+```
+
+Now we will bring the data in. 
+
+```{r loading static edgelist data}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the static edgelist data from github data 
+static_edgelist <- dbGetQuery(conn, "SELECT login, slug, count  
+                                     FROM github.st_bp_edgelist")
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+And make the bipartite network. 
+
+```{r}
+# renaming columms for igraph 
+static_edgelist <- static_edgelist %>% dplyr::rename(weight = count)
+
+# this creates a graph and removes duplicated edges and self-loops 
+g <- igraph::simplify(igraph::graph.data.frame(static_edgelist, directed=TRUE))
+
+# after creating that network, we need to construct a nodelist 
+static_nodelist <- data.frame(ID = c(1:(igraph::vcount(g))), nName = igraph::V(g)$name)
+```
+
+Hm. We have 7,529,762 million nodes. Since we started with ~715,000 users and only have 5.2 million total logins, this could mean that we had some users contributing to non-OSI approved repositories. Alternatively, it could mean that we ended up importing some nodes that are NULL. Just to make sure that is not the case, we will filter out any non-OSI approved licenses by matching that to our final list of OSI-approved repos (in done_repos). 
+
+```{sql}
+--create first table 
+create table github.temp1 as (
+SELECT login, st_bp_edgelist.slug, count
+FROM github.st_bp_edgelist
+RIGHT JOIN github.done_repos 
+ON st_bp_edgelist.slug = done_repos.slug
+WHERE done_repos.slug IS NOT NULL 
+)
+-- this filtered out nothing
+```
+
+Hm. That did not help. Let's make sure we didn't accidentally pull any NULLs in from the nodelist. 
+
+```{sql}
+
+--create second table 
+create table github.st_bp_edgelist_osi as (
+SELECT temp1.login, slug, count
+FROM github.temp1
+RIGHT JOIN github.users_gh_cc 
+ON temp1.login = users_gh_cc.login
+WHERE users_gh_cc.login IS NOT NULL 
+)
+-- but this filtered out 9,694,066 million rows, leaving us with 7,140,798 rows now (maybe it was taking in NULL entries?)
+
+```
+
+Ah ha! This filtered out 9,694,066 million rows, leaving us with 7,140,798 rows. To find the code for the static network statistics, go to the full-static-bp-network.Rmd. To find the code for the dynamic networks (by year), see below. 
+
+
+
+## Creating a Nodelist with Multiple Country Code Labels ##########################################################################################
+
+```{r loading edgelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the static edgelist data from github data 
+static_edgelist <- dbGetQuery(conn, "SELECT login, slug, count FROM github.st_bp_edgelist")
+
+# query the static edgelist data from github data 
+node_attributes <- dbGetQuery(conn, "SELECT login, country_code FROM github.users_gh_cc")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+Let's make a network and add the country codes to the nodelist. 
+
+```{r}
+# renaming columms for igraph 
+static_edgelist <- static_edgelist %>% dplyr::rename(weight = count)
+
+# this creates a graph and removes duplicated edges and self-loops 
+g <- igraph::simplify(igraph::graph.data.frame(static_edgelist, directed=TRUE))
+
+# after creating that network, we need to construct a nodelist 
+static_nodelist <- data.frame(ID = c(1:(igraph::vcount(g))), nName = igraph::V(g)$name)
+
+# adding country codes to the nodelist 
+static_nodelist <- dplyr::full_join(static_nodelist, node_attributes, by = c("nName" = "login")) %>% 
+  dplyr::mutate(new_col = ifelse(test = is.na(x = country_code), yes = paste("repo"), no = country_code)) %>% 
+  dplyr::select(-country_code) %>% 
+  dplyr::rename(name = nName, country_code = new_col) 
+
+# renaming multiple countries 
+static_nodelist <- static_nodelist %>% 
+  dplyr::mutate(country_code_vis = ifelse(test = str_detect(string = static_nodelist$country_code,
+                                      pattern = ","), paste("multiple"), no = country_code)) %>% 
+  dplyr::mutate(country_code_di = ifelse(test = str_detect(string = static_nodelist$country_code,
+                                      pattern = ","), paste("multiple"), no = "single")) %>% 
+  dplyr::select(ID, name, country_code_di, country_code, country_code_vis)
+
+# trimming white space (just in case)
+static_nodelist$country_code <- stringi::stri_trim_both(static_nodelist$country_code)
+static_nodelist$country_code_di <- stringi::stri_trim_both(static_nodelist$country_code_di)
+static_nodelist$country_code_vis <- stringi::stri_trim_both(static_nodelist$country_code_vis)
+
+# getting a count of countries and repos 
+static_nodelist %>% 
+  dplyr::count(country_code, sort = TRUE) 
+```
+
+Let's write the nodelist and edgelist back to the database to pull that later. 
+
+```{r writing edgelists to sql}
+# reconnecting to the database 
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# writing the new users_gh_cc table to postgis_2
+dbWriteTable(conn, c("github", "intl_st_bp_nodes"), static_nodelist)
+dbWriteTable(conn, c("github", "intl_st_bp_edges"), static_edgelist)
+
+# disconnect from postgresql database  
+dbDisconnect(conn)
+```
+
+The next logical step is to run more analyses on the networks, but these analyses are are so computationally intensive that we have to use UVA's Rivanna system. See the next files for that code. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Creating Dynamic Networks (Not Done Yet) ##########################################################################################
+
+If we did want to examine dynamic contributor-repo networks (with year being the time interval), we would need to use this code to download the edgelist. The first step is writing a new table to SQL using this code: 
+
+```{sql, echo=FALSE}
+create table github.intl_dyn_bp_el_new as (
+select login, slug, year, 
+count (*) 
+from github.commit_data_cc 
+WHERE country_code IS NOT NULL 
+group by login, slug, year
+);
+```
+
+Looks like we will be working with ~23 million rows.
+
+```{r loading dynamic edgelist data}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the dynamic edgelist data from github data
+dynamic_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, 
+                                      COUNT (*)
+                                      FROM github.commit_login_data
+                                      GROUP BY login, slug, year")
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+But that is too big to work with. Instead, we can start by examining the dynamic network on a year by year basis. 
+
+```{r loading dynamic edgelist data - year by year}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(),
+                 dbname = "sdad_data",
+                 host = "postgis_2",
+                 port = 5432L,
+                 user = Sys.getenv("db_userid"),
+                 password = Sys.getenv("db_pwd"))
+
+# query the dynamic edgelist data from github data
+# the years included in our dataset are 20XX - 2019
+edgelist_gh_cc <- dbGetQuery(conn, "SELECT login, slug, year,
+                                    COUNT (*)
+                                    FROM github.commit_login_data
+                                    WHERE year = 2008           
+                                    GROUP BY login, slug, year
+                                    LIMIT 1000")
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

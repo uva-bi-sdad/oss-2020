@@ -1,29 +1,13 @@
-# OSS 2019-2020 
+# OSS 2020 
 
-## Network Analysis 
+Update: 1/22/2020
 
-This folder contains a series of files of .Rmd files that wrangle, recode, and compute networks statistics for the GH Torrent GitHub data that is included on the PostgreSQL (postgis_2) database. In operational order, these files include:
+This repository has two general facets: cost estimation and network analysis for GitHub. 
 
-**International Analyses**
+**github-cost-estimation**
 
-**country-code-cleaning.Rmd:** Provides the code to ingest raw GH Torrent data from PostgreSQL, recode location, state and city data into valid country codes, find the counts of users from each country, and the amount of users that list multiple countries. 
+Gizem will update this.
 
-**intl-nets-construction.Rmd:** Building on the country-code-cleaning code, this file recodes the country data in addition to writing nodelists (users_gh_cc) and edgelists (intl_st_bp_edgelist, intl_dyn_bp_edgelist) to the database.
+**github-network-analysis**
 
-**intl-dyn-ctr-nets-cum.Rmd:** This file ingests the nodelist and edgelists, creates a bipartite network, transposes the network into only a contributor network, and finally runs network global and node-level statistics for each year of GitHub's history (2008-2018) in a *cumulative* fashion.
-
-**intl-dyn-ctr-nets-yxy.Rmd:** This file ingests the nodelist and edgelists, creates a bipartite network, transposes the network into only a contributor network, and finally runs network global and node-level statistics for each year of GitHub's history (2008-2018) in a *year-by-year* fashion.
-
-**intl-dyn-ctr-nets-sum.Rmd:** This files ingests the global and node-level statistics computed in the previous files and then graphs the variation in year-by-year and cumulative networks over time.  
-
-**intl-dyn-ctr-powerlaws.Rmd:** This file looks at the node-level (weighted and unweighted) degree distribution to determine the magnitude of the power laws on a year-by-year and cumulative basis.
-
-**intl-repo-nets.Rmd:** This file ingests the nodelist and edgelists, creates a bipartite network, transposes the network into only a repository network. This file is still incomplete.
-
-**Organizational Analyses**
-
-**org-code-cleaning.Rmd:** Provides the code to ingest raw GH Torrent data from PostgreSQL, recode company code data into valid organizational codes, find the counts of users from each organization, and totals from both academic and non-academic institutions. 
-
-
-
-
+In this folder, there are three types of analyses that we conduct: (1) network analysis on all GitHub data, (2) network analysis on international collaboration on GitHub, and (3) network analysis on users connected to specific organizations. We provide a more detailed description of these files in each folder. 

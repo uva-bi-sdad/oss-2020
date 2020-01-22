@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+Click on "SQL Command" in the database and copy this whole snippet. Takes 10 minutes.
+
+```{sql }
+create table github.forcost_bylogin as (
+SELECT slug, login, country_code, COUNT(*), SUM(additions) as additions, SUM(deletions) as deletions
+FROM github.commit_data_cc
+GROUP BY slug, login, country_code
+);
+```
+
+Click on "SQL Command" in the database and copy this whole snippet. Takes 10 minutes.
+
+```{sql }
+create table github.forcost_bycc as (
+SELECT slug, country_code, COUNT(*), SUM(additions) as additions, SUM(deletions) as deletions
+FROM github.commit_data_cc
+GROUP BY slug, country_code
+); 
+```
+
+```{r setup, include=FALSE}
+#rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", 
+              "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", port = 5436, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+#forcost_bycc <- dbGetQuery(conn, "SELECT slug, country_code, count, additions, deletions
+#                                 FROM github.forcost_bycc")
+
+forcost_bycc <- dbGetQuery(conn, "SELECT slug, country_code, count, additions, deletions
+                                 FROM github.forcost_bycc2")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+
+# recodes all of the countries with multiple names into one "multiple" category 
+forcost_bycc <- forcost_bycc %>% 
+  dplyr::mutate(country_code = 
+                ifelse(test = str_detect(string = country_code, 
+                pattern = ","), paste("multiple"), no = country_code)) 
+
+forcost_bycc %>% 
+  #filter(grepl(",", country_code)) %>% 
+  filter(country_code == "multiple")
+
+# total repos by country 
+data <- forcost_bycc %>% 
+  group_by(country_code) %>% 
+  count() %>% rename(repos = n) %>% 
+  arrange(-repos)
+
+# total commits by country 
+data <- forcost_bycc %>% 
+  group_by(country_code) %>% 
+  summarise(commits = sum(count)) %>% 
+  right_join(data, by = "country_code") %>% 
+  arrange(-commits)
+  
+# total additions by country 
+data <- forcost_bycc %>% 
+  group_by(country_code) %>% 
+  summarise(additions = sum(additions)) %>% 
+  right_join(data, by = "country_code")
+
+# total additions + deletions by country 
+data <- forcost_bycc %>% 
+  group_by(country_code) %>% 
+  summarise(add_plus_dels = sum(additions + deletions)) %>% 
+  right_join(data, by = "country_code")
+
+# total additions - deletions by country 
+data <- forcost_bycc %>% 
+  group_by(country_code) %>% 
+  summarise(add_sub_dels = sum(additions - deletions)) %>% 
+  right_join(data, by = "country_code")
+
+# total additions 
+data <- data %>% 
+  mutate(adds_per_repo = additions / 5188818)
+  #mutate(adds_per_521M = freq_adds / 5216947) 
+
+data <- data %>% 
+  mutate(add_plus_dels_per_repo= add_plus_dels / 5188818) 
+  #mutate(add_plus_dels_per_521M = add_plus_dels / 5216947) 
+
+data <- data <- data %>% 
+  mutate(add_sub_dels_per_repo = add_sub_dels / 5188818) 
+  #mutate(add_sub_dels_per_521M = add_sub_dels / 5216947) 
+
+write.csv(data, "repos_per_country.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

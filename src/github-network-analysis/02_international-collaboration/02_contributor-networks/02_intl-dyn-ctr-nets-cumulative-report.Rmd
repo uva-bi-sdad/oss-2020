@@ -1,0 +1,497 @@
+---
+title: "International Collaboration Networks"
+author: "Brandon Kramer, José Bayoán Santiago Calderón and Gizem Korkmaz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
+              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
+
+setwd("~/Documents/OSS/Data")
+#setwd("~/intl-dyn-ctr-nets-cum")
+global_netstats_cum <- read_rds("global_netstats_cum.rds")
+full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
+kcore_data <- read_rds("kcore_data_cum.rds")
+decomp_data <- read_rds("decomp_data_cum.rds")
+
+global_netstats_cum <- global_netstats_cum %>% 
+  transform(dyads = as.numeric(dyads))
+
+```
+
+```{r}
+
+ggplot(global_netstats_cum, aes(x=node_count, y=louvain)) +
+    geom_point(shape=1) 
+
+ggplot(global_netstats_cum, aes(x=log(node_count), y=louvain)) +
+    geom_point(shape=1)
+
+cor(global_netstats_cum$node_count, global_netstats_cum$louvain)
+
+constant <- rep(0.5, 11)
+
+growth <- c(0.1, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9)
+decline <- c(0.9, 0.8, 0.7, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2, 0.1)
+growth_scaled <- growth / global_netstats_cum$node_count
+growth_logged <- growth / log(global_netstats_cum$node_count)
+decline_scaled <- decline / global_netstats_cum$node_count
+decline_logged <- decline / log(global_netstats_cum$node_count)
+time <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+
+test_data <- as.data.frame(cbind(growth, decline,g_vector, g_logged, d_vector, d_logged, time))
+
+a <- ggplot(test_data, aes(x=time, y=growth_scaled)) + geom_line(shape=1)
+b <- ggplot(test_data, aes(x=time, y=growth_logged)) + geom_line(shape=1)
+c <- ggplot(test_data, aes(x=time, y=decline_scaled)) + geom_line(shape=1)
+d <- ggplot(test_data, aes(x=time, y=decline_logged)) + geom_line(shape=1)
+
+grid.arrange(a, b, c, d, nrow=2, ncol=2)
+
+```
+
+```{r bar graphs by cum, fig.width=9.5, fig.height=8, echo=FALSE}
+network_nodes <- global_netstats_cum %>% 
+  ggplot( aes(time, node_count), y=node_count) +
+  geom_bar(stat="identity", fill = "#990000", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, edge_count), y=edge_count) +
+  geom_bar(stat="identity", fill = "#DA3330", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_wtd_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, wtd_edge_count), y=wtd_edge_count) +
+  geom_bar(stat="identity", fill = "#D96403", width = 0.7) +
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_kmax <- global_netstats_cum %>% 
+  ggplot( aes(time, kmax), y=kmax) +
+  geom_bar(stat="identity", fill = "#eaaa31", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_commits <- global_netstats_cum %>% 
+  ggplot( aes(time, commits), y=commits) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_isolates <- global_netstats_cum %>% 
+  ggplot( aes(time, isolates), y=isolates) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+network_dyads <- global_netstats_cum %>% 
+  ggplot( aes(time, dyads), y=dyads) +
+  geom_bar(stat="identity", fill = "#1d7c6b", width = 0.7) + 
+  theme_bw() + theme(axis.title.x = element_blank())
+
+grid.arrange(network_nodes, network_commits, 
+             network_edges,  network_isolates,  
+             network_wtd_edges, network_dyads, 
+             network_kmax, nrow=4, ncol=2,
+             top="Cumulative Growth in Node, Edge and Commit Counts for GitHub Networks")
+```
+
+```{r, fig.width=9.5, fig.height=3, echo=FALSE}
+network_nodes <- global_netstats_cum %>% 
+  ggplot( aes(time, node_count), y=node_count) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + theme(axis.title.x = element_blank(),
+                          axis.text=element_text(size=24),
+                          axis.title=element_text(size=26)) +
+  labs(y = "Node Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0,  500000, 1000000, 1500000,  2000000), 
+                                labels = c(0, 0.5, 1, 1.5, 2))
+
+network_edges <- global_netstats_cum %>% 
+  ggplot( aes(time, edge_count), y=edge_count) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.6) + 
+  theme_minimal() + theme(axis.title.x = element_blank(),
+                          axis.text=element_text(size=24),
+                          axis.title=element_text(size=26)) + 
+  labs(y = "Edge Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 250000000, 300000000), 
+                                labels = c(0,  50, 100, 150,  200, 250,  300))
+
+network_commits <- global_netstats_cum %>% 
+  ggplot( aes(time, commits), y=commits) +
+  geom_bar(stat="identity", fill = "#D96403", width = 0.6) + 
+  theme_minimal() + 
+  theme(axis.title.x = element_blank(),
+        axis.text=element_text(size=24),axis.title=element_text(size=26)) +
+  labs(y = "Commit Count (in Millions)") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 
+                                250000000, 300000000, 350000000, 400000000), 
+                                labels = c(0, 50, 100, 150, 200, 250, 300, 350, 400))
+
+figure <- grid.arrange(network_nodes, network_edges, network_commits, 
+             nrow=1, ncol=3,
+             top=
+             textGrob("Cumulative Growth in Node, Edge and Commit Counts for GitHub Contributor Networks (2008-2018)",
+                        gp=gpar(fontsize=30)))
+             
+
+
+ggsave("nodes_edges_commits.png", plot = figure)
+
+```
+
+```{r}
+
+library(rworldmap) 
+library(tidyverse)
+library(countrycode)
+
+setwd("~/Documents/OSS/Data/Country-Country Networks")
+edgelist <- read_csv("country_edgelist_2008-18.csv")
+network <- graph.data.frame(edgelist, directed = FALSE)
+plot(network)
+
+gorder(network)  
+gsize(network)
+mean(degree(network))
+mean(betweenness(network))
+diameter(network)
+edge_density(network, loops = FALSE)
+ 
+nodelist <- data.frame(id = c(1:(igraph::vcount(network))), country = igraph::V(network)$name)
+
+fstgrdy <- fastgreedy.community(network)
+nodelist$modularity_class <- fstgrdy$membership
+
+nodelist$country_code <- countrycode(nodelist$country, origin = "country.name", destination = "iso3c")
+
+nodelist$country <- as.character(nodelist$country)
+
+nodelist <- nodelist %>% 
+  mutate(country_code = ifelse(test = str_detect(string = country, pattern = "Kosovo"), yes = "UNK", no = country_code)) 
+
+nodelist <- nodelist %>% 
+  mutate(modularity_class = recode(modularity_class, 
+                                   `5` = 4,`6` = 4,`7` = 4,`8` = 4,`9` = 4,`10` = 4,
+                                   `11` = 4,`12` = 4,`13` = 4,`14` = 4,`15` = 4,
+                                   `16` = 4,`17` = 4,`18` = 4,`19` = 4,`20` = 4,
+                                   `21` = 4,`22` = 4,`23` = 4,`24` = 4,`25` = 4))
+
+modMap <- joinCountryData2Map(nodelist, joinCode = "NAME",
+                              nameJoinColumn = "country_code")
+
+
+mapCountryData(modMap, 
+               nameColumnToPlot="modularity_class", 
+               catMethod = "categorical",
+               missingCountryCol = gray(.8), 
+               mapTitle = "Modularity Groups for GitHub Country-Country Networks",
+               addLegend = FALSE,
+               colourPalette = c("#ffcb0c", 
+                                 "#D96403",
+                                 "#628ed8", 
+                                 "#232D4B"  
+                                 ))
+nodelist <- nodelist %>% 
+  select(-id) %>% 
+  rename(ID = country)
+
+
+setwd("~/Documents/OSS/Data/Country-Country Networks")
+write_csv(nodelist, "nodelist_0818_mod.csv")
+
+#####
+
+
+```
+
+```{r}
+setwd("~/Documents/OSS/Country Network Viz")
+raw_data <- read_csv("mod_data.csv")
+
+new_data <- raw_data %>% 
+  rename(country = Id) %>% 
+  select(country, modularity_class)
+
+new_data$country_code <- countrycode(new_data$country, origin = "country.name", destination = "iso3c")
+  
+?countrycode
+malMap4 <- joinCountryData2Map(new_data, joinCode = "NAME",
+                              nameJoinColumn = "country_code")
+?mapCountryData
+mapCountryData(malMap4, 
+               nameColumnToPlot="modularity_class", 
+               catMethod = "categorical",
+               missingCountryCol = gray(.8), 
+               mapTitle = "Modularity Groups for GitHub Country-Country Networks",
+               addLegend = FALSE,
+               colourPalette = c("#D96403", "#628ed8"))
+```
+```{r global_networks_cum descriptive trends, fig.width=9.5, echo=FALSE, layout="l-body-outset"}
+
+all_others<-ggplot(global_netstats_cum, aes(time)) + 
+  geom_line(aes(y = node_count, colour = "node_count", group= 1), size=2) + 
+  geom_line(aes(y = edge_count/100, colour = "edge_count/100", group= 2), size=2) +
+  geom_line(aes(y = wtd_edge_count/1000, colour = "wtd_edge_count/1000", group= 3), size=2) +
+  geom_line(aes(y = kmax*100, colour = "kmax*100", group = 4), size=2) +
+  geom_line(aes(y = commits/100, colour = "commits/100", group= 5), size=2) +   
+  geom_line(aes(y = isolates, colour = "isolates", group = 6), size=2) +
+  geom_line(aes(y = dyads/100, colour = "dyads/100", group = 7), size=0.5) + 
+  scale_colour_manual(values = 
+  c("#990000","#DA3330","#D96403","#eaaa31","#000058","#628ed8","#1d7c6b")) +                   
+  #c( "#990000", "#D96403", "#eaaa31", "#628ed8", "#1d7c6b", "#600080", "#DA3330")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Cumulative Growth in GitHub Networks") +
+  theme_minimal() + theme(axis.title.x = element_blank()) + 
+  theme(legend.position = c(0.15,0.8))
+all_others
+
+descriptives <- global_netstats_cum %>% select(year, node_count, edge_count, 
+                               wtd_edge_count, commits, isolates, dyads,kmax)
+paged_table(descriptives, options = list(rows.print = 15))
+```
+
+```{r}
+
+119.7 / 22.4 # 5 fold increase 
+
+277 / 22 # 13 fold increase 
+
+114 / 35
+
+12015 / 236
+
+12029 / 1926
+
+1987352 / 5391
+
+```
+
+```{r density cum, fig.width=9.5, fig.height=8, echo=FALSE, layout="l-body-outset"}
+density_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=density,group=1), size=2) + 
+  labs(y = "Density (Cumulative)", x = "Year", colour = "#990000") + 
+  theme_minimal() + theme(axis.title.x = element_blank())
+transitivity_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=transitivity, group=1), size=2) + 
+  labs(y = "Transitivity (Cumulative)", x = "Year", colour = "#D96403") + 
+  theme_minimal() + theme(axis.title.x = element_blank())
+louvain_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain, group=1), size=2) + 
+  labs(y = "Modularity (Cumulative)", x = "Year", colour = "#628ed8") +
+  theme_minimal() + theme(axis.title.x = element_blank())
+louvain_cum_scaled<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain_scaled, group=1), size=2) + 
+  labs(y = "Modularity (Scaled)", x = "Year", colour = "#1d7c6b") +
+  theme_minimal() + theme(axis.title.x = element_blank())
+louvain_cum_logged<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=louvain_logged, group=1), size=2) + 
+  labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank())
+
+all_others<-ggplot(global_netstats_cum, aes(time)) + 
+  geom_line(aes(y = node_count, colour = "node_count", group= 1), size=2) + 
+  geom_line(aes(y = edge_count/100, colour = "edge_count/100", group= 2), size=2) +
+  geom_line(aes(y = wtd_edge_count/1000, colour = "wtd_edge_count/1000", group= 3), size=2) +
+  geom_line(aes(y = kmax*100, colour = "kmax*100", group = 4), size=2) +
+  geom_line(aes(y = commits/100, colour = "commits/100", group= 5), size=2) +   
+  geom_line(aes(y = isolates, colour = "isolates", group = 6), size=2) +
+  geom_line(aes(y = dyads/100, colour = "dyads/100", group = 7), size=0.5) + 
+  scale_colour_manual(values = 
+  c("#990000","#DA3330","#D96403","#eaaa31","#628ed8","#1d7c6b","#600080")) +                   
+  #c( "#990000", "#D96403", "#eaaa31", "#628ed8", "#1d7c6b", "#600080", "#DA3330")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Cumulative Growth in GitHub Networks") +
+  theme_minimal() + theme(axis.title.x = element_blank()) + 
+  theme(legend.position = c(0.25,0.65))
+
+grid.arrange(density_cum, louvain_cum, 
+             transitivity_cum, louvain_cum_scaled,  
+             all_others, louvain_cum_logged, nrow=3, ncol=2,
+             top="Network Measures")
+
+network_descriptives <- global_netstats_cum %>% 
+  select(year, density, transitivity,louvain, louvain_logged, louvain_scaled)
+paged_table(network_descriptives, options = list(rows.print = 15))
+
+```
+
+```{r percentage-change, echo=FALSE, fig.width=9.5}
+
+global_netstats_cum <- global_netstats_cum %>% 
+  mutate(nodes_pctcng = (node_count/lag(node_count) - 1) * 100) %>% 
+  mutate(edges_pctcng = (edge_count/lag(edge_count) - 1) * 100) %>% 
+  mutate(wtd_edges_pctcng = (wtd_edge_count/lag(wtd_edge_count) - 1) * 100) %>% 
+  mutate(kmax_pctcng = (kmax/lag(kmax) - 1) * 100) %>%
+  mutate(commits_pctcng = (commits/lag(commits) - 1) * 100) %>% 
+  mutate(isolates_pctcng = (isolates/lag(isolates) - 1) * 100) %>% 
+  mutate(dyads_pctcng = (dyads/lag(dyads) - 1) * 100) %>% 
+  select(time, year, node_count, nodes_pctcng, edge_count, edges_pctcng, 
+         wtd_edge_count, wtd_edges_pctcng, commits, commits_pctcng, 
+         isolates, isolates_pctcng, dyads, dyads_pctcng, kmax, kmax_pctcng)
+#global_netstats_cum
+global_netstats_cum %>% filter(time != 2008) %>% ggplot(aes(time)) + 
+  geom_line(aes(y = nodes_pctcng, colour = "nodes_pctcng", group= 1), size=2) + 
+  geom_line(aes(y = edges_pctcng, colour = "edges_pctcng", group= 2), size=2) +
+  geom_line(aes(y = wtd_edges_pctcng, colour = "wtd_edges_pctcng", group= 3), size=2) +
+  geom_line(aes(y = kmax_pctcng, colour = "kmax_pctcng", group= 4), size=2) +
+  geom_line(aes(y = commits_pctcng, colour = "commits_pctcng", group= 5), size=2) +   
+  geom_line(aes(y = isolates_pctcng, colour = "isolates_pctcng", group = 6), size=2) +
+  geom_line(aes(y = dyads_pctcng, colour = "dyads_pctcng", group = 7), size=0.5) + 
+  scale_colour_manual(values = 
+  c("#990000","#DA3330","#D96403","#eaaa31","#628ed8","#1d7c6b","#600080")) + 
+  labs(y = "Node Count", x = "Year", colour = "",
+       title = "Percent Change in Descriptive Measures for GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8))
+
+percentage_change <- global_netstats_cum %>% 
+  filter(year != 2008) %>% 
+  select(year, nodes_pctcng, edges_pctcng, 
+         wtd_edges_pctcng, commits_pctcng, 
+         isolates_pctcng, dyads_pctcng, kmax_pctcng)
+paged_table(percentage_change, options= list(rows.print = 15))
+```
+
+```{r k_core_graph, echo=FALSE, fig.width=9.5}
+# graph all values 
+kcore_graph <- kcore_data %>% 
+  #drop_na() %>%
+  ggplot(aes(core)) + 
+  geom_line(aes(y = k08, colour = "k08", group= 1), size=0.5) + 
+  geom_line(aes(y = k09, colour = "k09", group= 2), size=0.5) +
+  geom_line(aes(y = k10, colour = "k10", group= 3), size=0.5) +
+  geom_line(aes(y = k11, colour = "k11", group= 4), size=0.5) +
+  geom_line(aes(y = k12, colour = "k12", group= 5), size=0.5) +
+  geom_line(aes(y = k13, colour = "k13", group= 6), size=0.5) +
+  geom_line(aes(y = k14, colour = "k14", group= 7), size=0.5) +
+  geom_line(aes(y = k15, colour = "k15", group= 8), size=0.5) +
+  geom_line(aes(y = k16, colour = "k16", group= 9), size=0.5) +
+  geom_line(aes(y = k17, colour = "k17", group= 10), size=0.5) +
+  geom_line(aes(y = k18, colour = "k18", group= 11), size=0.5) +
+  labs(title = "K-Core Distributions for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
+```{r k_core_graph_2, echo=FALSE, fig.width=9.5}
+kcore_graph <- kcore_data %>% 
+  drop_na() %>%
+  ggplot(aes(core)) + 
+  geom_line(aes(y = k08, colour = "k08", group= 1), size=0.5) + 
+  geom_line(aes(y = k09, colour = "k09", group= 2), size=0.5) +
+  geom_line(aes(y = k10, colour = "k10", group= 3), size=0.5) +
+  geom_line(aes(y = k11, colour = "k11", group= 4), size=0.5) +
+  geom_line(aes(y = k12, colour = "k12", group= 5), size=0.5) +
+  geom_line(aes(y = k13, colour = "k13", group= 6), size=0.5) +
+  geom_line(aes(y = k14, colour = "k14", group= 7), size=0.5) +
+  geom_line(aes(y = k15, colour = "k15", group= 8), size=0.5) +
+  geom_line(aes(y = k16, colour = "k16", group= 9), size=0.5) +
+  geom_line(aes(y = k17, colour = "k17", group= 10), size=0.5) +
+  geom_line(aes(y = k18, colour = "k18", group= 11), size=0.5) +
+  labs(title = "K-Core Distributions for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
+
+```{r decomp_graph, echo=FALSE, fig.width=9.5}
+# graph all values 
+decomp_graph <- decomp_data %>% 
+  #drop_na() %>%
+  ggplot(aes(order(decomp))) + 
+  geom_point(aes(y = dc08, colour = "dc08", group= 1), size=0.5) + 
+  geom_point(aes(y = dc09, colour = "dc09", group= 2), size=0.5) +
+  geom_point(aes(y = dc10, colour = "dc10", group= 3), size=0.5) +
+  geom_point(aes(y = dc11, colour = "dc11", group= 4), size=0.5) +
+  geom_point(aes(y = dc12, colour = "dc12", group= 5), size=0.5) +
+  geom_point(aes(y = dc13, colour = "dc13", group= 6), size=0.5) +
+  geom_point(aes(y = dc14, colour = "dc14", group= 7), size=0.5) +
+  geom_point(aes(y = dc15, colour = "dc15", group= 8), size=0.5) +
+  geom_point(aes(y = dc16, colour = "dc16", group= 9), size=0.5) +
+  geom_point(aes(y = dc17, colour = "dc17", group= 10), size=0.5) +
+  geom_point(aes(y = dc18, colour = "dc18", group= 11), size=0.5) +
+  labs(title = "Decomposition Tendencies for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
+
+```{r decomp_graph_2, echo=FALSE, fig.width=9.5}
+# graph all values 
+decomp_graph <- decomp_data %>% 
+  drop_na() %>%
+  ggplot(aes(decomp)) + 
+  geom_line(aes(y = dc08, colour = "dc08", group= 1), size=0.5) + 
+  geom_line(aes(y = dc09, colour = "dc09", group= 2), size=0.5) +
+  geom_line(aes(y = dc10, colour = "dc10", group= 3), size=0.5) +
+  geom_line(aes(y = dc11, colour = "dc11", group= 4), size=0.5) +
+  geom_line(aes(y = dc12, colour = "dc12", group= 5), size=0.5) +
+  geom_line(aes(y = dc13, colour = "dc13", group= 6), size=0.5) +
+  geom_line(aes(y = dc14, colour = "dc14", group= 7), size=0.5) +
+  geom_line(aes(y = dc15, colour = "dc15", group= 8), size=0.5) +
+  geom_line(aes(y = dc16, colour = "dc16", group= 9), size=0.5) +
+  geom_line(aes(y = dc17, colour = "dc17", group= 10), size=0.5) +
+  geom_line(aes(y = dc18, colour = "dc18", group= 11), size=0.5) +
+  labs(title = "Decomposition Tendencies for Cumulative GitHub Networks") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
+```
+
+```{r}
+library(data.table)
+kcore_data <- kcore_data[,-1]
+test <- kcore_data
+test[,12] <- rownames(test)
+test <- test %>% rename(core = V12)
+test$core <- paste0("deg", test$core, sep="") 
+test <- test %>% select(core, everything())
+test <- test %>% remove_rownames %>% column_to_rownames(var="core")
+test <- as.data.frame(t(test))
+test <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+            "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
+  bind_cols(test) %>% 
+  rename(time = value)  
+
+kcore_trends <- ggplot(test, mapping = aes(x = time)) + 
+  geom_line(aes(y = deg1, colour = "deg1", group= 1), size=0.5) +
+  geom_line(aes(y = deg2, colour = "deg2", group= 2), size=0.5) +
+  geom_line(aes(y = deg3, colour = "deg3", group= 3), size=0.5) +
+  geom_line(aes(y = deg4, colour = "deg4", group= 4), size=0.5) +
+  geom_line(aes(y = deg5, colour = "deg5", group= 5), size=0.5) +
+  geom_line(aes(y = deg6, colour = "deg6", group= 6), size=0.5) +
+  geom_line(aes(y = deg7, colour = "deg7", group= 7), size=0.5) +
+  geom_line(aes(y = deg8, colour = "deg8", group= 8), size=0.5) +
+  geom_line(aes(y = deg9, colour = "deg9", group= 9), size=0.5) +
+  geom_line(aes(y = deg10, colour = "deg10", group= 10), size=0.5) +
+  geom_line(aes(y = deg11, colour = "deg11", group= 11), size=0.5) +
+  geom_line(aes(y = deg12, colour = "deg12", group= 12), size=0.5) +
+  geom_line(aes(y = deg13, colour = "deg13", group= 13), size=0.5) +
+  geom_line(aes(y = deg14, colour = "deg14", group= 14), size=0.5) +
+  geom_line(aes(y = deg15, colour = "deg15", group= 15), size=0.5); ggplotly()
+
+```
+
+```{r}
+full_nodelist_cum %>% drop_na(deg08) %>% mutate(avg_deg = mean(deg08)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0809) %>% mutate(avg_deg = mean(deg0809)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0810) %>% mutate(avg_deg = mean(deg0810)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0811) %>% mutate(avg_deg = mean(deg0811)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0812) %>% mutate(avg_deg = mean(deg0812)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0813) %>% mutate(avg_deg = mean(deg0813)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0814) %>% mutate(avg_deg = mean(deg0814)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0815) %>% mutate(avg_deg = mean(deg0815)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0816) %>% mutate(avg_deg = mean(deg0816)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0817) %>% mutate(avg_deg = mean(deg0817)) %>% select(avg_deg)
+full_nodelist_cum %>% drop_na(deg0818) %>% mutate(avg_deg = mean(deg0818)) %>% select(avg_deg)
+
+
+
+
+
+```
+
+
+
+
