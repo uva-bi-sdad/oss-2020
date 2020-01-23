@@ -6,7 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(root.dir = "~/full-github-network-construction")
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "bc3net", 
-              "RPostgreSQL", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+              "RPostgreSQL", "maditr", "lubridate", "rmarkdown")) {library(pkg, character.only = TRUE)}
 ```
 
 This is the PostgreSQL code for creating nodelists and edgelists for social network analysis of the full GitHub networks. 
@@ -176,7 +176,7 @@ login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
 rm(bp_edgelist_2018, login_edgelist)
 ```
 
-```{r comparison testing}
+```{r, comparison testing}
 
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
@@ -191,78 +191,77 @@ bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sn
 # disconnect from postgresql
 dbDisconnect(conn); rm(conn)
 
-login_edgelist_comp <- one_mode_network(bp_edgelist)
+#login_edgelist_comp <- one_mode_network(bp_edgelist)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2008)) %>% 
   mutate(year = (bp_edgelist[4] <- "2008")) 
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2009)) %>% 
   mutate(year = (bp_edgelist[4] <- "2009")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2010)) %>% 
   mutate(year = (bp_edgelist[4] <- "2010")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2011)) %>% 
   mutate(year = (bp_edgelist[4] <- "2011")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+                   filter(year == 2012)) %>% 
+  mutate(year = (bp_edgelist[4] <- "2012")) %>% 
+  bind_rows(login_edgelist_tidy)
+
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2012)) %>% 
   mutate(year = (bp_edgelist[4] <- "2013")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2014)) %>% 
   mutate(year = (bp_edgelist[4] <- "2014")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2015)) %>% 
   mutate(year = (bp_edgelist[4] <- "2015")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2016)) %>% 
   mutate(year = (bp_edgelist[4] <- "2016")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2017)) %>% 
   mutate(year = (bp_edgelist[4] <- "2017")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_full <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
                    filter(year == 2018)) %>% 
   mutate(year = (bp_edgelist[4] <- "2018")) %>% 
-  bind_rows(login_edgelist_full)
+  bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- login_edgelist_full_tidy
-
-
+login_edgelist_tidy
 ```
 
 
 ```{r}
-
-r
-
-
-
-
-
-
-
-
-
+login_edgelist_tidy %>% 
+  group_by(year) %>% 
+  count(year)
 ```
 
-
+```{r}
+login_edgelist_full %>% 
+  group_by(year) %>% 
+  count(year)
+```
 
 
 
