@@ -1,4 +1,10 @@
+# OSX
+.DS_Store
+# RStudio
 .Rproj.user
 .Rhistory
 .RData
-.Ruserdata
+.Rprofile
+# Julia
+Manifest.toml
+build

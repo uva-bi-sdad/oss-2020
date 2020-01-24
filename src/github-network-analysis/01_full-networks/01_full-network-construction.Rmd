@@ -5,7 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(root.dir = "~/full-github-network-construction")
-for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "bc3net", 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "bc3net", "network", "reshape2",
               "RPostgreSQL", "maditr", "lubridate", "rmarkdown")) {library(pkg, character.only = TRUE)}
 ```
 
@@ -28,156 +28,48 @@ group by login, slug, year
 
 Next, we want to create the contributor and repo networks. To do this, we need to pull the bipartite edgelist we just made from the database, convert it to a matrix, transpose that matrix, and then pull the weighted edgelist from that matrix. Unfortunately, we lose the year column in the process of converting the bipartite edgelist into a matrix, so we actually have to do this process ten times filter by year. In the end, we will have two edgelists (one login edgelist and one repo edgelist) that is ten edgelists all bound together. The first step in this process is to write a function that transposes the bipartite edgelist into a single mode network
 
-```{r bipartite edgelist to one-mode edgelist}
-one_mode_network <- function(x){
-  # rename columns 
-  x <- x %>% rename(source = 1, target = 2)
-  # reduces bipartite matrix to single mode matrix 
-  bp_matrix <- spMatrix(nrow=length(unique(x$source)),
-               ncol=length(unique(x$target)),
-               i = as.numeric(factor(x$source)),
-               j = as.numeric(factor(x$target)),
-               x = rep(1, length(as.numeric(x$source))))
-  # add row and column names
-  row.names(bp_matrix) <- levels(factor(x$source))
-  colnames(bp_matrix) <- levels(factor(x$target))
-  # multiply the incidence matrices  
-  login_matrix <- tcrossprod(bp_matrix)
-  # impute zeroes to prevent self loops
-  diag(login_matrix) <- 0
-  # convert to a network (bc i cannot get the edgelist from a dsCMatrix object)
-  login_network <- simplify(graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE))
-  # then pull the weigted edgelist from the igraph object 
-  login_edgelist <- as.data.frame(cbind(get.edgelist(login_network) , round(E(login_network)$weight, 3)))
-  # add the year information and rename all the columns 
-  #login_edgelist[4] <- "2008"
-  login_edgelist <- login_edgelist %>% rename(from = "V1", to = "V2", weight = "V3")
-}
-```
-
-
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
-#rm(list = ls())
-
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", 
-                  port = 5436, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-bp_edgelist_2008 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2008")
-bp_edgelist_2009 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2009")
-bp_edgelist_2010 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2010")
-bp_edgelist_2011 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2011")
-bp_edgelist_2012 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2012")
-bp_edgelist_2013 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2013")
-bp_edgelist_2014 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2014")
-bp_edgelist_2015 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2015")
-bp_edgelist_2016 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2016")
-bp_edgelist_2017 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2017")
-bp_edgelist_2018 <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year = 2018")
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-# function 
-one_mode_network <- function(x){
-  # rename columns 
-  x <- x %>% rename(source = 1, target = 2)
-  # reduces bipartite matrix to single mode matrix 
-  bp_matrix <- spMatrix(nrow=length(unique(x$source)),
-               ncol=length(unique(x$target)),
-               i = as.numeric(factor(x$source)),
-               j = as.numeric(factor(x$target)),
-               x = rep(1, length(as.numeric(x$source))))
-  # add row and column names
-  row.names(bp_matrix) <- levels(factor(x$source))
-  colnames(bp_matrix) <- levels(factor(x$target))
-  # multiply the incidence matrices  
-  login_matrix <- tcrossprod(bp_matrix)
-  # impute zeroes to prevent self loops
-  diag(login_matrix) <- 0
-  # convert to a network (bc i cannot get the edgelist from a dsCMatrix object)
-  login_network <- simplify(graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE))
-  # then pull the weigted edgelist from the igraph object 
-  login_edgelist <- as.data.frame(cbind(get.edgelist(login_network) , round(E(login_network)$weight, 3)))
-  # add the year information and rename all the columns 
-  #login_edgelist[4] <- "2008"
-  login_edgelist <- login_edgelist %>% rename(from = "V1", to = "V2", weight = "V3")
-}
-
-# convert bipartite to single-mode edgelist 
-login_edgelist <- one_mode_network(bp_edgelist_2008)
-login_edgelist[4] <- "2008"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- login_edgelist
-rm(bp_edgelist_2008)
-
-login_edgelist <- one_mode_network(bp_edgelist_2009)
-login_edgelist[4] <- "2009"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2009)
-
-login_edgelist <- one_mode_network(bp_edgelist_2010)
-login_edgelist[4] <- "2010"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2010)
-
-login_edgelist <- one_mode_network(bp_edgelist_2011)
-login_edgelist[4] <- "2011"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2011)
-
-login_edgelist <- one_mode_network(bp_edgelist_2012)
-login_edgelist[4] <- "2012"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2012)
-
-login_edgelist <- one_mode_network(bp_edgelist_2013)
-login_edgelist[4] <- "2013"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2013) 
-
-login_edgelist <- one_mode_network(bp_edgelist_2014)
-login_edgelist[4] <- "2014"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2014)
-
-login_edgelist <- one_mode_network(bp_edgelist_2015)
-login_edgelist[4] <- "2015"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2015)
- 
-login_edgelist <- one_mode_network(bp_edgelist_2016)
-login_edgelist[4] <- "2016"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2016)
-
-login_edgelist <- one_mode_network(bp_edgelist_2017)
-login_edgelist[4] <- "2017"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2017)
-
-login_edgelist <- one_mode_network(bp_edgelist_2018)
-login_edgelist[4] <- "2018"
-colnames(login_edgelist)[4] <- c("year")
-login_edgelist_full <- rbind(login_edgelist_full, login_edgelist)
-rm(bp_edgelist_2018, login_edgelist)
-```
-
 ```{r, comparison testing}
 
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", 
+                  port = 5436, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# function 
+one_mode_edgelist <- function(x){
+  # rename columns 
+  x <- x %>% rename(source = 1, target = 2) %>% 
+    filter(-weight, -year)
+  # reduces bipartite matrix to single mode matrix 
+  bp_matrix <- spMatrix(
+               nrow=length(unique(x$source)),
+               ncol=length(unique(x$target)),
+               i = as.numeric(factor(x$source)),
+               j = as.numeric(factor(x$target)),
+               x = rep(1, length(as.numeric(x$source)))
+               )
+  # add row and column names
+  row.names(bp_matrix) <- levels(factor(x$source))
+  colnames(bp_matrix) <- levels(factor(x$target))
+  # multiply the incidence matrices  
+  one_mode_matrix <- tcrossprod(bp_matrix)
+  # impute zeroes to prevent self loops
+  diag(one_mode_matrix) <- 0
+  # convert to a network (bc i cannot get the edgelist from a dsCMatrix object)
+  one_mode_network <- simplify(graph_from_adjacency_matrix(one_mode_matrix, mode = "undirected", weighted = TRUE))
+  # then pull the weigted edgelist from the igraph object 
+  one_mode_edgelist <- as.data.frame(cbind(get.edgelist(one_mode_network) , round(E(one_mode_network)$weight, 3)))
+  # add the year information and rename all the columns 
+  #login_edgelist[4] <- "2008"
+  one_mode_edgelist <- one_mode_edgelist %>% 
+    rename(from = "V1", to = "V2", weight = "V3") %>% 
+    mutate(weight = as.integer(weight))
+}
+
+
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
                   host = "sdad.policy-analytics.net", 
@@ -186,98 +78,231 @@ conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data",
                   password = Sys.getenv("db_pwd"))
 
 # query the bipartite edgelist data from github data  
-bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year > 2007 AND year < 2019")
+raw_bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year > 2007 AND year < 2019")
 
 # disconnect from postgresql
 dbDisconnect(conn); rm(conn)
 
-#login_edgelist_comp <- one_mode_network(bp_edgelist)
+login_edgelist_comp <- one_mode_edgelist(bp_edgelist)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2008)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2008")) 
+  mutate(year = as.integer((bp_edgelist[4] <- "2008"))) 
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2009)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2009")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2009"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2010)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2010")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2010"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2011)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2011")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2011"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2012)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2012")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2012"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
-                   filter(year == 2012)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2013")) %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
+                   filter(year == 2013)) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2013"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2014)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2014")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2014"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2015)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2015")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2015"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2016)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2016")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2016"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2017)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2017")) %>% 
+  mutate(year = as.integer((bp_edgelist[4] <- "2017"))) %>% 
   bind_rows(login_edgelist_tidy)
 
-login_edgelist_tidy <- one_mode_network(bp_edgelist %>% 
+login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
                    filter(year == 2018)) %>% 
-  mutate(year = (bp_edgelist[4] <- "2018")) %>% 
-  bind_rows(login_edgelist_tidy)
+  mutate(year = as.integer((bp_edgelist[4] <- "2018"))) %>% 
+  bind_rows(login_edgelist_tidy) %>% 
+  rename(from = login, to = slug) %>% 
+  mutate(weight = as.integer(weight))
 
-login_edgelist_tidy
 ```
 
 
 ```{r}
 login_edgelist_tidy %>% 
-  group_by(year) %>% 
-  count(year)
+  #slice(1:300) %>% 
+  group_by(from, to) %>% 
+  summarize(weight = sum(weight)) %>% 
+  arrange(-weight)
 ```
 
 ```{r}
-login_edgelist_full %>% 
-  group_by(year) %>% 
-  count(year)
+head(login_edgelist_comp)
+
+login_edgelist_comp %>% 
+  mutate(weight = as.integer(weight)) %>% 
+  filter(from == "defunkt" & to == "technoweenie") %>% 
+  arrange(-weight)
+```
+
+```{r}
+login_edgelist_comp %>% 
+  mutate(weight = as.integer(weight)) %>%
+  filter(from == "defunkt" & to == "technoweenie")
+```
+
+```{r}
+
+defunkt <- bp_edgelist %>% filter(login == "defunkt" ) 
+technoweenie <- bp_edgelist %>% filter(login == "technoweenie" ) 
+defunkt$slug
+technoweenie$slug
+
+length(intersect(defunkt$slug,technoweenie$slug ))
+
+
 ```
 
 
 
+```{r}
+
+test_edgelist <- bp_edgelist %>% 
+  filter(year > 2007 | year < 2011) %>% 
+  select(-weight, -year)
+
+test_edgelist
+
+test_sm_edgelist <- one_mode_edgelist(test_edgelist)
+
+test_sm_edgelist %>%
+  arrange(-weight)
+
+test_sm_edgelist %>%
+  filter(from == "defunkt" & to == "technoweenie"  ) %>% 
+  arrange(-weight)
+
+#test_edgelist %>% 
+#  filter(login == "defunkt" | login == "technoweenie") %>% 
+#  group_by(slug) %>% 
+#  count(slug) %>% 
+#  filter(n == 2) %>% 
+#  arrange(slug)
+
+
+```
+
+
+
+```{r}
+
+test_edgelist <- bp_edgelist %>% 
+  filter(year == 2008) %>% 
+  select(-weight, -year)
+
+g <- graph_from_edgelist(as.matrix(test_edgelist))
+
+V(g)$type <- bipartite_mapping(g)$type
+
+bipartite_matrix <- as_incidence_matrix(g)
+
+bipartite_matrix
+login_matrix <- bipartite_matrix %*% t(bipartite_matrix)
+repo_matrix <- t(bipartite_matrix) %*% bipartite_matrix
+diag(login_matrix) <- 0
+diag(repo_matrix) <- 0
+login_matrix
+repo_matrix
+
+one_mode_matrix <- login_matrix
+
+one_mode_network <- simplify(graph_from_adjacency_matrix(one_mode_matrix, mode = "undirected", weighted = TRUE))
+  # then pull the weigted edgelist from the igraph object 
+one_mode_edgelist <- as.data.frame(cbind(get.edgelist(one_mode_network) , round(E(one_mode_network)$weight, 3)))
+
+one_mode_edgelist <- one_mode_edgelist %>% 
+    rename(from = "V1", to = "V2", weight = "V3") %>% 
+    mutate(weight = as.integer(weight)) 
+
+one_mode_edgelist %>% 
+  arrange(-weight)
+
+library(tidyverse)
 
 
 
 
 
 
+```
+
+
+```{r}
+
+bp_edgelist <- raw_bp_edgelist 
+
+######
+bp_edgelist <- unique(bp_edgelist[,1:2])
+bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
+              ncol=length(unique(bp_edgelist$slug)),
+              i = as.numeric(factor(bp_edgelist$login)),
+              j = as.numeric(factor(bp_edgelist$slug)),
+              x = rep(1, length(as.numeric(bp_edgelist$login))))
+row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
+colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
+one_mode_matrix <- tcrossprod(bp_matrix)
+diag(one_mode_matrix) <- 0
+#######
+
+
+
+one_mode_matrix[upper.tri(one_mode_matrix)] <- .01
+one_mode_edgelist <- melt(as.matrix(one_mode_matrix))
+one_mode_edgelist <- filter(one_mode_edgelist, value != .01) %>% filter(Var1 != Var2)
+
+one_mode_edgelist <- one_mode_edgelist %>% 
+    rename(from = "Var1", to = "Var2", weight = "value") %>% 
+    mutate(weight = as.integer(weight))
+
+one_mode_edgelist %>% filter(weight > 1)
 
 
 
 
+#unique list of user slugs
+#all combinations users that contributed to slugs 
+#for that set of uneique users get all unique 
+#get weight of unique conmbinations by repo 
 
 
+unique(bp_edgelist$slug)
 
+
+```
+
+```{r}
+
+defunkt <- bp_edgelist %>% filter(login == "AndiDog" ) 
+technoweenie <- bp_edgelist %>% filter(login == "007" ) 
+length(intersect(defunkt$slug,technoweenie$slug ))
+
+```
 
 
 
