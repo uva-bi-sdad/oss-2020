@@ -1,4 +1,4 @@
-name: CI Licenses
+name: Docs Licenses
 on:
   push:
     branches:
@@ -29,10 +29,6 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
-      - uses: julia-actions/julia-uploadcodecov@latest
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - uses: julia-actions/julia-docdeploy@releases/v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
