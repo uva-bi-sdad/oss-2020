@@ -23,7 +23,7 @@ jobs:
         julia-arch: [x64]
         os: [ubuntu-latest]
     steps:
-      - run: cd src/github-data-collection/01_licenses
+      - run: cd ./src/github-data-collection/01_licenses
       - uses: actions/checkout@v1.0.0
       - uses: julia-actions/setup-julia@latest
         with:
