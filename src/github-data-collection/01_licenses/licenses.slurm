@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=6000
 #SBATCH --partition=standard
-#SBATCH --time=1:00:00
+#SBATCH --time=0:01:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=6
@@ -13,4 +13,10 @@ module purge
 module load julia
 module list
 
-srun julia --proj test/runtests.jl
+srun julia --proj -e 'filter!(isequal(joinpath(homedir(), ".julia")), DEPOT_PATH);
+                      using Pkg;
+                      Pkg.instantiate();
+                      Pkg.build();
+                      Pkg.API.precompile();
+                      Pkg.test();'
+

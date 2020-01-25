@@ -24,7 +24,7 @@ module Licenses
     const selector_a = Selector("a");
 
     """
-        parse_license(node)::Union{Nothing,Tuple{SubString{String},SubString{String}}}
+        parse_license(node)
 
     Return the name and SPDX for an OSI license that has SPDX and has not been retired.
     If the license does not have a SPDX or it has been retired, returns `Nothing`.
@@ -60,25 +60,29 @@ module Licenses
         spdx
     end
     """
-        osi_licenses()::Vector{NamedTuple{(:name, :spdx),Tuple{SubString{String},SubString{String}}}}
+        osi_licenses()::Tuple{Vector{NamedTuple{(:name, :spdx),Tuple{SubString{String},SubString{String}}}},SubString{String}}
     
-    Return non-retired OSI approved licences.
+    Return non-retired OSI approved licences and the date when the data was last queried.
     """
-    function osi_licenses()::Vector{NamedTuple{(:name, :spdx),Tuple{SubString{String},SubString{String}}}}
+    @inline function osi_licenses()::Tuple{Vector{NamedTuple{(:name, :spdx),Tuple{SubString{String},SubString{String}}}},SubString{String}}
         response = request("GET", "https://opensource.org/licenses/alphabetical");
         html = parsehtml(String(response.body));
         licenses = eachmatch(selector_li, html.root);
-        collect(Iterators.filter(!isnothing, parse_license(node) for node ∈ licenses));
+        spdx = collect(Iterators.filter(!isnothing, parse_license(node) for node ∈ licenses))
+        response_date = last(response.headers[findfirst(isequal("Date"), first.(response.headers))])
+        spdx, response_date
     end
     """
-        sdpx_data()::Vector{String}
+        sdpx_data()::Tuple{Vector{String},String}
 
-    Return a list of all SPDX.
+    Return a list of all SPDX and the date/version of the data release.
     """
-    function sdpx_data()::Vector{String}
+    @inline function sdpx_data()::Tuple{Vector{String},String}
         spdx_data = request("GET", "https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json");
         json = JSON3.read(spdx_data.body);
-        spdx_id = get.(json.licenses, "licenseId", nothing);
+        spdx_id = get.(json.licenses, "licenseId", nothing)
+        spdx_date = json.releaseDate
+        spdx_id, spdx_date
     end
     """
         upload_licenses(conn::Connection)
@@ -88,8 +92,8 @@ module Licenses
     function upload_licenses(conn::Connection)
         # Obtaining OSI licenses from the Open Source Initiative Website
         # Verify SPDX with SPDX ID data
-        spdx = osi_licenses()
-        spdx_id = sdpx_data()
+        spdx, response_date = osi_licenses()
+        spdx_id, spdx_date = sdpx_data()
         foreach(wc -> manual_fix_spdx!(spdx, wc...), spdx_corrections)
         @assert isempty(setdiff(last.(spdx), spdx_id))
         @assert length(unique(spdx)) == length(spdx)
@@ -108,8 +112,10 @@ module Licenses
                          COMMENT ON TABLE gh.licenses IS
                          'License name and SPDX based on non-retired OSI-approved licenses.
                           Based on data at: https://opensource.org/licenses/alphabetical
-                          On: $(last(response.headers[findfirst(isequal("Date"), first.(response.headers))]))
-                          Using SPDX codes from release date: $(json.releaseDate)';
+                          On: $response_date
+                          Using SPDX codes from release date: $spdx_date';
+                         COMMENT ON COLUMN gh.licenses.name IS 'Name of the license.';
+                         COMMENT ON COLUMN gh.licenses.spdx IS 'Software Package Data Exchange License ID';
                          ALTER TABLE gh.licenses OWNER to ncses_oss;
                       """)
         stmt = prepare(conn, "INSERT INTO gh.licenses (name, spdx) VALUES (\$1, \$2) ON CONFLICT DO NOTHING;")
@@ -123,4 +129,3 @@ module Licenses
         # Licenses
         upload_licenses
 end
-

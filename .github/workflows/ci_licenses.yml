@@ -1,0 +1,38 @@
+name: CI Licenses
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/github-data-collection/01_licenses/*'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'src/github-data-collection/01_licenses/*'
+  release:
+    types:
+      - created
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: [1.1.0]
+        julia-arch: [x64]
+        os: [ubuntu-latest]
+    steps:
+      - run: cd src/github-data-collection/01_licenses
+      - uses: actions/checkout@v1.0.0
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ matrix.julia-version }}
+      - uses: julia-actions/julia-buildpkg@latest
+      - uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-uploadcodecov@latest
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - uses: julia-actions/julia-docdeploy@releases/v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
