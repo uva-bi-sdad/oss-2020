@@ -2,6 +2,8 @@ start_time = Sys.time()
 
 using Test, Licenses
 
+using Licenses: execute
+
 conf = ConfParse(joinpath(homedir(), "confs", "config.simple"))
 parse_conf!(conf)
 const db_usr = retrieve(conf, "db_usr");

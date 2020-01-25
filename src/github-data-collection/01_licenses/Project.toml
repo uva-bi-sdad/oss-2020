@@ -1,4 +1,5 @@
 name = "Licenses"
+uuid = "03e827bc-9f81-4497-badc-ad1959943a31"
 
 [deps]
 Cascadia = "54eefc05-d75b-58de-a785-1a3403f0919f"
