@@ -1,9 +1,9 @@
 """
-    Licenses
+    SPDXQueries
 
-Application for uploading OSI-approved non-retired licences name and SPDX to the database.
+Application for identifying queries for finding repos.
 """
-module Licenses
+module SPDXQueries
     using HTTP: Response
     using ConfParser: ConfParse, parse_conf!, retrieve
     using Dates: unix2datetime, DateTime, now, canonicalize, CompoundPeriod, DateFormat, format
@@ -28,7 +28,18 @@ module Licenses
     """
     const until = ZonedDateTime("2020-01-01T00:00:00-00:00",
                                 github_dtf)
-
+    """
+        find_queries_by_license::String
+    Queries for finding open-sourced projects and their commit information from GitHub.
+    """
+    const find_queries_by_license = """
+        query Search(\$license_created: String!) {
+            search(query: \$license_created,
+                   type: REPOSITORY) {
+            repositoryCount
+            }
+        }
+        """;
     mutable struct GitHubPersonalAccessToken
         client::Client
         id::String
@@ -38,7 +49,7 @@ module Licenses
             client = GraphQLClient(github_endpoint,
                                    auth = "bearer $token",
                                    headers = Dict("User-Agent" => login))
-            result = client.Query(find_repos_by_license, operationName = "")
+            result = client.Query(find_queries_by_license, operationName = "")
             remaining = parse(Int, result.Info["X-RateLimit-Remaining"])
             reset = parse(Int, result.Info["X-RateLimit-Reset"]) |>
                 unix2datetime |>
@@ -62,52 +73,15 @@ module Licenses
         end
         obj
     end
-    d
-    """
-        find_repos_by_license::String
-    Queries for finding open-sourced projects and their commit information from GitHub.
-    """
-    const find_repos_by_license = """
-        query Search(\$license_created: String!) {
-            search(query: \$license_created,
-                   type: REPOSITORY,
-                first: 100) {
-            ...SearchLogic
-            }
-        }
-        query SearchCursor(\$license_created: String!,
-                           \$cursor: String!) {
-            search(query: \$license_created,
-                   type: REPOSITORY,
-                   first: 100,
-                   after: \$cursor) {
-                ...SearchLogic
-            }
-        }
-        fragment SearchLogic on SearchResultItemConnection {
-            repositoryCount
-            pageInfo {
-                endCursor
-                hasNextPage
-            }
-            nodes {
-                ... on Repository {
-                    databaseId
-                    nameWithOwner
-                    createdAt
-                }
-            }
-        }
-        """;
     """
         binary_search_dt_interval(license::AbstractString,
                                   interval::AbstractString)::data, as_of, created_at
     Given a license and a datetime interval, it will use binary search to find
     a datetime interval with no more than 1,000 results.
     """
-    @inline function binary_search_dt_interval(pat::AbstractVector{<:GitHubPersonalAccessToken},
-                                               license::AbstractString,
-                                               created_at::AbstractString)
+    function binary_search_dt_interval(pat::AbstractVector{<:GitHubPersonalAccessToken},
+                                       license::AbstractString,
+                                       created_at::AbstractString)
         dt_start = match(r".*(?=\.{2})", created_at)
         if isnothing(dt_start)
             dt_start = replace(created_at, r"Z$" => "+00:00") |>
@@ -128,7 +102,7 @@ module Licenses
         foreach(update!, pat)
         sort!(pat)
         next_available = first(pat)
-        result = next_available.client.Query(find_repos_by_license,
+        result = next_available.client.Query(find_queries_by_license,
                                              operationName = "Search",
                                              vars = Dict("license_created" =>
                                                          """license:$license
@@ -137,6 +111,8 @@ module Licenses
                                                             mirror:false
                                                             created:$dt_start..$dt_end
                                                          """))
+        sleep(rand(0.25:0.15:1.25))
+        next_available.remaining -= 1
         as_of = get_as_of(result.Info)
         json = JSON3.read(result.Data)
         @assert(haskey(json, :data))
@@ -149,7 +125,7 @@ module Licenses
             foreach(update!, pat)
             sort!(pat)
             next_available = first(pat)
-            result = next_available.client.Query(find_repos_by_license,
+            result = next_available.client.Query(find_queries_by_license,
                                                  operationName = "Search",
                                                  vars = Dict("license_created" =>
                                                              """license:$license
@@ -158,6 +134,8 @@ module Licenses
                                                                 mirror:false
                                                                 created:$dt_start..$dt_end
                                                              """))
+            sleep(rand(0.25:0.15:1.25))
+            next_available.remaining -= 1
             as_of = get_as_of(result.Info)
             json = JSON3.read(result.Data)
             @assert(haskey(json, :data))
@@ -178,7 +156,8 @@ module Licenses
             string
     function find_queries(conn::Connection,
                           github_tokens::AbstractVector{<:GitHubPersonalAccessToken},
-                          spdx::AbstractString)
+                          spdx::AbstractString,
+                          insert_spdx_queries)
         last_dt = execute(conn, """SELECT dtinterval FROM gh.spdx_queries
                                    WHERE spdx = '$spdx' ORDER BY dtinterval DESC LIMIT 1;
                                 """)
@@ -192,7 +171,7 @@ module Licenses
         end
         data, as_of, created_at = binary_search_dt_interval(github_tokens, spdx, last_dt)
         execute(insert_spdx_queries, (spdx, created_at, data.repositoryCount, "Initiated", as_of))
-        false
+        occursin(r"2019-01-01", created_at)
     end
     export # ConfParser
         ConfParse, parse_conf!, retrieve,
