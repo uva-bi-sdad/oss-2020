@@ -1,0 +1,192 @@
+---
+title: "PostgreSQL Edgelist Creation"
+output: html_document
+---
+
+The purpose of this file is to share the PostgreSQL code that converts user's contributions to repos (i.e. a bipartite edgelist) into contributor edgelists with shared repos, shared commits, shared additions and shared deletions as columns for use as edge weights. This code bypasses the need to project bipartite matrices and all of the problems this creates. 
+
+First we will create a toy dataset of contributions so that we can test our code. We create the data and write it to the database. 
+
+```{r testing postgresql code for edgelist_data, include=FALSE}
+
+# first, we create some toy data 
+login <- c("brandon","bayoan","gizem","brandon","gizem","teja","kathryn")
+slug  <- c("oss", "oss", "oss", "ffx", "oss", "ffx", "ffx")
+committed_date <- as.Date(c('2018-01-01 13:35:08-05', '2018-01-01 13:35:08-05',
+                            '2018-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05'))
+additions <- c(3,5,7,10,3,4,3)
+deletions <- c(2,2,2,2,2,2,2)
+test_data <- data.frame(login, slug, committed_date, additions, deletions)
+
+# then we connect to the database 
+library(RPostgreSQL)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+dbWriteTable(conn, 
+             name = c(schema = "gh" , 
+                      name = "test_data"), 
+             value = test_data, 
+             row.names = FALSE)
+
+dbDisconnect(conn)
+
+```
+
+```{sql test}
+
+-- then we plug this code into the database 
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts,
+       SUM(commits) AS commits_wts,
+       SUM(additions) AS additions_wts,
+       SUM(deletions) AS deletions_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits,
+          A.additions,
+          A.deletions
+   FROM
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits,
+             SUM(additions) AS additions,
+             SUM(deletions) AS deletions
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR,
+                additions,
+                deletions
+         FROM gh.commits
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits,
+             SUM(additions) AS additions,
+             SUM(deletions) AS deletions
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR,
+                additions,
+                deletions
+         FROM gh.commits
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug
+   AND A.year = B.year
+   WHERE A.login < B.login) A
+GROUP BY YEAR,
+         ctr1,
+         ctr2;
+         
+--this is what the data should look like...          
+--brandon gizem 2018 1 8 4 
+--brandon bayoan 2018 1 
+--gizem bayoan 2017 1 
+--brandon teja 2017 1
+--brandon kathryn 2017 1 
+
+```
+
+
+```{sql contributor_edgelist}
+
+--then we write the actual data to the database (as a materialized view table)
+CREATE MATERIALIZED VIEW gh.ctr_edgelist AS (
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts,
+       SUM(commits) AS commits_wts,
+       SUM(additions) AS additions_wts,
+       SUM(deletions) AS deletions_wts 
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits,
+          A.additions,
+          A.deletions
+   FROM
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits,
+             SUM(additions) AS additions,
+             SUM(deletions) AS deletions
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR,
+                additions,
+                deletions
+         FROM gh.commits
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits,
+             SUM(additions) AS additions,
+             SUM(deletions) AS deletions
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR,
+                additions,
+                deletions
+         FROM gh.commits
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug
+   AND A.year = B.year
+   WHERE A.login < B.login) A
+GROUP BY YEAR,
+         ctr1,
+         ctr2
+);
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
