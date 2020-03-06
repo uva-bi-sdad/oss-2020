@@ -113,41 +113,31 @@ GROUP BY YEAR,
 ```
 
 
-```{sql contributor_edgelist}
+```{sql sna_ctr_edgelist}
 
 --then we write the actual data to the database (as a materialized view table)
-CREATE MATERIALIZED VIEW gh.ctr_edgelist AS (
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist AS (
 SELECT ctr1,
        ctr2,
        YEAR,
-       COUNT(*) AS repo_wts,
-       SUM(commits) AS commits_wts,
-       SUM(additions) AS additions_wts,
-       SUM(deletions) AS deletions_wts 
+       COUNT(*) AS weight
 FROM
   (SELECT A.slug,
           A.year,
           A.login AS ctr1,
           B.login AS ctr2,
-          A.commits,
-          A.additions,
-          A.deletions
+          A.commits
    FROM
      (SELECT slug,
              YEAR,
              login,
-             COUNT(*) AS commits,
-             SUM(additions) AS additions,
-             SUM(deletions) AS deletions
+             COUNT(*) AS commits
       FROM
         (SELECT login,
                 slug,
                 EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR,
-                additions,
-                deletions
-         FROM gh.commits
-         LIMIT 500) A
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits) A
       GROUP BY slug,
                YEAR,
                login) A
@@ -155,18 +145,13 @@ FROM
      (SELECT slug,
              YEAR,
              login,
-             COUNT(*) AS commits,
-             SUM(additions) AS additions,
-             SUM(deletions) AS deletions
+             COUNT(*) AS commits
       FROM
         (SELECT login,
                 slug,
                 EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR,
-                additions,
-                deletions
-         FROM gh.commits
-         LIMIT 500) A
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits) A
       GROUP BY slug,
                YEAR,
                login) B ON A.slug = B.slug
@@ -178,8 +163,109 @@ GROUP BY YEAR,
 );
 ```
 
+```{sql sna_repo_edgelist}
+
+CREATE MATERIALIZED VIEW gh.sna_repo_edgelist AS (
+SELECT repo1,
+       repo2,
+       YEAR,
+       COUNT(*) AS weight
+FROM
+  (SELECT A.login,
+          A.year,
+          A.slug AS repo1,
+          B.slug AS repo2,
+          A.commits
+   FROM
+     (SELECT login,
+             YEAR,
+             slug,
+             COUNT(*) AS commits
+      FROM
+        (SELECT slug,
+                login,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits) A
+      GROUP BY login,
+               YEAR,
+               slug) A
+   INNER JOIN
+     (SELECT login,
+             YEAR,
+             slug,
+             COUNT(*) AS commits
+      FROM
+        (SELECT slug,
+                login,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits) A
+      GROUP BY login,
+               YEAR,
+               slug) B ON A.login = B.login
+   AND A.year = B.year
+   WHERE A.slug < B.slug) A
+GROUP BY YEAR,
+         repo1,
+         repo2
+);
+
+```
+
+```{sql}
+
+SELECT login, 
+       COUNT(*) AS commits, 
+       SUM(additions), 
+       SUM (deletions) 
+FROM gh.commits 
+GROUP BY 
+INNER JOIN (SELECT login, 
+                   company, 
+                   EXTRACT(YEAR FROM created_at)::int AS year, 
+                   country_code, 
+                   state, 
+                   city, 
+                   location 
+            FROM github.users_gh
+            LIMIT 500) A
+ON A.login = B.login
+GROUP BY 
+--WHERE B.login IS NOT NULL 
+            
+```
 
 
+```{sql}
+
+-- international edgelist (need to test to make sure)
+-- may need to download full edgelist from gh_torrent data, recode country_code and then validate 
+
+CREATE MATERIALIZED VIEW sna_intl_ctr_edgelist AS (
+
+SELECT t1.ctr1, t1.ctr2, t1.weight, t2.login, t2.country_code 
+FROM sna_ctr_edgelist AS t1, gh_users_cc AS t2 
+WHERE t1.ctr1 = t2.login, t2.country_code IS NOT NULL 
+
+)
+
+```
+
+```{sql}
+
+-- company edgelist (need to test to make sure)
+-- may need to download full edgelist from gh_torrent data, recode cmpy_code and then validate 
+
+CREATE MATERIALIZED VIEW sna_cmpy_ctr_edgelist AS (
+
+SELECT t1.ctr1, t1.ctr2, t1.weight, t2.login, t2.cmpy_code 
+FROM sna_ctr_edgelist AS t1, gh_users_cmpy AS t2 
+WHERE t1.ctr1 = t2.login, t2.cmpy_code IS NOT NULL 
+
+)
+
+```
 
 
 
