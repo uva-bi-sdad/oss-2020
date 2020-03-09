@@ -98,7 +98,7 @@ FROM
                YEAR,
                login) B ON A.slug = B.slug
    AND A.year = B.year
-   WHERE A.login < B.login) A
+   WHERE A.login <= B.login) A   --- UPDATED 
 GROUP BY YEAR,
          ctr1,
          ctr2;
@@ -120,13 +120,13 @@ CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist AS (
 SELECT ctr1,
        ctr2,
        YEAR,
-       COUNT(*) AS weight
+       COUNT(*) AS repo_wts
 FROM
   (SELECT A.slug,
           A.year,
           A.login AS ctr1,
           B.login AS ctr2,
-          A.commits
+          A.commits 
    FROM
      (SELECT slug,
              YEAR,
@@ -156,14 +156,91 @@ FROM
                YEAR,
                login) B ON A.slug = B.slug
    AND A.year = B.year
-   WHERE A.login < B.login) A
+   WHERE A.login <= B.login) A
 GROUP BY YEAR,
          ctr1,
          ctr2
 );
 ```
 
+```{sql sna_ctr_edgelist}
+
+--then we write the actual data to the database (as a materialized view table)
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist AS (
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug
+   AND A.year = B.year
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
+GROUP BY YEAR,
+         ctr1,
+         ctr2
+);
+```
+
+
+```{sql sna_intl_ctr_edgelist}
+
+--FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
+CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
+CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
+
+--THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
+SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
+FROM gh.sna_ctr_edgelist AS ctr_el
+INNER JOIN github.users_gh_cc AS cc1 ON cc1.login = ctr_el.ctr1 OR cc1.login = ctr_el.ctr2 
+WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL
+); 
+
+```
+
+
+
+
+
+
+
 ```{sql sna_repo_edgelist}
+
+-- as of march 9th this is not right... 
 
 CREATE MATERIALIZED VIEW gh.sna_repo_edgelist AS (
 SELECT repo1,
@@ -186,7 +263,8 @@ FROM
                 login,
                 EXTRACT(YEAR
                         FROM committed_date)::int AS YEAR
-         FROM gh.commits) A
+         FROM gh.commits
+         LIMIT 500) A
       GROUP BY login,
                YEAR,
                slug) A
@@ -200,7 +278,8 @@ FROM
                 login,
                 EXTRACT(YEAR
                         FROM committed_date)::int AS YEAR
-         FROM gh.commits) A
+         FROM gh.commits
+         LIMIT 500) A
       GROUP BY login,
                YEAR,
                slug) B ON A.login = B.login
@@ -243,16 +322,24 @@ GROUP BY
 -- may need to download full edgelist from gh_torrent data, recode country_code and then validate 
 
 CREATE MATERIALIZED VIEW sna_intl_ctr_edgelist AS (
-
-SELECT t1.ctr1, t1.ctr2, t1.weight, t2.login, t2.country_code 
-FROM sna_ctr_edgelist AS t1, gh_users_cc AS t2 
-WHERE t1.ctr1 = t2.login, t2.country_code IS NOT NULL 
-
-)
+SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
+FROM gh.sna_ctr_edgelist AS ctr_el
+INNER JOIN github.users_gh_cc AS cc1 ON cc1.login = ctr_el.ctr1 OR cc1.login = ctr_el.ctr2 
+WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL
+); 
 
 ```
 
 ```{sql}
+
+
+
+SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts
+FROM gh.sna_ctr_edgelist AS ctr_el
+INNER JOIN github.users_gh_cc AS cc1 ON cc1.login = ctr_el.ctr1 OR cc2.login = ctr_el.ctr2 
+WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL 
+LIMIT 50; 
+
 
 -- company edgelist (need to test to make sure)
 -- may need to download full edgelist from gh_torrent data, recode cmpy_code and then validate 

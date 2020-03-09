@@ -8,10 +8,76 @@ output: html_document
 
 We used this code to pull data for the construction of Github network data (cumulatively.
 
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
+## Calculating Global Network Statistics 
+
+In this snippet, we calculate various network statistics at the global level of the network, including the node count, edge count, the number of commits, the network density, transitivity, and modularity. These were all calculated using the standard function in R's igraph package with the only exception being that we calculated the modularity with the Louvain method (Blondel et al. 2008). As we went through and calculated the statistics for each network, we ran into a number of computational challenges. While a standard laptop computer will suffice to run the original few networks, we ultimately migrated to an instance (i.e. UVA's Rivanna supercomputing platform) to calculate these statistics. Even then, we ultimately ended up not running the diameter measures for 2014-2018 or the mean distance for 2016-2018 because of our own time limitations and lack of patience. We will likely come back to calculate these measures at a later date, but for now we decided to allocate our efforts elsewhere. We also used this code to construct node-level statistics for the cumulative networks, including the degree centrality measure (both weight and unweighted), the k-core measure, the Louvain cluster grouping, and the component grouping.
+
+
+```{r create_function}
+networkStats <- function(x, y){
+
+  # node and edge counts  
+  node_count <- gorder(x)  
+  edge_count <- gsize(x)
+  commits <- sum(y$weight)
+
+  # isolates, dyads and triads 
+  isolates <- sum(degree(x)==0)
+  dyads <- dyad_census(x)[1]
+
+  # density and transitivity
+  density <- edge_density(x, loops=FALSE) 
+  transitivity <- transitivity(x)
+
+  # PART 3: MODULARITY STATS 
+
+  # community detection (using louvain method)
+  louvain <- cluster_louvain(x)
+  louvain <- modularity(x, membership(louvain))
+  louvain_scaled <- modularity(louvain) / gorder(x)
+  louvain_logged <- modularity(louvain) / log(gorder(x))
+  # community detection (using fast & greedy method)
+  fstgrdy <- fastgreedy.community(x)
+  fstgrdy <- modularity(x, membership(fstgrdy))
+  fstgrdy_scaled <- modularity(fstgrdy) / gorder(x)
+  fstgrdy_logged <- modularity(fstgrdy) / log(gorder(x))
+}  
+  
+
+  
+  
+  
+  # decomposition statistics 
+  decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
+
+  net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
+  time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
+
+  # PART 4: NODE LEVEL STATS
+
+  # now, we need to construct a nodelist 
+  nodelist <- data.frame(id = c(1:(igraph::vcount(login_network))), login = igraph::V(login_network)$name)
+
+  # degree, weighted degree, k core and modularity 
+  node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
+  time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
+  nodelist$degree <- degree(login_network)
+  nodelist$wtd_degree <- strength(login_network)
+  nodelist$k_core <- coreness(login_network)
+  #louvain <- cluster_louvain(login_network)
+  nodelist$louvain_comm <- louvain$membership
+  #fstgrdy <- fastgreedy.community(login_network)
+  #nodelist$fstgrdy_comm <- fstgrdy$membership
+  components <- components(login_network)
+  nodelist$component <- components$membership
+
+  node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
+  time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
+}
+```
+
+```{r all_operations, warning=FALSE, echo=FALSE}
 rm(list = ls())
-# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
@@ -28,7 +94,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_intl_ctr_edgelist
-                                  WHERE year > 2007 AND year < 2010")
+                                  WHERE year > 2007 AND year < 2009")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -40,87 +106,34 @@ ctr_edgelist <- ctr_edgelist %>%
 login_network <- graph.data.frame(ctr_edgelist, directed = FALSE)
 login_network <- simplify(login_network, remove.loops = TRUE)
 
-```
 
-```{r global network stats}
-# loading the network (if the instance crashes while doing network_stats)
-net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
-network_stats <- data.frame(year="2008-09")                                          
+outcome <- networkStats(x = login_network, y = ctr_edgelist)
+outcome
 
-# node and edge counts  
-network_stats$node_count <- gorder(login_network)  
-network_stats$edge_count <- gsize(login_network)
-network_stats$commits <- sum(ctr_edgelist$weight)
 
-# isolates, dyads and triads 
-network_stats$isolates <- sum(degree(login_network)==0)
-network_stats$dyads <- dyad_census(login_network)[1]
-net_counts <- data.frame(event="net_counts", time=now("EST"))
-time_log <- rbind(net_stats_start, net_counts); rm(net_counts)
-
-# density and transitivity
-network_stats$density <- edge_density(login_network, loops=FALSE) 
-network_stats$transitivity <- transitivity(login_network)
-net_globals <- data.frame(event="net_globals", time=now("EST"))
-time_log <- rbind(time_log, net_globals); rm(net_globals)
-
-# community detection (using louvain method)
-louvain <- cluster_louvain(login_network)
-network_stats$louvain <- modularity(louvain)
-network_stats$louvain_scaled <- modularity(louvain) / gorder(login_network)
-network_stats$louvain_logged <- modularity(louvain) / log(gorder(login_network))
-# community detection (using fast & greedy method)
-fstgrdy <- fastgreedy.community(login_network)
-network_stats$fstgrdy <- modularity(fstgrdy)
-network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(login_network)
-network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(login_network))
-
-# decomposition statistics 
-decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
-
-net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
-time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
-
-# now, we need to construct a nodelist 
-nodelist <- data.frame(id = c(1:(igraph::vcount(login_network))), login = igraph::V(login_network)$name)
-
-# degree, weighted degree, k core and modularity 
-node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
-time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
-nodelist$degree <- degree(login_network)
-nodelist$wtd_degree <- strength(login_network)
-nodelist$k_core <- coreness(login_network)
-#louvain <- cluster_louvain(login_network)
-nodelist$louvain_comm <- louvain$membership
-#fstgrdy <- fastgreedy.community(login_network)
-#nodelist$fstgrdy_comm <- fstgrdy$membership
-components <- components(login_network)
-nodelist$component <- components$membership
-
-node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
-time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
 setwd("~/oss-data/intl-dyn-ctr-nets-cum")
-saveRDS(network_stats, "global_netstats_2008-09.rds")  
-saveRDS(decomposition_stats, "decomposition_stats_2008-09.rds") 
-saveRDS(nodelist, "nodelist_2008-09.rds")  
-saveRDS(time_log, "timelog_2008-09.rds")
+saveRDS(network_stats, "global_netstats_2008.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008.rds") 
+saveRDS(nodelist, "nodelist_2008.rds")  
+saveRDS(time_log, "timelog_2008.rds")
+
 ```
 
 ```{r binding cum nodelists}
 # read nodelists
 rm(list = ls())
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 #setwd("~/oss_networks_cum/2008")
-nodelist_2008 <- readRDS("nodelist_2008.rds") 
+nodelist_2008 <- readRDS("nodelist_2008.rds") %>% select(-fstgrdy_comm)
 #setwd("~/oss_networks_cum/2008-09")
-nodelist_200809 <- readRDS("nodelist_2008-09.rds") 
+nodelist_200809 <- readRDS("nodelist_2008-09.rds") %>% select(-fstgrdy_comm)
 #setwd("~/oss_networks_cum/2008-10")
-nodelist_200810 <- readRDS("nodelist_2008-10.rds")
+nodelist_200810 <- readRDS("nodelist_2008-10.rds") %>% select(-fstgrdy_comm)
 #setwd("~/oss_networks_cum/2008-11")
-nodelist_200811 <- readRDS("nodelist_2008-11.rds") 
+nodelist_200811 <- readRDS("nodelist_2008-11.rds") %>% select(-fstgrdy_comm)
 #setwd("~/oss_networks_cum/2008-12")
-nodelist_200812 <- readRDS("nodelist_2008-12.rds") 
+nodelist_200812 <- readRDS("nodelist_2008-12.rds") %>% select(-fstgrdy_comm)
 #setwd("~/oss_networks_cum/2008-13")
 nodelist_200813 <- readRDS("nodelist_2008-13.rds")
 #setwd("~/oss_networks_cum/2008-14")

@@ -12,15 +12,15 @@ rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get our data
-conn <- dbConnect(drv = PostgreSQL(),
-                 dbname = "sdad_data",
-                 host = "sdad.policy-analytics.net",
-                 port = 5436,
-                 user = Sys.getenv("db_userid"),
-                 password = Sys.getenv("db_pwd"))
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
 
 # query the users_gh data (table of all github users) 
 oss_data <- dbGetQuery(conn, "SELECT login, country_code, location 
@@ -609,7 +609,8 @@ length(users_gh_cc$login)
 ```
 ```{r}
 # number of users with multiple country codes 
-users_gh_cc %>% dplyr::filter(grepl(",", country_code))
+users_gh_cc %>% 
+  dplyr::filter(grepl(",", country_code))
 ```
 ```{r}
 users_gh_cc %>% 
@@ -622,15 +623,15 @@ Now that the countries have been recoded, let's write that table to PostgreSQL.
 
 ```{r writing filtered gh_users data back to database}
 # reconnecting to the database 
-conn <- dbConnect(drv = PostgreSQL(),
-                 dbname = "sdad_data",
-                 host = "postgis_2",
-                 port = 5432L,
-                 user = Sys.getenv("db_userid"),
-                 password = Sys.getenv("db_pwd"))
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
 
 # writing the new users_gh_cc table to postgis_2
-dbWriteTable(conn, c("github", "sna_ctr_nodelist_cum_intl"), users_gh_cc)
+dbWriteTable(conn, c("gh", "sna_intl_ctr_nodelist"), users_gh_cc)
 
 # disconnect from postgresql database  
 dbDisconnect(conn)
@@ -638,11 +639,31 @@ dbDisconnect(conn)
 
 ## Edgelist Creation 
 
+```{sql sna_intl_ctr_edgelist}
+
+--FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
+CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
+CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
+CREATE INDEX sna_intl_ctr_nodelist_login_idx ON gh.sna_intl_ctr_nodelist (login);
+
+--THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
+SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
+FROM gh.sna_ctr_edgelist AS ctr_el
+INNER JOIN gh.sna_intl_ctr_nodelist AS cc ON cc.login = ctr_el.ctr1 OR cc.login = ctr_el.ctr2 
+WHERE cc.country_code IS NOT NULL AND cc.country_code IS NOT NULL
+); 
+
+```
+
+I THINK SOME OF THIS MIGHT BE OUTDATED BUT I AM GOING TO LEAVE IT HERE FOR NOW  ########################
+
 The last thing we need to do is create a dynamic bipartitle edgelist from our original commit_data. This will take two steps:
 
 First, we need to bind the commit_data to the users with valid country_codes. This materializes a new commit_data_cc table.
 
 ```{sql}
+--code is outdated 
 create table github.commit_data_cc as (
 select slug, commit_data.login, year, users_gh_cc.country_code, additions, deletions, (additions + deletions) AS add_lines, (additions - deletions) AS sub_lines
 from github.commit_data
@@ -654,6 +675,7 @@ on commit_data.login = users_gh_cc.login
 The second step is creating a weighted edgelist of logins & repos with the weight for each year. This creates a new table called intl_dyn_bp_edgelist.
 
 ```{sql, echo=FALSE}
+--code is outdated 
 create table github.sna_bp_edgelist_cum_intl as (
 select login, slug, year, 
 count (*) AS weight 
