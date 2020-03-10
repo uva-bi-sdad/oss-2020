@@ -16,8 +16,6 @@ committed_date <- as.Date(c('2018-01-01 13:35:08-05', '2018-01-01 13:35:08-05',
                             '2018-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
                             '2017-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
                             '2017-01-01 13:35:08-05'))
-additions <- c(3,5,7,10,3,4,3)
-deletions <- c(2,2,2,2,2,2,2)
 test_data <- data.frame(login, slug, committed_date, additions, deletions)
 
 # then we connect to the database 
@@ -47,34 +45,25 @@ dbDisconnect(conn)
 SELECT ctr1,
        ctr2,
        YEAR,
-       COUNT(*) AS repo_wts,
-       SUM(commits) AS commits_wts,
-       SUM(additions) AS additions_wts,
-       SUM(deletions) AS deletions_wts
+       COUNT(*) AS repo_wts
 FROM
   (SELECT A.slug,
           A.year,
           A.login AS ctr1,
           B.login AS ctr2,
-          A.commits,
-          A.additions,
-          A.deletions
+          A.commits 
    FROM
      (SELECT slug,
              YEAR,
              login,
-             COUNT(*) AS commits,
-             SUM(additions) AS additions,
-             SUM(deletions) AS deletions
+             COUNT(*) AS commits
       FROM
         (SELECT login,
                 slug,
                 EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR,
-                additions,
-                deletions
+                        FROM committed_date)::int AS YEAR
          FROM gh.commits
-         LIMIT 500) A
+         WHERE login IS NOT NULL) A
       GROUP BY slug,
                YEAR,
                login) A
@@ -82,26 +71,22 @@ FROM
      (SELECT slug,
              YEAR,
              login,
-             COUNT(*) AS commits,
-             SUM(additions) AS additions,
-             SUM(deletions) AS deletions
+             COUNT(*) AS commits
       FROM
         (SELECT login,
                 slug,
                 EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR,
-                additions,
-                deletions
+                        FROM committed_date)::int AS YEAR
          FROM gh.commits
-         LIMIT 500) A
+         WHERE login IS NOT NULL) A
       GROUP BY slug,
                YEAR,
                login) B ON A.slug = B.slug
    AND A.year = B.year
-   WHERE A.login <= B.login) A   --- UPDATED 
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
 GROUP BY YEAR,
          ctr1,
-         ctr2;
+         ctr2
          
 --this is what the data should look like...          
 --brandon gizem 2018 1 8 4 
@@ -137,7 +122,8 @@ FROM
                 slug,
                 EXTRACT(YEAR
                         FROM committed_date)::int AS YEAR
-         FROM gh.commits) A
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
       GROUP BY slug,
                YEAR,
                login) A
@@ -151,12 +137,13 @@ FROM
                 slug,
                 EXTRACT(YEAR
                         FROM committed_date)::int AS YEAR
-         FROM gh.commits) A
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
       GROUP BY slug,
                YEAR,
                login) B ON A.slug = B.slug
    AND A.year = B.year
-   WHERE A.login <= B.login) A
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
 GROUP BY YEAR,
          ctr1,
          ctr2
@@ -213,6 +200,8 @@ GROUP BY YEAR,
          ctr1,
          ctr2
 );
+
+-- creates a table of 149177098 rows 
 ```
 
 
@@ -221,6 +210,9 @@ GROUP BY YEAR,
 --FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
 CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
 CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
+
+-- NEXT WE HAVE TO CREATE A NODELIST WITH ALL OF THE CLEANED COUNTRY_CODES 
+-- CODE FOR NODELIST IS IN THE 02_intl-network-construction.Rmd 
 
 --THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
 CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
@@ -232,65 +224,6 @@ WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL
 
 ```
 
-
-
-
-
-
-
-```{sql sna_repo_edgelist}
-
--- as of march 9th this is not right... 
-
-CREATE MATERIALIZED VIEW gh.sna_repo_edgelist AS (
-SELECT repo1,
-       repo2,
-       YEAR,
-       COUNT(*) AS weight
-FROM
-  (SELECT A.login,
-          A.year,
-          A.slug AS repo1,
-          B.slug AS repo2,
-          A.commits
-   FROM
-     (SELECT login,
-             YEAR,
-             slug,
-             COUNT(*) AS commits
-      FROM
-        (SELECT slug,
-                login,
-                EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR
-         FROM gh.commits
-         LIMIT 500) A
-      GROUP BY login,
-               YEAR,
-               slug) A
-   INNER JOIN
-     (SELECT login,
-             YEAR,
-             slug,
-             COUNT(*) AS commits
-      FROM
-        (SELECT slug,
-                login,
-                EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR
-         FROM gh.commits
-         LIMIT 500) A
-      GROUP BY login,
-               YEAR,
-               slug) B ON A.login = B.login
-   AND A.year = B.year
-   WHERE A.slug < B.slug) A
-GROUP BY YEAR,
-         repo1,
-         repo2
-);
-
-```
 
 ```{sql}
 

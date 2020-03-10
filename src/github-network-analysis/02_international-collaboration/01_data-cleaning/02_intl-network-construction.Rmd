@@ -645,6 +645,7 @@ dbDisconnect(conn)
 CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
 CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
 CREATE INDEX sna_intl_ctr_nodelist_login_idx ON gh.sna_intl_ctr_nodelist (login);
+CREATE INDEX sna_intl_ctr_nodelist_cc_idx ON gh.sna_intl_ctr_nodelist (country_code);
 
 --THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
 CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
