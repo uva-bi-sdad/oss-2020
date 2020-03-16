@@ -673,18 +673,7 @@ on commit_data.login = users_gh_cc.login
 );  
 ```
 
-The second step is creating a weighted edgelist of logins & repos with the weight for each year. This creates a new table called intl_dyn_bp_edgelist.
 
-```{sql, echo=FALSE}
---code is outdated 
-create table github.sna_bp_edgelist_cum_intl as (
-select login, slug, year, 
-count (*) AS weight 
-from github.commit_data_cc 
-where country_code IS NOT NULL 
-group by login, slug, year
-);
-```
 
 
 

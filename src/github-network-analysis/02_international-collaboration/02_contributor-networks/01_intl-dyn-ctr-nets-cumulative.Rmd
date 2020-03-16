@@ -28,7 +28,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_intl_ctr_edgelist
-                                  WHERE year > 2007 AND year < 2016")
+                                  WHERE year > 2007 AND year < 2017")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -49,7 +49,7 @@ login_network <- simplify(login_network, remove.loops = TRUE)
 ```{r global network stats}
 # loading the network (if the instance crashes while doing network_stats)
 net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
-network_stats <- data.frame(year="2008-15")                                          
+network_stats <- data.frame(year="2008-16")                                          
 
 # node and edge counts  
 network_stats$node_count <- gorder(login_network)  
@@ -105,16 +105,16 @@ node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
 setwd("~/oss-data/intl-dyn-ctr-nets-cum")
-saveRDS(network_stats, "global_netstats_2008-15.rds")  
-saveRDS(decomposition_stats, "decomposition_stats_2008-15.rds") 
-saveRDS(nodelist, "nodelist_2008-15.rds")  
-saveRDS(time_log, "timelog_2008-15.rds")
+saveRDS(network_stats, "global_netstats_2008-16.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008-16.rds") 
+saveRDS(nodelist, "nodelist_2008-16.rds")  
+saveRDS(time_log, "timelog_2008-16.rds")
 ```
 
 ```{r binding cum nodelists}
 # read nodelists
 rm(list = ls())
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 #setwd("~/oss_networks_cum/2008")
 nodelist_2008 <- readRDS("nodelist_2008.rds") 
 #setwd("~/oss_networks_cum/2008-09")
@@ -128,7 +128,6 @@ nodelist_200812 <- readRDS("nodelist_2008-12.rds")
 #setwd("~/oss_networks_cum/2008-13")
 nodelist_200813 <- readRDS("nodelist_2008-13.rds")
 #setwd("~/oss_networks_cum/2008-14")
-setwd("~/intl-dyn-ctr-nets-cum")
 nodelist_200814 <- readRDS("nodelist_2008-14.rds")
 #setwd("~/oss_networks_cum/2008-15")
 nodelist_200815 <- readRDS("nodelist_2008-15.rds")
@@ -229,13 +228,13 @@ full_nodelist <- nodelist_2008 %>%
          #fstgrdy0818 = fstgrdy_comm,
          comp0818 = component) 
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 saveRDS(full_nodelist, "full_nodelist_cum.rds")
 ```
 
 ```{r concatenating global_netstats_cum}
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 #setwd("~/2008")
 global_netstats_2008 <- readRDS("global_netstats_2008.rds") 
 #setwd("~/2008-09")
@@ -259,13 +258,11 @@ global_netstats_200817 <- readRDS("global_netstats_2008-17.rds")
 #setwd("~/2008-18")
 global_netstats_200818 <- readRDS("global_netstats_2008-18.rds")
 
-global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809, 
-                             global_netstats_200810, global_netstats_200811) %>% 
-  select(-triads_003, -triads_102, -triads_201, -triads_300) %>% 
-  rbind(global_netstats_200812, global_netstats_200813) %>%  
-  select(-fstgrdy, -fstgrdy_scaled, -fstgrdy_logged) %>% 
-  rbind(global_netstats_200814, global_netstats_200815, 
-        global_netstats_200816, global_netstats_200817, global_netstats_200818)
+global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809,
+                             global_netstats_200810, global_netstats_200811, 
+                             global_netstats_200812, global_netstats_200813, 
+                             global_netstats_200814, global_netstats_200815, 
+                             global_netstats_200816, global_netstats_200817, global_netstats_200818) 
 
 global_netstats_cum <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
                                    "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
