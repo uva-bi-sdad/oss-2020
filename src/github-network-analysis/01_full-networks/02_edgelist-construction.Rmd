@@ -12,9 +12,12 @@ First we will create a toy dataset of contributions so that we can test our code
 # first, we create some toy data 
 login <- c("brandon","bayoan","gizem","brandon","gizem","teja","kathryn")
 slug  <- c("oss", "oss", "oss", "ffx", "oss", "ffx", "ffx")
-committed_date <- as.Date(c('2018-01-01 13:35:08-05', '2018-01-01 13:35:08-05',
-                            '2018-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
-                            '2017-01-01 13:35:08-05', '2017-01-01 13:35:08-05',
+committed_date <- as.Date(c('2018-01-01 13:35:08-05', 
+                            '2018-01-01 13:35:08-05',
+                            '2018-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
                             '2017-01-01 13:35:08-05'))
 test_data <- data.frame(login, slug, committed_date, additions, deletions)
 
@@ -97,59 +100,6 @@ GROUP BY YEAR,
 
 ```
 
-
-```{sql sna_ctr_edgelist}
-
---then we write the actual data to the database (as a materialized view table)
-CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist AS (
-SELECT ctr1,
-       ctr2,
-       YEAR,
-       COUNT(*) AS repo_wts
-FROM
-  (SELECT A.slug,
-          A.year,
-          A.login AS ctr1,
-          B.login AS ctr2,
-          A.commits 
-   FROM
-     (SELECT slug,
-             YEAR,
-             login,
-             COUNT(*) AS commits
-      FROM
-        (SELECT login,
-                slug,
-                EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR
-         FROM gh.commits
-         WHERE login IS NOT NULL) A
-      GROUP BY slug,
-               YEAR,
-               login) A
-   INNER JOIN
-     (SELECT slug,
-             YEAR,
-             login,
-             COUNT(*) AS commits
-      FROM
-        (SELECT login,
-                slug,
-                EXTRACT(YEAR
-                        FROM committed_date)::int AS YEAR
-         FROM gh.commits
-         WHERE login IS NOT NULL) A
-      GROUP BY slug,
-               YEAR,
-               login) B ON A.slug = B.slug
-   AND A.year = B.year
-   WHERE A.login <= B.login) A  --- corrected code for self-loops 
-GROUP BY YEAR,
-         ctr1,
-         ctr2
-);
-```
-
 ```{sql sna_ctr_edgelist}
 
 --then we write the actual data to the database (as a materialized view table)
@@ -204,7 +154,6 @@ GROUP BY YEAR,
 -- creates a table of 149177098 rows 
 ```
 
-
 ```{sql sna_intl_ctr_edgelist}
 
 --FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
@@ -225,7 +174,10 @@ WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL
 ```
 
 
-```{sql}
+## NOT SURE IF ANYTHING BELOW THIS IS RIGHT YET (NEED TO COME BACK TO THIS TO WRITE COMPANY EDGELIST)
+
+
+```{sql test_again}
 
 SELECT login, 
        COUNT(*) AS commits, 
@@ -250,29 +202,6 @@ GROUP BY
 
 
 ```{sql}
-
--- international edgelist (need to test to make sure)
--- may need to download full edgelist from gh_torrent data, recode country_code and then validate 
-
-CREATE MATERIALIZED VIEW sna_intl_ctr_edgelist AS (
-SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
-FROM gh.sna_ctr_edgelist AS ctr_el
-INNER JOIN github.users_gh_cc AS cc1 ON cc1.login = ctr_el.ctr1 OR cc1.login = ctr_el.ctr2 
-WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL
-); 
-
-```
-
-```{sql}
-
-
-
-SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts
-FROM gh.sna_ctr_edgelist AS ctr_el
-INNER JOIN github.users_gh_cc AS cc1 ON cc1.login = ctr_el.ctr1 OR cc2.login = ctr_el.ctr2 
-WHERE cc1.country_code IS NOT NULL AND cc1.country_code IS NOT NULL 
-LIMIT 50; 
-
 
 -- company edgelist (need to test to make sure)
 -- may need to download full edgelist from gh_torrent data, recode cmpy_code and then validate 

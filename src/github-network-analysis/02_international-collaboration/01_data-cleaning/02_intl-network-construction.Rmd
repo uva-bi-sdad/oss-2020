@@ -616,10 +616,11 @@ users_gh_cc %>%
 users_gh_cc %>% 
   separate_rows(country_code, sep = "," , convert = FALSE) %>% 
   dplyr::mutate(country_code = trimws(country_code)) %>%
-  dplyr::count(country_code) %>% arrange(-n)
+  dplyr::count(country_code) %>% 
+  arrange(-n)
 ```
 
-Now that the countries have been recoded, let's write that table to PostgreSQL.
+Now that the countries have been recoded, let's write that table to PostgreSQL. Note that this *could* be used as the nodelist for the networks, but we actually want to add in more node attributes a little later on. 
 
 ```{r writing filtered gh_users data back to database}
 # reconnecting to the database 
@@ -631,47 +632,49 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # writing the new users_gh_cc table to postgis_2
-dbWriteTable(conn, c("gh", "sna_intl_ctr_nodelist"), users_gh_cc)
+dbWriteTable(conn, c("gh", "login_ctry_codes"), users_gh_cc)
 
 # disconnect from postgresql database  
 dbDisconnect(conn)
 ```
 
-## Edgelist Creation 
+```{sql}
+
+--- need to finish the code for the full nodelist with country code 
+
+SELECT commits.login, COUNT(*) AS commits, SUM(commits.additions) AS additions, SUM(commits.deletions) AS deletions, 
+login_ctry_codes.country_code, login_ctry_codes.country_code_di, login_ctry_codes.country_code_vis
+FROM gh.commits 
+RIGHT JOIN gh.login_ctry_codes 
+ON commits.login = login_ctry_codes.login
+GROUP BY commits.login, login_ctry_codes.country_code, login_ctry_codes.country_code_di, login_ctry_codes.country_code_vis
+LIMIT 500;
+
+```
+
+## International Edgelist Creation 
+
+This same snippet of code also exists in the main 02_edgelist-construction.Rmd file but having this information in multiple places seemed like a good idea:  
 
 ```{sql sna_intl_ctr_edgelist}
 
 --FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
 CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
 CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
-CREATE INDEX sna_intl_ctr_nodelist_login_idx ON gh.sna_intl_ctr_nodelist (login);
-CREATE INDEX sna_intl_ctr_nodelist_cc_idx ON gh.sna_intl_ctr_nodelist (country_code);
+CREATE INDEX login_ctry_codes_login_idx ON gh.login_ctry_codes (login);
+CREATE INDEX login_ctry_codes_cc_idx ON gh.login_ctry_codes (country_code);
 
 --THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
 CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
 SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
 FROM gh.sna_ctr_edgelist AS ctr_el
-INNER JOIN gh.sna_intl_ctr_nodelist AS cc ON cc.login = ctr_el.ctr1 OR cc.login = ctr_el.ctr2 
+INNER JOIN gh.login_ctry_codes AS cc ON cc.login = ctr_el.ctr1 OR cc.login = ctr_el.ctr2 
 WHERE cc.country_code IS NOT NULL AND cc.country_code IS NOT NULL
 ); 
 
 ```
 
-I THINK SOME OF THIS MIGHT BE OUTDATED BUT I AM GOING TO LEAVE IT HERE FOR NOW  ########################
 
-The last thing we need to do is create a dynamic bipartitle edgelist from our original commit_data. This will take two steps:
-
-First, we need to bind the commit_data to the users with valid country_codes. This materializes a new commit_data_cc table.
-
-```{sql}
---code is outdated 
-create table github.commit_data_cc as (
-select slug, commit_data.login, year, users_gh_cc.country_code, additions, deletions, (additions + deletions) AS add_lines, (additions - deletions) AS sub_lines
-from github.commit_data
-full join github.users_gh_cc
-on commit_data.login = users_gh_cc.login
-);  
-```
 
 
 

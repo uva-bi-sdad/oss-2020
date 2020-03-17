@@ -1,0 +1,74 @@
+---
+title: "PostgreSQL Code for Repos per Country"
+output: html_document
+---
+
+This code pulls from original commits data and groups by slug and country so that repos per country can be calculated in the 2nd file.
+
+```{sql }
+CREATE MATERIALIZED VIEW AS gh.commits_by_repo_cc AS (
+SELECT slug, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM (SELECT slug, 
+	  commits.login, 
+	  EXTRACT(YEAR FROM committed_date)::int AS YEAR, 
+	  users_gh_cc.country_code AS country_code, 
+	  additions, deletions
+	  FROM gh.commits 
+	  FULL JOIN github.users_gh_cc 
+	  ON commits.login = users_gh_cc.login) A
+GROUP BY slug, A.country_code
+); 
+```
+
+This does the same thing but also includes login in the group by so we get: commits by login, country code and repo.
+
+```{sql }
+CREATE MATERIALIZED VIEW gh.commits_by_ctr_cc AS (
+SELECT login, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM (SELECT slug, 
+	  commits.login, 
+	  EXTRACT(YEAR FROM committed_date)::int AS YEAR, 
+	  users_gh_cc.country_code AS country_code, 
+	  additions, deletions
+	  FROM gh.commits 
+	  FULL JOIN github.users_gh_cc 
+	  ON commits.login = users_gh_cc.login
+	  LIMIT 500) A
+GROUP BY login, A.country_code
+LIMIT 500
+);
+```
+
+```{sql}
+
+--- should double check with bay to make sure this is right but i think this is sna_intl_ctr_nodelist
+
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_nodelist AS (
+SELECT login, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT slug, 
+    commits.login, 
+	  EXTRACT(YEAR FROM committed_date)::int AS YEAR, 
+	  additions, deletions,
+	  login_ctry_codes.country_code AS country_code, 
+	  login_ctry_codes.country_code_di,
+	  login_ctry_codes.country_code_vis
+	  FROM gh.commits 
+	  FULL JOIN gh.login_ctry_codes
+	  ON commits.login = login_ctry_codes.login) A
+WHERE A.country_code IS NOT NULL
+GROUP BY login, A.country_code, A.country_code_di, A.country_code_vis
+);
+```
+
+```{sql}
+
+
+
+
+```
+
+
+
+
+
+

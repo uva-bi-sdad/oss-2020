@@ -1,0 +1,201 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+This code pulls from original commits data and groups by slug and country so that repos per country can be calculated in the 2nd file.
+
+```{sql }
+CREATE MATERIALIZED VIEW AS gh.commits_by_repo_cc AS (
+SELECT slug, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM (SELECT slug, 
+	  commits.login, 
+	  EXTRACT(YEAR FROM committed_date)::int AS YEAR, 
+	  users_gh_cc.country_code AS country_code, 
+	  additions, deletions
+	  FROM gh.commits 
+	  FULL JOIN github.users_gh_cc 
+	  ON commits.login = users_gh_cc.login) A
+GROUP BY slug, A.country_code
+); 
+```
+
+Then we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
+
+```{r setup, include=FALSE}
+#rm(list = ls())
+# load packages 
+for (pkg in c("tidyverse", "data.table", "countrycode",
+              "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+repos_by_ctry <- dbGetQuery(conn, "SELECT slug, country_code, commits, additions, deletions
+                                   FROM gh.commits_by_repo_cc
+                                   WHERE country_code IS NOT NULL")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+ctrs_by_ctry <- dbGetQuery(conn, "SELECT login, country_code, country_code_di, country_code_vis
+                                  FROM gh.login_ctry_codes
+                                  WHERE country_code IS NOT NULL")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+# get the total logins by country 
+stats_by_country <- ctrs_by_ctry %>% 
+  group_by(country_code_vis) %>% 
+  count() %>%
+  rename(users = n, 
+         country_code = country_code_vis) %>% 
+  arrange(-users)
+
+stats_by_country
+```
+
+```{r}
+# recodes all of the countries with multiple names into one "multiple" category 
+repos_by_ctry <- repos_by_ctry %>% 
+  dplyr::mutate(old_cc = country_code) %>% 
+  dplyr::mutate(country_code = ifelse(
+    test = str_detect(string = country_code, 
+                      pattern = "_"), paste("multiple"), no = country_code)) 
+
+repos_by_ctry$country_code <- trimws(repos_by_ctry$country_code)
+
+repos_by_ctry %>% 
+  #grepl("us", "us")
+  filter(country_code == "us")
+
+# distinct countries 
+n_distinct(repos_by_ctry$country_code)
+
+# distinct slugs 
+n_distinct(repos_by_ctry$slug)
+
+```
+
+```{r}
+# total repos by country 
+stats_by_country <- repos_by_ctry %>% 
+  group_by(country_code) %>% 
+  count() %>% 
+  rename(repos = n) %>% 
+  right_join(stats_by_country, by = "country_code") %>%    
+  select(country_code, users, repos) %>% 
+  arrange(-repos)
+
+# total commits by country 
+stats_by_country <- repos_by_ctry %>% 
+  drop_na(commits) %>% 
+  group_by(country_code) %>% 
+  summarise(commits = sum(commits)) %>% 
+  right_join(stats_by_country, by = "country_code") %>%    
+  select(country_code, users, repos, commits) %>% 
+  arrange(-commits)
+  
+# total additions by country 
+stats_by_country <- repos_by_ctry %>% 
+  drop_na(additions) %>% 
+  group_by(country_code) %>% 
+  summarise(additions = sum(additions)) %>% 
+  right_join(stats_by_country, by = "country_code") %>% 
+  arrange(-additions) %>% 
+  select(country_code, users, repos, commits, additions)
+
+# total deletions by country 
+stats_by_country <- repos_by_ctry %>% 
+  drop_na(deletions) %>%
+  group_by(country_code) %>% 
+  summarise(deletions = sum(deletions)) %>% 
+  right_join(stats_by_country, by = "country_code") %>% 
+  arrange(-deletions) %>% 
+  select(country_code, users, repos, commits, additions, deletions)
+
+# total additions + deletions by country 
+stats_by_country <- stats_by_country %>% 
+  group_by(country_code) %>% 
+  mutate(adds_plus_dels = sum(additions + deletions))
+
+# total additions - deletions by country 
+stats_by_country <- stats_by_country %>% 
+  group_by(country_code) %>% 
+  mutate(adds_minus_dels = sum(additions - deletions))
+
+# all stats by repo 
+stats_by_country <- stats_by_country %>% 
+  mutate(cmts_per_repo = commits   / repos) %>% 
+  mutate(adds_per_repo = additions / repos) %>% 
+  mutate(dels_per_repo = deletions / repos) %>% 
+  arrange(-users)
+
+# changing country codes to country name 
+stats_by_country$country <- countrycode(stats_by_country$country_code, 
+                                        origin = 'iso2c', destination = 'country.name')
+
+# changing Kosovo to have a valid country name 
+stats_by_country <- stats_by_country %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "xk"), yes = "Kosovo", no = country)) %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "multiple"), yes = "Multiple Countries", no = country)) %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "asia"), yes = "Asia", no = country)) %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "europe"), yes = "Europe", no = country)) %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "americas"), yes = "The Americas", no = country)) %>% 
+  mutate(country = ifelse(test = str_detect(string = country_code, 
+                                            pattern = "africa"), yes = "Africa", no = country)) %>%
+  select(country, country_code, everything())
+
+setwd("~/oss-data/intl-country-nets")
+write_csv(stats_by_country, "oss-repos-per-country.csv")
+```
+
+```{r writing stats_by_country to the database}
+# reconnecting to the database 
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# writing the new users_gh_cc table to postgis_2
+dbWriteTable(conn, name = c(schema = "gh" , name = "intl_stats"), 
+             value = stats_by_country, row.names = FALSE)
+
+# disconnect from postgresql database  
+dbDisconnect(conn)
+```
+
+
+
+
+
+
+
+
+
+
+
+

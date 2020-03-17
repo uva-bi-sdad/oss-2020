@@ -5,26 +5,25 @@ output: html_document
 
 ```{r setup, include=FALSE}
 rm(list = ls())
-# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "visNetwork", 
-              "bc3net", "data.table", "R.utils", "RPostgreSQL",
-              "cowplot", "maditr", "lubridate", "linkprediction", 
-              "poweRlaw")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
 
 licenses <- dbGetQuery(conn, "SELECT name, spdx 
-                    FROM github.licenses")
+                              FROM gh.licenses")
 
 # query the bipartite edgelist data from github data  
 repos <- dbGetQuery(conn, "SELECT slug, created_at, spdx, cnt 
-                    FROM github.repos")
+                           FROM gh.repos")
 
 # disconnect from postgresql
 dbDisconnect(conn)
