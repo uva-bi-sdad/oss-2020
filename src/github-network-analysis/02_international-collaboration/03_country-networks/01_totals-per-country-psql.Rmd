@@ -1,9 +1,9 @@
 ---
-title: "Untitled"
+title: "GitHub Totals, By Country"
 output: html_document
 ---
 
-This code pulls from original commits data and groups by slug and country so that repos per country can be calculated in the 2nd file.
+This code pulls from original commits data and groups by slug and country so that repos per country can be calculated.
 
 ```{sql }
 CREATE MATERIALIZED VIEW AS gh.commits_by_repo_cc AS (
@@ -20,7 +20,7 @@ GROUP BY slug, A.country_code
 ); 
 ```
 
-Then we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
+After that, we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
 
 ```{r setup, include=FALSE}
 #rm(list = ls())
@@ -59,6 +59,8 @@ ctrs_by_ctry <- dbGetQuery(conn, "SELECT login, country_code, country_code_di, c
 dbDisconnect(conn)
 ```
 
+Then we calculate users by country... 
+
 ```{r}
 # get the total logins by country 
 stats_by_country <- ctrs_by_ctry %>% 
@@ -70,6 +72,8 @@ stats_by_country <- ctrs_by_ctry %>%
 
 stats_by_country
 ```
+
+Next, we pull in repos per country and recode the multiple column... 
 
 ```{r}
 # recodes all of the countries with multiple names into one "multiple" category 
@@ -92,6 +96,8 @@ n_distinct(repos_by_ctry$country_code)
 n_distinct(repos_by_ctry$slug)
 
 ```
+
+Then we calculate repos, commits, additions, deletions, additions + deletions and additions - deletions by country... 
 
 ```{r}
 # total repos by country 
@@ -170,6 +176,8 @@ stats_by_country <- stats_by_country %>%
 setwd("~/oss-data/intl-country-nets")
 write_csv(stats_by_country, "oss-repos-per-country.csv")
 ```
+
+And write our summary table to the database... 
 
 ```{r writing stats_by_country to the database}
 # reconnecting to the database 

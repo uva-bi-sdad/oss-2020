@@ -1,308 +1,242 @@
 ---
-title: "Full GitHub Network Construction"
+title: "PostgreSQL Edgelist Creation"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(root.dir = "~/full-github-network-construction")
-for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "bc3net", "network", "reshape2",
-              "RPostgreSQL", "maditr", "lubridate", "rmarkdown")) {library(pkg, character.only = TRUE)}
+The purpose of this file is to share the PostgreSQL code that converts user's contributions to repos (i.e. a bipartite edgelist) into contributor edgelists with shared repos, shared commits, shared additions and shared deletions as columns for use as edge weights. This code bypasses the need to project bipartite matrices and all of the computational problems this creates (i.e. lack of RAM).
+
+The procedures documented in this file are: 
+
+- Writing a toy dataset of bipartite relations (login, slug) to the database
+- Testing some practice code to make sure that it flattens the bipartite to a user-user network
+- Using some PostgreSQL code to write the user-user network to the database 
+- Indexing that table 
+- Writing a nodelist with attributes, including repos, commits, additions, deletions, and country_code
+- Writing another nodelist with these attributes but broken down into all available years 
+
+First we will create a toy dataset of contributions so that we can test our code. We create the data and write it to the database. 
+
+```{r testing postgresql code for edgelist_data, include=FALSE}
+
+# then we connect to the database 
+library(RPostgreSQL)
+
+# first, we create some toy data 
+login <- c("brandon","bayoan","gizem","brandon","gizem","teja","kathryn")
+slug  <- c("oss", "oss", "oss", "ffx", "oss", "ffx", "ffx")
+committed_date <- as.Date(c('2018-01-01 13:35:08-05', 
+                            '2018-01-01 13:35:08-05',
+                            '2018-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05'))
+test_data <- data.frame(login, slug, committed_date, additions, deletions)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+dbWriteTable(conn, 
+             name = c(schema = "gh" , 
+                      name = "test_data"), 
+             value = test_data, 
+             row.names = FALSE)
+
+dbDisconnect(conn)
+
 ```
 
-This is the PostgreSQL code for creating nodelists and edgelists for social network analysis of the full GitHub networks. 
+Then we will test to see if our code accurately codes this data
 
-# Full GitHub Edgelists 
+```{sql psql_test_query}
 
-The first step is to create a full edgelist, because the full list of nodes will come from the edges, which will be joined back to node attributes in the last step before writing to the database. 
+-- then we plug this code into the database 
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug
+   AND A.year = B.year
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
+GROUP BY YEAR,
+         ctr1,
+         ctr2
+         
+--this is what the data should look like...          
+--brandon gizem 2018 1 8 4 
+--brandon bayoan 2018 1 
+--gizem bayoan 2017 1 
+--brandon teja 2017 1
+--brandon kathryn 2017 1 
 
-To create an edgelist, you want to pull the login, slug and year, group by those three variables and the convert the count of that group by into a weight. The end result is that you have a bipartite edgelist where the source/from is the login target/to is the repository and the weight correspond to the number of commits for each year. 
+--WHEN YOU SEE THE RESULTS MATCH, YOU CAN DELETE THAT TABLE FROM THE DATABASE 
 
-```{sql, echo=FALSE}
-create table github.sna_bp_edgelist_cum_full as (
-select login, slug, year, 
-count (*) AS weight, count(additions) as additions_weight, count(deletions) as deletions_weight 
-from github.commit_data 
-group by login, slug, year
+```
+
+Next, we can write the actual edgelist to the database as a materialized view. 
+
+```{sql sna_ctr_edgelist}
+
+--then we write the actual data to the database (as a materialized view table)
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist AS (
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug
+   AND A.year = B.year
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
+GROUP BY YEAR,
+         ctr1,
+         ctr2
 );
+
+-- creates a table of 149177098 rows 
 ```
 
-Next, we want to create the contributor and repo networks. To do this, we need to pull the bipartite edgelist we just made from the database, convert it to a matrix, transpose that matrix, and then pull the weighted edgelist from that matrix. Unfortunately, we lose the year column in the process of converting the bipartite edgelist into a matrix, so we actually have to do this process ten times filter by year. In the end, we will have two edgelists (one login edgelist and one repo edgelist) that is ten edgelists all bound together. The first step in this process is to write a function that transposes the bipartite edgelist into a single mode network
+Next, we index our full edgelist. 
 
-```{r, comparison testing}
+```{sql}
 
+--NEXT WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
+--This will come in handy when making the sna_intl_ctr_edgelist
 
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", 
-                  port = 5436, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# function 
-one_mode_edgelist <- function(x){
-  # rename columns 
-  x <- x %>% rename(source = 1, target = 2) %>% 
-    filter(-weight, -year)
-  # reduces bipartite matrix to single mode matrix 
-  bp_matrix <- spMatrix(
-               nrow=length(unique(x$source)),
-               ncol=length(unique(x$target)),
-               i = as.numeric(factor(x$source)),
-               j = as.numeric(factor(x$target)),
-               x = rep(1, length(as.numeric(x$source)))
-               )
-  # add row and column names
-  row.names(bp_matrix) <- levels(factor(x$source))
-  colnames(bp_matrix) <- levels(factor(x$target))
-  # multiply the incidence matrices  
-  one_mode_matrix <- tcrossprod(bp_matrix)
-  # impute zeroes to prevent self loops
-  diag(one_mode_matrix) <- 0
-  # convert to a network (bc i cannot get the edgelist from a dsCMatrix object)
-  one_mode_network <- simplify(graph_from_adjacency_matrix(one_mode_matrix, mode = "undirected", weighted = TRUE))
-  # then pull the weigted edgelist from the igraph object 
-  one_mode_edgelist <- as.data.frame(cbind(get.edgelist(one_mode_network) , round(E(one_mode_network)$weight, 3)))
-  # add the year information and rename all the columns 
-  #login_edgelist[4] <- "2008"
-  one_mode_edgelist <- one_mode_edgelist %>% 
-    rename(from = "V1", to = "V2", weight = "V3") %>% 
-    mutate(weight = as.integer(weight))
-}
-
-
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", 
-                  port = 5436, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-raw_bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight FROM github.sna_bp_edgelist_cum_intl WHERE year > 2007 AND year < 2019")
-
-# disconnect from postgresql
-dbDisconnect(conn); rm(conn)
-
-login_edgelist_comp <- one_mode_edgelist(bp_edgelist)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2008)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2008"))) 
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2009)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2009"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2010)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2010"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2011)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2011"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2012)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2012"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2013)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2013"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2014)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2014"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2015)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2015"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2016)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2016"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2017)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2017"))) %>% 
-  bind_rows(login_edgelist_tidy)
-
-login_edgelist_tidy <- one_mode_edgelist(bp_edgelist %>% 
-                   filter(year == 2018)) %>% 
-  mutate(year = as.integer((bp_edgelist[4] <- "2018"))) %>% 
-  bind_rows(login_edgelist_tidy) %>% 
-  rename(from = login, to = slug) %>% 
-  mutate(weight = as.integer(weight))
+CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
+CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
 
 ```
 
+Then, we write our full nodelist with attributes. 
 
-```{r}
-login_edgelist_tidy %>% 
-  #slice(1:300) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES (sna_ctr_nodelist)
+--This code selects the login, commit count, number of repos each login commmitted to, and total additions and deletions. 
+--It also pulls country_code data from "login_ctry_codes" which is a table created in the 02_intl-network-construction.Rmd file.
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_full AS (
+SELECT A.login, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions
+	  FROM gh.commits 
+	  GROUP BY login) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
 ```
 
-```{r}
-head(login_edgelist_comp)
+If we wanted to create dynamic nodelists with attributes based on any given year we would use this: 
 
-login_edgelist_comp %>% 
-  mutate(weight = as.integer(weight)) %>% 
-  filter(from == "defunkt" & to == "technoweenie") %>% 
-  arrange(-weight)
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES FOR EACH YEAR (sna_ctr_nodelist_yxy)
+--THIS TAKES THE EXACT SAME CODE AS THE LAST SNIPPET AND ADDS A YEAR TO THE GROUP_BY 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_yxy AS (
+SELECT A.login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions, EXTRACT(YEAR FROM committed_date)::int AS YEAR
+	  FROM gh.commits 
+	  GROUP BY login, year) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
 ```
 
-```{r}
-login_edgelist_comp %>% 
-  mutate(weight = as.integer(weight)) %>%
-  filter(from == "defunkt" & to == "technoweenie")
-```
+And then filter from this year-by-year: 
 
-```{r}
+```{sql }
 
-defunkt <- bp_edgelist %>% filter(login == "defunkt" ) 
-technoweenie <- bp_edgelist %>% filter(login == "technoweenie" ) 
-defunkt$slug
-technoweenie$slug
+-- THIS CODE PULLS FROM THE PREVIOUS TABLE AND JUST FILTERS BASED ON YEAR 
+-- YOU WOULD CHANGE THE YEAR FOR ALL APPLICABLE YEARS 
 
-length(intersect(defunkt$slug,technoweenie$slug ))
-
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_2008 AS (
+SELECT login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM   gh.sna_ctr_nodelist_yxy
+WHERE  year = '2008'  
+);
 
 ```
 
 
 
-```{r}
-
-test_edgelist <- bp_edgelist %>% 
-  filter(year > 2007 | year < 2011) %>% 
-  select(-weight, -year)
-
-test_edgelist
-
-test_sm_edgelist <- one_mode_edgelist(test_edgelist)
-
-test_sm_edgelist %>%
-  arrange(-weight)
-
-test_sm_edgelist %>%
-  filter(from == "defunkt" & to == "technoweenie"  ) %>% 
-  arrange(-weight)
-
-#test_edgelist %>% 
-#  filter(login == "defunkt" | login == "technoweenie") %>% 
-#  group_by(slug) %>% 
-#  count(slug) %>% 
-#  filter(n == 2) %>% 
-#  arrange(slug)
 
 
-```
-
-
-
-```{r}
-
-test_edgelist <- bp_edgelist %>% 
-  filter(year == 2008) %>% 
-  select(-weight, -year)
-
-g <- graph_from_edgelist(as.matrix(test_edgelist))
-
-V(g)$type <- bipartite_mapping(g)$type
-
-bipartite_matrix <- as_incidence_matrix(g)
-
-bipartite_matrix
-login_matrix <- bipartite_matrix %*% t(bipartite_matrix)
-repo_matrix <- t(bipartite_matrix) %*% bipartite_matrix
-diag(login_matrix) <- 0
-diag(repo_matrix) <- 0
-login_matrix
-repo_matrix
-
-one_mode_matrix <- login_matrix
-
-one_mode_network <- simplify(graph_from_adjacency_matrix(one_mode_matrix, mode = "undirected", weighted = TRUE))
-  # then pull the weigted edgelist from the igraph object 
-one_mode_edgelist <- as.data.frame(cbind(get.edgelist(one_mode_network) , round(E(one_mode_network)$weight, 3)))
-
-one_mode_edgelist <- one_mode_edgelist %>% 
-    rename(from = "V1", to = "V2", weight = "V3") %>% 
-    mutate(weight = as.integer(weight)) 
-
-one_mode_edgelist %>% 
-  arrange(-weight)
-
-library(tidyverse)
-
-
-
-
-
-
-```
-
-
-```{r}
-
-bp_edgelist <- raw_bp_edgelist 
-
-######
-bp_edgelist <- unique(bp_edgelist[,1:2])
-bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
-              ncol=length(unique(bp_edgelist$slug)),
-              i = as.numeric(factor(bp_edgelist$login)),
-              j = as.numeric(factor(bp_edgelist$slug)),
-              x = rep(1, length(as.numeric(bp_edgelist$login))))
-row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
-colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
-one_mode_matrix <- tcrossprod(bp_matrix)
-diag(one_mode_matrix) <- 0
-#######
-
-
-
-one_mode_matrix[upper.tri(one_mode_matrix)] <- .01
-one_mode_edgelist <- melt(as.matrix(one_mode_matrix))
-one_mode_edgelist <- filter(one_mode_edgelist, value != .01) %>% filter(Var1 != Var2)
-
-one_mode_edgelist <- one_mode_edgelist %>% 
-    rename(from = "Var1", to = "Var2", weight = "value") %>% 
-    mutate(weight = as.integer(weight))
-
-one_mode_edgelist %>% filter(weight > 1)
-
-
-
-
-#unique list of user slugs
-#all combinations users that contributed to slugs 
-#for that set of uneique users get all unique 
-#get weight of unique conmbinations by repo 
-
-
-unique(bp_edgelist$slug)
-
-
-```
-
-```{r}
-
-defunkt <- bp_edgelist %>% filter(login == "AndiDog" ) 
-technoweenie <- bp_edgelist %>% filter(login == "007" ) 
-length(intersect(defunkt$slug,technoweenie$slug ))
-
-```
 
 
 

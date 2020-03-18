@@ -638,31 +638,21 @@ dbWriteTable(conn, c("gh", "login_ctry_codes"), users_gh_cc)
 dbDisconnect(conn)
 ```
 
-```{sql}
-
---- need to finish the code for the full nodelist with country code 
-
-SELECT commits.login, COUNT(*) AS commits, SUM(commits.additions) AS additions, SUM(commits.deletions) AS deletions, 
-login_ctry_codes.country_code, login_ctry_codes.country_code_di, login_ctry_codes.country_code_vis
-FROM gh.commits 
-RIGHT JOIN gh.login_ctry_codes 
-ON commits.login = login_ctry_codes.login
-GROUP BY commits.login, login_ctry_codes.country_code, login_ctry_codes.country_code_di, login_ctry_codes.country_code_vis
-LIMIT 500;
-
-```
-
 ## International Edgelist Creation 
 
-This same snippet of code also exists in the main 02_edgelist-construction.Rmd file but having this information in multiple places seemed like a good idea:  
+To make an international edgelist, we need first make sure that our full edgelist and the country_code data is indexed and then filter down the intl_edgelist for cases where both ctr1 + ctr2 columns actually have a valid country_code. 
 
-```{sql sna_intl_ctr_edgelist}
+```{sql indexing_tables}
 
 --FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
 CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
 CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
-CREATE INDEX login_ctry_codes_login_idx ON gh.login_ctry_codes (login);
-CREATE INDEX login_ctry_codes_cc_idx ON gh.login_ctry_codes (country_code);
+CREATE INDEX login_cc_login_idx ON gh.login_ctry_codes (login);
+CREATE INDEX login_cc_cc_idx ON gh.login_ctry_codes (country_code);
+
+```
+
+```{sql write_sna_intl_ctr_edgelist}
 
 --THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
 CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
@@ -674,6 +664,33 @@ WHERE cc.country_code IS NOT NULL AND cc.country_code IS NOT NULL
 
 ```
 
+## International Nodelist Creation 
+
+And to make the intl_nodelist for the intl_edgelist we can just filter down the full sna_edgelist we made in 01_full-network-construction:
+
+```{sql write_sna_intl_ctr_nodelist}
+
+---NEED TO TEST THIS TO MAKE SURE IT WORKS 
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_nodelist AS (
+SELECT login, repos, commits, deletions, country_code, country_code_di, country_code_vis 
+FROM gh.sna_ctr_nodelist
+WHERE country_code IS NOT NULL 
+); 
+
+```
+
+If we wanted to make dynamic nodelists that go year-by-year then we can use pull from our existing nodelist that has years:
+
+```{sql write_sna_intl_ctr_nodelist_year}
+
+---NEED TO TEST THIS TO MAKE SURE IT WORKS 
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_nodelist_year AS (
+SELECT login, year, repos, commits, deletions, country_code, country_code_di, country_code_vis 
+FROM gh.sna_ctr_nodelist
+WHERE country_code IS NOT NULL AND year = '2008' 
+); 
+
+```
 
 
 

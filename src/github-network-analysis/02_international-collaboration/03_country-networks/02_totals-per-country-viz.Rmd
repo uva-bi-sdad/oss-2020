@@ -1,0 +1,153 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# grab the licenses data 
+licenses <- dbGetQuery(conn, "SELECT name, spdx 
+                              FROM gh.licenses")
+
+# grab the repos data 
+repos <- dbGetQuery(conn, "SELECT slug, spdx, created
+                           FROM gh.repos")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+The first step is to graph the number of new repos created on GitHub each year. 
+
+```{r, fig.width=8.5}
+# extract the year from the created column 
+repos <- repos %>% 
+  mutate(year = format(as.Date(created, format="%Y/%m/%d"),"%Y")) 
+
+# filter out those before 2007 and after 2018
+repo_totals <- repos %>% 
+  filter(year > 2007 & year < 2019) %>%
+  group_by(year) %>% 
+  count(); repo_totals
+
+repo_totals
+
+# graph those totals by year 
+ggplot(data=repo_totals, aes(x=year, y=n)) +
+  geom_bar(stat="identity", fill = "#232D4B")+
+  theme(plot.title = (element_text("Number of New Repositories Created on GitHub (2008-2018)", 
+                                   colour="#232D4B", hjust = 2, size = 18)),
+        panel.background = element_rect(fill = "white", colour = "white",
+                                        size = 2, linetype = "solid"),
+        panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                        colour = "white"),
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                        colour = "white"),
+        axis.title.x = element_blank(),
+        axis.text=element_text(colour="#232D4B", size = 18),
+        axis.title = element_text(colour="#232D4B", size = 20)) + 
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
+                     labels = c(2008,"","","","",2013,"","","","",2018)) +
+  labs(title="Number of New Repositories Created on GitHub (2008-2018)", x="Year", y = "Repositories (in Millions)") +
+  scale_y_continuous(limits = c(0, 1750000), breaks = seq(0, 1750000, by = 250000),
+                     labels = c("0","0.25","0.5","0.75","1.0","1.25","1.5","1.75")) 
+
+#setwd("~/")
+#ggsave("bar_version1.png", width = 9.5)
+```
+
+The first step is to graph the number of repos by license.
+
+```{r, fig.width=8.5}
+# creating total repos by license
+repos_by_license <- repos %>% 
+  group_by(spdx) %>% 
+  count() %>% 
+  rename(Total = n, License = spdx) %>% 
+  arrange(-Total) 
+
+# adding the percentages to each repo 
+repos_by_license$Proportion <- round(repos_by_license$Total/as.numeric(sum(repos_by_license$Total)) * 100, digits = 2)
+
+# filtering the top-5 (top_n will not work for the life of me)
+repos_by_license <- repos_by_license %>% filter(Total > 100000)
+positions <- c("BSD-3-Clause", "GPL-2.0", "GPL-3.0", "Apache-2.0", "MIT")
+
+# graphing outcomes
+
+ggplot(repos_by_license, aes(x=License, y=Proportion)) +
+  geom_segment( aes(x=License, xend=License, y=0, yend=Proportion), color="#232D4B", size=1.3) +
+  geom_point( color="#232D4B", size=7, alpha=1, pch=21, stroke = 1.5, fill="#E57200") +
+  theme_minimal() +
+  coord_flip() +
+  theme(plot.title = element_text(size=18, hjust=0.25),
+        panel.border = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_text(hjust=1),
+        axis.text=element_text(colour="#232D4B", size = 14),
+        axis.title = element_text(colour="#232D4B", size = 16)) +
+  scale_x_discrete(limits = positions) +
+  #scale_y_discrete(limits = c(0,25,50,75,100), breaks = c(0,25,50,75,100)) +
+  ggtitle("    Proportion of Repositories with \n Top Licenses on GitHub (2008-2018)")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

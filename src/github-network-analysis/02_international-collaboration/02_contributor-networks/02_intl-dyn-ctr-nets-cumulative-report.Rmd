@@ -10,11 +10,12 @@ rm(list = ls())
 # "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot",
-              "maditr", "lubridate", "linkprediction", "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "extrafont",
+              "R.utils", "RPostgreSQL", "cowplot", "maditr", "lubridate", 
+              "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
 
-setwd("~/Documents/OSS/Data")
-#setwd("~/intl-dyn-ctr-nets-cum")
+#setwd("~/Documents/OSS/Data")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
 full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
 kcore_data <- read_rds("kcore_data_cum.rds")
@@ -25,38 +26,7 @@ global_netstats_cum <- global_netstats_cum %>%
 
 ```
 
-```{r}
-
-ggplot(global_netstats_cum, aes(x=node_count, y=louvain)) +
-    geom_point(shape=1) 
-
-ggplot(global_netstats_cum, aes(x=log(node_count), y=louvain)) +
-    geom_point(shape=1)
-
-cor(global_netstats_cum$node_count, global_netstats_cum$louvain)
-
-constant <- rep(0.5, 11)
-
-growth <- c(0.1, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9)
-decline <- c(0.9, 0.8, 0.7, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2, 0.1)
-growth_scaled <- growth / global_netstats_cum$node_count
-growth_logged <- growth / log(global_netstats_cum$node_count)
-decline_scaled <- decline / global_netstats_cum$node_count
-decline_logged <- decline / log(global_netstats_cum$node_count)
-time <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
-
-test_data <- as.data.frame(cbind(growth, decline,g_vector, g_logged, d_vector, d_logged, time))
-
-a <- ggplot(test_data, aes(x=time, y=growth_scaled)) + geom_line(shape=1)
-b <- ggplot(test_data, aes(x=time, y=growth_logged)) + geom_line(shape=1)
-c <- ggplot(test_data, aes(x=time, y=decline_scaled)) + geom_line(shape=1)
-d <- ggplot(test_data, aes(x=time, y=decline_logged)) + geom_line(shape=1)
-
-grid.arrange(a, b, c, d, nrow=2, ncol=2)
-
-```
-
-```{r bar graphs by cum, fig.width=9.5, fig.height=8, echo=FALSE}
+```{r bar_graphs_by_cum, fig.width=9.5, fig.height=8, echo=FALSE}
 network_nodes <- global_netstats_cum %>% 
   ggplot( aes(time, node_count), y=node_count) +
   geom_bar(stat="identity", fill = "#990000", width = 0.7) + 
@@ -99,54 +69,52 @@ grid.arrange(network_nodes, network_commits,
              top="Cumulative Growth in Node, Edge and Commit Counts for GitHub Networks")
 ```
 
-```{r, fig.width=9.5, fig.height=3, echo=FALSE}
+```{r, fig.width=11.5, fig.height=4, echo=FALSE}
 network_nodes <- global_netstats_cum %>% 
   ggplot( aes(time, node_count), y=node_count) +
   geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
-  theme_minimal() + theme(axis.title.x = element_blank(),
-                          axis.text=element_text(size=24),
-                          axis.title=element_text(size=26)) +
+  theme_minimal() + 
+  theme(axis.title.x = element_blank(),
+        axis.text=element_text(size=12, family="Arial"),
+        axis.title=element_text(size=16, family="Arial")) +
   labs(y = "Node Count (in Millions)") +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
                      labels = c(2008,"","","","",2013,"","","","",2018)) +
-  scale_y_continuous(breaks = c(0,  500000, 1000000, 1500000,  2000000), 
-                                labels = c(0, 0.5, 1, 1.5, 2))
+  scale_y_continuous(breaks = c(0,  200000, 400000, 600000, 800000, 1000000, 1200000, 1400000), 
+                                labels = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4))
 
 network_edges <- global_netstats_cum %>% 
   ggplot( aes(time, edge_count), y=edge_count) +
   geom_bar(stat="identity", fill = "#628ed8", width = 0.6) + 
-  theme_minimal() + theme(axis.title.x = element_blank(),
-                          axis.text=element_text(size=24),
-                          axis.title=element_text(size=26)) + 
+  theme_minimal() + 
+  theme(axis.title.x = element_blank(),
+                          axis.text=element_text(size=12, family="Arial"),
+                          axis.title=element_text(size=16, family="Arial")) + 
   labs(y = "Edge Count (in Millions)") +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
                      labels = c(2008,"","","","",2013,"","","","",2018)) +
-  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 250000000, 300000000), 
-                                labels = c(0,  50, 100, 150,  200, 250,  300))
+  scale_y_continuous(breaks = c(0, 10000000, 20000000, 30000000, 40000000, 
+                                50000000, 60000000, 70000000, 80000000), 
+                                labels = c(0, 10, 20, 30, 40, 50, 60, 70, 80))
 
 network_commits <- global_netstats_cum %>% 
   ggplot( aes(time, commits), y=commits) +
   geom_bar(stat="identity", fill = "#D96403", width = 0.6) + 
   theme_minimal() + 
   theme(axis.title.x = element_blank(),
-        axis.text=element_text(size=24),axis.title=element_text(size=26)) +
-  labs(y = "Commit Count (in Millions)") +
+        axis.text=element_text(size=12, family="Arial"),
+        axis.title=element_text(size=16, family="Arial")) +
+  labs(y = "Commit Count (in Billions)") +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018), 
                      labels = c(2008,"","","","",2013,"","","","",2018)) +
-  scale_y_continuous(breaks = c(0, 50000000, 100000000, 150000000, 200000000, 
-                                250000000, 300000000, 350000000, 400000000), 
-                                labels = c(0, 50, 100, 150, 200, 250, 300, 350, 400))
+  scale_y_continuous(breaks = c(0, 250000000, 500000000, 750000000, 1000000000, 1250000000, 1500000000), 
+                                labels = c(0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5))
 
 figure <- grid.arrange(network_nodes, network_edges, network_commits, 
-             nrow=1, ncol=3,
-             top=
+             nrow=1, ncol=3, top=
              textGrob("Cumulative Growth in Node, Edge and Commit Counts for GitHub Contributor Networks (2008-2018)",
-                        gp=gpar(fontsize=30)))
-             
-
-
-ggsave("nodes_edges_commits.png", plot = figure)
-
+                        gp=gpar(fontsize=16, family="Arial")))
+      
 ```
 
 ```{r}
@@ -493,5 +461,34 @@ full_nodelist_cum %>% drop_na(deg0818) %>% mutate(avg_deg = mean(deg0818)) %>% s
 ```
 
 
+```{r}
 
+ggplot(global_netstats_cum, aes(x=node_count, y=louvain)) +
+    geom_point(shape=1) 
+
+ggplot(global_netstats_cum, aes(x=log(node_count), y=louvain)) +
+    geom_point(shape=1)
+
+cor(global_netstats_cum$node_count, global_netstats_cum$louvain)
+
+constant <- rep(0.5, 11)
+
+growth <- c(0.1, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9)
+decline <- c(0.9, 0.8, 0.7, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2, 0.1)
+growth_scaled <- growth / global_netstats_cum$node_count
+growth_logged <- growth / log(global_netstats_cum$node_count)
+decline_scaled <- decline / global_netstats_cum$node_count
+decline_logged <- decline / log(global_netstats_cum$node_count)
+time <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+
+test_data <- as.data.frame(cbind(growth, decline,g_vector, g_logged, d_vector, d_logged, time))
+
+a <- ggplot(test_data, aes(x=time, y=growth_scaled)) + geom_line(shape=1)
+b <- ggplot(test_data, aes(x=time, y=growth_logged)) + geom_line(shape=1)
+c <- ggplot(test_data, aes(x=time, y=decline_scaled)) + geom_line(shape=1)
+d <- ggplot(test_data, aes(x=time, y=decline_logged)) + geom_line(shape=1)
+
+grid.arrange(a, b, c, d, nrow=2, ncol=2)
+
+```
 

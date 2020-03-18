@@ -269,27 +269,21 @@ global_netstats_cum <- as_tibble(c("2008", "2009", "2010", "2011", "2012",
   bind_cols(global_netstats_cum) %>% # select(-year) %>% 
   rename(time = value)
 
-setwd("~/intl-dyn-ctr-nets-cum"); saveRDS(global_netstats_cum, "global_netstats_cum.rds") 
-
 # adding in weighted degree counts 
 
-setwd("~/intl-dyn-ctr-nets-cum")
-full_nodelist_cum <- readRDS("full_nodelist_cum.rds")
-global_netstats_cum <- readRDS("global_netstats_cum.rds")
+edges <- as_tibble(c(sum(full_nodelist$deg08/ 2, na.rm = TRUE), sum(full_nodelist$deg0809/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0810/ 2, na.rm = TRUE), sum(full_nodelist$deg0811/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0812/ 2, na.rm = TRUE), sum(full_nodelist$deg0813/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0814/ 2, na.rm = TRUE), sum(full_nodelist$deg0815/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0816/ 2, na.rm = TRUE), sum(full_nodelist$deg0817/ 2, na.rm = TRUE), 
+            sum(full_nodelist$deg0818/ 2, na.rm = TRUE))) 
 
-edges <- as_tibble(c(sum(full_nodelist_cum$deg08/ 2, na.rm = TRUE), sum(full_nodelist_cum$deg0809/ 2, na.rm = TRUE),
-            sum(full_nodelist_cum$deg0810/ 2, na.rm = TRUE), sum(full_nodelist_cum$deg0811/ 2, na.rm = TRUE),
-            sum(full_nodelist_cum$deg0812/ 2, na.rm = TRUE), sum(full_nodelist_cum$deg0813/ 2, na.rm = TRUE),
-            sum(full_nodelist_cum$deg0814/ 2, na.rm = TRUE), sum(full_nodelist_cum$deg0815/ 2, na.rm = TRUE),
-            sum(full_nodelist_cum$deg0816/ 2, na.rm = TRUE), sum(full_nodelist_cum$deg0817/ 2, na.rm = TRUE), 
-            sum(full_nodelist_cum$deg0818/ 2, na.rm = TRUE))) 
-
-weighted <- as_tibble(c(sum(full_nodelist_cum$wtddeg08, na.rm = TRUE), sum(full_nodelist_cum$wtddeg0809, na.rm = TRUE),
-            sum(full_nodelist_cum$wtddeg0810, na.rm = TRUE), sum(full_nodelist_cum$wtddeg0811, na.rm = TRUE),
-            sum(full_nodelist_cum$wtddeg0812, na.rm = TRUE), sum(full_nodelist_cum$wtddeg0813, na.rm = TRUE),
-            sum(full_nodelist_cum$wtddeg0814, na.rm = TRUE), sum(full_nodelist_cum$wtddeg0815, na.rm = TRUE),
-            sum(full_nodelist_cum$wtddeg0816, na.rm = TRUE), sum(full_nodelist_cum$wtddeg0817, na.rm = TRUE), 
-            sum(full_nodelist_cum$wtddeg0818, na.rm = TRUE))) 
+weighted <- as_tibble(c(sum(full_nodelist$wtddeg08, na.rm = TRUE), sum(full_nodelist$wtddeg0809, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0810, na.rm = TRUE), sum(full_nodelist$wtddeg0811, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0812, na.rm = TRUE), sum(full_nodelist$wtddeg0813, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0814, na.rm = TRUE), sum(full_nodelist$wtddeg0815, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0816, na.rm = TRUE), sum(full_nodelist$wtddeg0817, na.rm = TRUE), 
+            sum(full_nodelist$wtddeg0818, na.rm = TRUE))) 
 
 colnames(weighted) <- "wtd_edge_count"
 global_netstats_cum <- cbind(global_netstats_cum, weighted) 
@@ -299,11 +293,14 @@ global_netstats_cum <- global_netstats_cum %>%
 
 global_netstats_cum
 
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
+saveRDS(global_netstats_cum, "global_netstats_cum.rds") 
+
 ```
 
 ```{r k_core}
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 full_nodelist <- readRDS("full_nodelist_cum.rds")
 global_netstats_cum <- readRDS("global_netstats_cum.rds")
 
@@ -353,7 +350,7 @@ kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max
 
 global_netstats_cum <- right_join(global_netstats_cum,kmax_df, by = "time")
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 write_rds(kcore_data, "kcore_data_cum.rds")
 write_rds(global_netstats_cum, "global_netstats_cum.rds")
 
@@ -361,7 +358,7 @@ write_rds(global_netstats_cum, "global_netstats_cum.rds")
 
 ```{r decomp_stats}
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
 dc09 <- as.data.frame(readRDS("decomposition_stats_2008-09.rds")) %>% rename(decomp = Var1, dc09 = Freq)
 dc10 <- as.data.frame(readRDS("decomposition_stats_2008-10.rds")) %>% rename(decomp = Var1, dc10 = Freq)
@@ -385,7 +382,7 @@ decomp_data_cum <- right_join(decomp_data_cum,dc16, by = "decomp")
 decomp_data_cum <- right_join(decomp_data_cum,dc17, by = "decomp")
 decomp_data_cum <- right_join(decomp_data_cum,dc18, by = "decomp")
 
-setwd("~/intl-dyn-ctr-nets-cum")
+setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 write_rds(decomp_data_cum, "decomp_data_cum.rds")
 
 ```

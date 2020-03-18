@@ -115,28 +115,28 @@ saveRDS(time_log, "timelog_yxy_2018.rds")
 # read nodelists
 rm(list = ls())
 #setwd("~/2008")
-setwd("~/intl-dyn-ctr-nets-yxy")
-nodelist_2008 <- read_rds("nodelist_2008.rds")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
+nodelist_2008 <- read_rds("nodelist_yxy_2008.rds")
 #setwd("~/2009")
-nodelist_2009 <- read_rds("nodelist_2009.rds")
+nodelist_2009 <- read_rds("nodelist_yxy_2009.rds")
 #setwd("~/2010")
-nodelist_2010 <- read_rds("nodelist_2010.rds")
+nodelist_2010 <- read_rds("nodelist_yxy_2010.rds")
 #setwd("~/2011")
-nodelist_2011 <- read_rds("nodelist_2011.rds")
+nodelist_2011 <- read_rds("nodelist_yxy_2011.rds")
 #setwd("~/2012")
-nodelist_2012 <- read_rds("nodelist_2012.rds")
+nodelist_2012 <- read_rds("nodelist_yxy_2012.rds")
 #setwd("~/2013")
-nodelist_2013 <- read_rds("nodelist_2013.rds")
+nodelist_2013 <- read_rds("nodelist_yxy_2013.rds")
 #setwd("~/2014")
-nodelist_2014 <- read_rds("nodelist_2014.rds")
+nodelist_2014 <- read_rds("nodelist_yxy_2014.rds")
 #setwd("~/2015")
-nodelist_2015 <- read_rds("nodelist_2015.rds")
+nodelist_2015 <- read_rds("nodelist_yxy_2015.rds")
 #setwd("~/2016")
-nodelist_2016 <- read_rds("nodelist_2016.rds")
+nodelist_2016 <- read_rds("nodelist_yxy_2016.rds")
 #setwd("~/2017")
-nodelist_2017 <- read_rds("nodelist_2017.rds")
+nodelist_2017 <- read_rds("nodelist_yxy_2017.rds")
 #setwd("~/2018")
-nodelist_2018 <- read_rds("nodelist_2018.rds")
+nodelist_2018 <- read_rds("nodelist_yxy_2018.rds")
 
 full_nodelist <- nodelist_2008 %>% 
   select(-id) %>% 
@@ -145,7 +145,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg08 = wtd_degree, 
          kcore08 = k_core,
          louvain08 = louvain_comm,
-         fstgrdy08 = fstgrdy_comm,
+         #fstgrdy08 = fstgrdy_comm,
          comp08 = component) %>%     
   right_join(nodelist_2009, by = "login") %>% 
   select(-id) %>% 
@@ -153,7 +153,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg09 = wtd_degree, 
          kcore09 = k_core,
          louvain09 = louvain_comm,
-         fstgrdy09 = fstgrdy_comm,
+         #fstgrdy09 = fstgrdy_comm,
          comp09 = component) %>% 
   right_join(nodelist_2010, by = "login") %>% 
   select(-id) %>% 
@@ -161,7 +161,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg10 = wtd_degree, 
          kcore10 = k_core,
          louvain10 = louvain_comm,
-         fstgrdy10 = fstgrdy_comm,
+         #fstgrdy10 = fstgrdy_comm,
          comp10 = component) %>% 
   right_join(nodelist_2011, by = "login") %>% 
   select(-id) %>% 
@@ -169,7 +169,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg11 = wtd_degree, 
          kcore11 = k_core,
          louvain11 = louvain_comm,
-         fstgrdy11 = fstgrdy_comm,
+         #fstgrdy11 = fstgrdy_comm,
          comp11 = component) %>% 
   right_join(nodelist_2012, by = "login") %>% 
   select(-id) %>% 
@@ -177,7 +177,7 @@ full_nodelist <- nodelist_2008 %>%
          wtddeg12 = wtd_degree, 
          kcore12 = k_core,
          louvain12 = louvain_comm,
-         fstgrdy12 = fstgrdy_comm,
+         #fstgrdy12 = fstgrdy_comm,
          comp12 = component) %>% 
   right_join(nodelist_2013, by = "login") %>% 
   select(-id) %>% 
@@ -228,31 +228,29 @@ full_nodelist <- nodelist_2008 %>%
          #fstgrdy18 = NA,
          comp18 = component) 
 
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 saveRDS(full_nodelist, "full_nodelist_yxy.rds")
 ```
 
 ```{r concatenating global_netstats_yxy}
 
 rm(list = ls())
-setwd("~/intl-dyn-ctr-nets-yxy")
-global_netstats_2008 <- read_rds("global_netstats_2008.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2009 <- read_rds("global_netstats_2009.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2010 <- read_rds("global_netstats_2010.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2011 <- read_rds("global_netstats_2011.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2012 <- read_rds("global_netstats_2012.rds") #%>% select(-diameter, -mean_distance)
-global_netstats_2013 <- read_rds("global_netstats_2013.rds") #%>% select(-mean_distance)
-global_netstats_2014 <- read_rds("global_netstats_2014.rds") #%>% select(-mean_distance)
-global_netstats_2015 <- read_rds("global_netstats_2015.rds") #%>% select(-mean_distance)
-global_netstats_2016 <- read_rds("global_netstats_2016.rds")
-global_netstats_2017 <- read_rds("global_netstats_2017.rds")
-global_netstats_2018 <- read_rds("global_netstats_2018.rds")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
+global_netstats_2008 <- read_rds("global_netstats_yxy_2008.rds") 
+global_netstats_2009 <- read_rds("global_netstats_yxy_2009.rds") 
+global_netstats_2010 <- read_rds("global_netstats_yxy_2010.rds") 
+global_netstats_2011 <- read_rds("global_netstats_yxy_2011.rds")
+global_netstats_2012 <- read_rds("global_netstats_yxy_2012.rds") 
+global_netstats_2013 <- read_rds("global_netstats_yxy_2013.rds")
+global_netstats_2014 <- read_rds("global_netstats_yxy_2014.rds") 
+global_netstats_2015 <- read_rds("global_netstats_yxy_2015.rds") 
+global_netstats_2016 <- read_rds("global_netstats_yxy_2016.rds")
+global_netstats_2017 <- read_rds("global_netstats_yxy_2017.rds")
+global_netstats_2018 <- read_rds("global_netstats_yxy_2018.rds")
 
-global_netstats_2012 <- global_netstats_2012 %>% select(-triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged)
-
-global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011) %>% 
-  select(-triads_003, -triads_102, -triads_201, -triads_300, -fstgrdy, -fstgrdy_scaled, -fstgrdy_logged) %>% 
-  rbind(global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015, global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
+global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011,
+                             global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015,
+                             global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
   transform(dyads = as.numeric(dyads))
 
 setwd("~/intl-dyn-ctr-nets-yxy")
