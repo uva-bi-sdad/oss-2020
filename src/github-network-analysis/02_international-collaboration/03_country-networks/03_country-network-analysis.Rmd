@@ -1,0 +1,92 @@
+---
+title: "Country Network Analysis"
+output: html_document
+---
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
+                                  FROM gh.login_ctry_codes")
+
+# query the bipartite edgelist data from github data  
+ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
+                                  FROM gh.sna_intl_ctr_edgelist
+                                  WHERE year > 2007 AND year < 2019")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+```
+
+```{r}
+
+# detect all multiple country_codes and separate them into new rows 
+ctr_nodelist <- ctr_nodelist %>% 
+  separate_rows(country_code, sep = "," , convert = FALSE) %>% 
+  mutate(country_code = trimws(country_code)) %>% 
+  filter(country_code != "asia" | country_code != "europe" | 
+         country_code != "africa" | country_code != "americas" )
+
+# join the country_codes to ctr_edgelist
+intl_edgelist <- ctr_edgelist %>% 
+  rename(login = ctr1) %>% 
+  inner_join(ctr_nodelist, by = "login") %>% 
+  rename(ctrycode1 = country_code) %>% 
+  select(ctrycode1, repo_wts, year, ctr2)
+
+# join the country_codes to ctr_edgelist
+intl_edgelist <- intl_edgelist %>% 
+  rename(login = ctr2) %>% 
+  inner_join(ctr_nodelist, by = "login") %>% 
+  rename(ctrycode2 = country_code) %>%  
+  select(ctrycode1, ctrycode2, year, repo_wts)
+
+# changing country codes to country name 
+intl_edgelist$country1 <- countrycode(intl_edgelist$ctrycode1, 
+                                      origin = 'iso2c', 
+                                      destination = 'country.name')
+intl_edgelist$country2 <- countrycode(intl_edgelist$ctrycode2, 
+                                      origin = 'iso2c', 
+                                      destination = 'country.name')
+
+# changing Kosovo to have a valid country name 
+intl_edgelist <- intl_edgelist %>% 
+  mutate(country1 = ifelse(test = str_detect(string = ctrycode1, 
+                          pattern = "xk"), yes = "Kosovo", no = country1)) 
+  mutate(country2 = ifelse(test = str_detect(string = ctrycode2, 
+                          pattern = "xk"), yes = "Kosovo", no = country2))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

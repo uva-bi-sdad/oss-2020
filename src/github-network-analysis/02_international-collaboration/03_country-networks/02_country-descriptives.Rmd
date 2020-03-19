@@ -1,0 +1,164 @@
+---
+title: "International Country Networks: Descriptive Analyses"
+author: "Brandon L. Kramer"
+output: html_document
+---
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
+                                 FROM gh.intl_stats")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+# recoding coutry names for graphing purposes
+intl_stats$country <- recode(intl_stats$country, `United States` = "USA", `United Kingdom` = "UK")
+
+intl_stats
+```
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+# pull out a character vector 
+users_ranking <- pull(intl_stats %>% 
+  top_n(10, users) %>% 
+  arrange(-users) %>%
+  select(country))
+
+# setting up a custom order graphing purposes 
+users_ranking <- c("USA", "China", "UK","Germany","India","Canada","France", "Brazil","Russia", "Japan")
+class(users_ranking)
+
+intl_stats %>% 
+  top_n(10, users) %>% 
+  ggplot( aes(x = country, y = users)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = users_ranking) + 
+  theme(plot.title = element_text(size = 24),
+    axis.title.x = element_blank(),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=20)) +
+  labs(y = "Contributors (in Thousands)") +
+  scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000), 
+                                labels = c(0,  50, 100, 150,  200)) +
+  labs(title="Total Contributors for Top-10 Countries (GitHub, 2008-2018)")
+
+```
+
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+repos_ranking <- pull(intl_stats %>% 
+  top_n(10, repos) %>% 
+  arrange(-repos) %>%
+  select(country)) 
+
+intl_stats %>% 
+  top_n(10, repos) %>% 
+  ggplot( aes(x = country, y = repos)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = repos_ranking) + 
+  theme(plot.title = element_text(size = 24),
+        axis.title.x = element_blank(),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=20)) +
+  labs(y = "Repositories (in Millions)") +
+  scale_y_continuous(breaks = c(0, 250000, 500000, 750000, 1000000, 1250000, 1500000, 1750000), 
+                                labels = c(0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75)) +
+  labs(title="Total Repositories for Top-10 Countries (GitHub, 2008-2018)")
+```
+
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+intl_stats %>% arrange(-commits)
+
+commits_ranking <- pull(intl_stats %>% 
+  top_n(10, commits) %>% 
+  arrange(-commits) %>%
+  select(country)) 
+
+intl_stats %>% 
+  top_n(10, commits) %>% 
+  ggplot( aes(x = country, y = commits)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = commits_ranking) + 
+  theme(plot.title = element_text(size = 24),
+        axis.title.x = element_blank(),
+        axis.text=element_text(size=13),
+        axis.title=element_text(size=20)) +
+  labs(y = "Commits (in Millions)") +
+  scale_y_continuous(breaks = c(0, 20000000, 40000000, 60000000, 80000000, 100000000, 120000000), 
+                                labels = c(0, 20, 40, 60, 80, 100, 120)) +
+  labs(title="Total Commits for Top-10 Countries (GitHub, 2008-2018)")
+
+```
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+intl_stats %>% arrange(-additions)
+
+additions_ranking <- pull(intl_stats %>% 
+  top_n(10, additions) %>% 
+  arrange(-additions) %>%
+  select(country)) 
+
+intl_stats %>% 
+  top_n(10, additions) %>% 
+  ggplot( aes(x = country, y = additions)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = additions_ranking) + 
+  theme(plot.title = element_text(size = 24),
+        axis.title.x = element_blank(),
+        axis.text=element_text(size=13),
+        axis.title=element_text(size=20)) +
+  labs(y = "Additions (in Billions)") +
+  scale_y_continuous(breaks = c(0, 20000000000, 40000000000, 60000000000, 80000000000, 100000000000, 120000000000), 
+                                labels = c(0, 20, 40, 60, 80, 100, 120)) +
+  labs(title="Total Additions for Top-10 Countries (GitHub, 2008-2018)")
+
+```
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+intl_stats %>% arrange(-deletions)
+
+deletions_ranking <- pull(intl_stats %>% 
+  top_n(10, deletions) %>% 
+  arrange(-deletions) %>%
+  select(country)) 
+
+intl_stats %>% 
+  top_n(10, deletions) %>% 
+  ggplot( aes(x = country, y = deletions)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = deletions_ranking) + 
+  theme(plot.title = element_text(size = 24),
+        axis.title.x = element_blank(),
+        axis.text=element_text(size=13),
+        axis.title=element_text(size=20)) +
+  labs(y = "Deletions (in Billions)") +
+  scale_y_continuous(breaks = c(0, 10000000000, 20000000000, 30000000000, 40000000000, 50000000000, 60000000000), 
+                                labels = c(0, 10, 20, 30, 40, 50, 60)) +
+  labs(title="Total Deletions for Top-10 Countries (GitHub, 2008-2018)")
+
+```

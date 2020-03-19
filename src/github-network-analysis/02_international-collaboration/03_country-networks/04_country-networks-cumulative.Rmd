@@ -9,8 +9,6 @@ We used this code to pull data for the construction of Github network data (cumu
 
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
 rm(list = ls())
-# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
 for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL",
