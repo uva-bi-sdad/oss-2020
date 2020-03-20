@@ -23,7 +23,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                 FROM gh.intl_stats")
+                                FROM gh.sna_intl_ctry_nodelist")
 
 # disconnect from postgresql
 dbDisconnect(conn)

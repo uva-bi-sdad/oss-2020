@@ -637,33 +637,6 @@ dbWriteTable(conn, c("gh", "login_ctry_codes"), users_gh_cc)
 # disconnect from postgresql database  
 dbDisconnect(conn)
 ```
-
-## International Edgelist Creation 
-
-To make an international edgelist, we need first make sure that our full edgelist and the country_code data is indexed and then filter down the intl_edgelist for cases where both ctr1 + ctr2 columns actually have a valid country_code. 
-
-```{sql indexing_tables}
-
---FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
-CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
-CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
-CREATE INDEX login_cc_login_idx ON gh.login_ctry_codes (login);
-CREATE INDEX login_cc_cc_idx ON gh.login_ctry_codes (country_code);
-
-```
-
-```{sql write_sna_intl_ctr_edgelist}
-
---THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
-CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
-SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
-FROM gh.sna_ctr_edgelist AS ctr_el
-INNER JOIN gh.login_ctry_codes AS cc ON cc.login = ctr_el.ctr1 OR cc.login = ctr_el.ctr2 
-WHERE cc.country_code IS NOT NULL AND cc.country_code IS NOT NULL
-); 
-
-```
-
 ## International Nodelist Creation 
 
 And to make the intl_nodelist for the intl_edgelist we can just filter down the full sna_edgelist we made in 01_full-network-construction:
@@ -691,6 +664,45 @@ WHERE country_code IS NOT NULL AND year = '2008'
 ); 
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+## International Edgelist Creation 
+
+To make an international edgelist, we need first make sure that our full edgelist and the country_code data is indexed and then filter down the intl_edgelist for cases where both ctr1 + ctr2 columns actually have a valid country_code. 
+
+```{sql indexing_tables}
+
+--FIRST WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
+CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
+CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
+CREATE INDEX login_cc_login_idx ON gh.login_ctry_codes (login);
+CREATE INDEX login_cc_cc_idx ON gh.login_ctry_codes (country_code);
+
+```
+
+```{sql write_sna_intl_ctr_edgelist}
+
+--THIS FILTERS THE ORIGINAL EDGELIST DOWN TO ONLY THOSE WITH VALID COUNTRY CODES 
+CREATE MATERIALIZED VIEW gh.sna_intl_ctr_edgelist AS (
+SELECT ctr_el.ctr1, ctr_el.ctr2, ctr_el.year, ctr_el.repo_wts  
+FROM gh.sna_ctr_edgelist AS ctr_el
+INNER JOIN gh.login_ctry_codes AS cc ON cc.login = ctr_el.ctr1 OR cc.login = ctr_el.ctr2 
+WHERE cc.country_code IS NOT NULL AND cc.country_code IS NOT NULL
+); 
+
+```
+
+
 
 
 

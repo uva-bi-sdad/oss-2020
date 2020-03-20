@@ -189,7 +189,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # writing the new users_gh_cc table to postgis_2
-dbWriteTable(conn, name = c(schema = "gh" , name = "intl_stats"), 
+dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctry_nodelist"), 
              value = stats_by_country, row.names = FALSE)
 
 # disconnect from postgresql database  
