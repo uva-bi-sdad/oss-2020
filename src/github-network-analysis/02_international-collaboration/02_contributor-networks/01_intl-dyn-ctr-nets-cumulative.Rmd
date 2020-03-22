@@ -11,7 +11,6 @@ We used this code to pull data for the construction of Github network data (cumu
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
 rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
@@ -28,7 +27,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_intl_ctr_edgelist
-                                  WHERE year > 2007 AND year < 2016")
+                                  WHERE year > 2007 AND year < 2019")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -49,7 +48,7 @@ login_network <- simplify(login_network, remove.loops = TRUE)
 ```{r global network stats}
 # loading the network (if the instance crashes while doing network_stats)
 net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
-network_stats <- data.frame(year="2008-15")                                          
+network_stats <- data.frame(year="2008-18")                                          
 
 # node and edge counts  
 network_stats$node_count <- gorder(login_network)  
@@ -105,15 +104,20 @@ node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
 setwd("~/oss-data/intl-dyn-ctr-nets-cum")
-saveRDS(network_stats, "global_netstats_2008-15.rds")  
-saveRDS(decomposition_stats, "decomposition_stats_2008-15.rds") 
-saveRDS(nodelist, "nodelist_2008-15.rds")  
-saveRDS(time_log, "timelog_2008-15.rds")
+saveRDS(network_stats, "global_netstats_2008-18.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008-18.rds") 
+saveRDS(nodelist, "nodelist_2008-18.rds")  
+saveRDS(time_log, "timelog_2008-18.rds")
 ```
 
 ```{r binding cum nodelists}
 # read nodelists
 rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
 setwd("~/oss-data/intl-dyn-ctr-nets-cum")
 #setwd("~/oss_networks_cum/2008")
 nodelist_2008 <- readRDS("nodelist_2008.rds") 

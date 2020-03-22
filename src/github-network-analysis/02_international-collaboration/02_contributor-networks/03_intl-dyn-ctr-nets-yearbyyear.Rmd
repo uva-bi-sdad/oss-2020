@@ -11,7 +11,6 @@ We used this code to pull data (year-by-year and then cumulutively) for the cons
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
 rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
 
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
@@ -28,7 +27,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_intl_ctr_edgelist
-                                  WHERE year > 2016 AND year < 2018")
+                                  WHERE year > 2017 AND year < 2019")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -49,7 +48,7 @@ login_network <- simplify(login_network, remove.loops = TRUE)
 ```{r global network stats}
 # loading the network (if the instance crashes while doing network_stats)
 net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
-network_stats <- data.frame(year="2017")                                          
+network_stats <- data.frame(year="2018")                                          
 
 # node and edge counts  
 network_stats$node_count <- gorder(login_network)  
@@ -105,13 +104,18 @@ node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
 setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
-saveRDS(network_stats, "global_netstats_yxy_2017.rds")  
-saveRDS(decomposition_stats, "decomposition_stats_yxy_2017.rds") 
-saveRDS(nodelist, "nodelist_yxy_2017.rds")  
-saveRDS(time_log, "timelog_yxy_2017.rds")
+saveRDS(network_stats, "global_netstats_yxy_2018.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_yxy_2018.rds") 
+saveRDS(nodelist, "nodelist_yxy_2018.rds")  
+saveRDS(time_log, "timelog_yxy_2018.rds")
 ```
 
 ```{r binding yxy nodelists}
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
 # read nodelists
 rm(list = ls())
 #setwd("~/2008")
@@ -234,7 +238,7 @@ saveRDS(full_nodelist, "full_nodelist_yxy.rds")
 
 ```{r concatenating global_netstats_yxy}
 
-rm(list = ls())
+#rm(list = ls())
 setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 global_netstats_2008 <- read_rds("global_netstats_yxy_2008.rds") 
 global_netstats_2009 <- read_rds("global_netstats_yxy_2009.rds") 
@@ -253,7 +257,7 @@ global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_
                              global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
   transform(dyads = as.numeric(dyads))
 
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
 
 edges <- as_tibble(c(sum(full_nodelist_yxy$deg08/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg09/ 2, na.rm = TRUE),
@@ -281,7 +285,7 @@ global_netstats_yxy <- global_netstats_yxy %>%
   select(time, year, node_count, edge_count, wtd_edge_count, everything()) %>% 
   transform(dyads = as.numeric(dyads))
 
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
 
 ```
@@ -289,7 +293,7 @@ saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
 ```{r k_core}
 
 rm(list = ls())
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 full_nodelist <- readRDS("full_nodelist_yxy.rds")
 global_netstats_yxy <- readRDS("global_netstats_yxy.rds")
 
@@ -339,7 +343,7 @@ kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max
 
 global_netstats_yxy <- right_join(global_netstats_yxy,kmax_df, by = "time")
 
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 write_rds(kcore_data, "kcore_data_yxy.rds")
 write_rds(global_netstats_yxy, "global_netstats_yxy.rds")
 
@@ -347,18 +351,18 @@ write_rds(global_netstats_yxy, "global_netstats_yxy.rds")
 
 ```{r decomp_stats}
 
-setwd("~/intl-dyn-ctr-nets-yxy")
-dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
-dc09 <- as.data.frame(readRDS("decomposition_stats_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
-dc10 <- as.data.frame(readRDS("decomposition_stats_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
-dc11 <- as.data.frame(readRDS("decomposition_stats_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
-dc12 <- as.data.frame(readRDS("decomposition_stats_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
-dc13 <- as.data.frame(readRDS("decomposition_stats_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
-dc14 <- as.data.frame(readRDS("decomposition_stats_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
-dc15 <- as.data.frame(readRDS("decomposition_stats_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
-dc16 <- as.data.frame(readRDS("decomposition_stats_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
-dc17 <- as.data.frame(readRDS("decomposition_stats_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
-dc18 <- as.data.frame(readRDS("decomposition_stats_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
+dc08 <- as.data.frame(readRDS("decomposition_stats_yxy_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomposition_stats_yxy_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomposition_stats_yxy_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_yxy_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_yxy_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_yxy_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_yxy_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_yxy_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_yxy_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_yxy_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_yxy_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
 
 decomp_data_yxy <- right_join(dc08,dc09, by = "decomp")  
 decomp_data_yxy <- right_join(decomp_data_yxy,dc10, by = "decomp")  
@@ -371,7 +375,7 @@ decomp_data_yxy <- right_join(decomp_data_yxy,dc16, by = "decomp")
 decomp_data_yxy <- right_join(decomp_data_yxy,dc17, by = "decomp")
 decomp_data_yxy <- right_join(decomp_data_yxy,dc18, by = "decomp")
 
-setwd("~/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
 write_rds(decomp_data_yxy, "decomp_data_yxy.rds")
 
 ```
