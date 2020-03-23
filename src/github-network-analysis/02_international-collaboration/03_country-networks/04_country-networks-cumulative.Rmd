@@ -3,335 +3,150 @@ title: "Create Edgelists"
 output: html_document
 ---
 
-## Loading Data 
-
-We used this code to pull data for the construction of Github network data (cumulatively.
-
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
 rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL",
-              "cowplot", "maditr", "lubridate", "linkprediction", "poweRlaw")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "igraph", 
+              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
 
 # query the bipartite edgelist data from github data  
-bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight 
-                                 FROM github.intl_dyn_bp_el_new 
-                                 WHERE year = 2008")
-                                #WHERE year > 2007 AND year < 2019")
+sna_intl_ctry_nodelist <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
+                                            FROM gh.sna_intl_ctry_nodelist")
+
+# query the bipartite edgelist data from github data  
+sna_intl_ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, ctrycode1, ctrycode2, year, repo_wts
+                                            FROM gh.sna_intl_ctry_edgelist")
 
 # disconnect from postgresql
 dbDisconnect(conn)
 
-# this code is taken from network scientists to reduce bipartite networks to single mode networks 
-bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
-              ncol=length(unique(bp_edgelist$slug)),
-              i = as.numeric(factor(bp_edgelist$login)),
-              j = as.numeric(factor(bp_edgelist$slug)),
-              x = rep(1, length(as.numeric(bp_edgelist$login))))
-row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
-colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
-
-# we then multiply these incidence matrices and impute zeroes to prevent self loops 
-login_matrix <- tcrossprod(bp_matrix)
-diag(login_matrix) <- 0
-rm(bp_matrix)
-
-# convert it into a network and removing the loops 
-login_network <- graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE)
-login_network <- simplify(login_network, remove.loops = TRUE)
-
-# getting the weighted edgelist from 
-login_edgelist  <- graph.adjacency(login_matrix, mode = "undirected", weighted=TRUE)
-login_edgelist <- get.data.frame(login_edgelist)
-head(login_edgelist)
-login_edgelist <- login_edgelist %>% 
-  filter(weight != 0) %>% 
-  rename(Source = from, Target = to, Weight = weight)
-login_edgelist %>% arrange(-Weight)
-
-
-
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-country_codes <- dbGetQuery(conn, "SELECT login, country_code
-                                   FROM github.users_gh_cc")
-
-dbDisconnect(conn)
-
-country_codes <- country_codes %>% 
-  filter(!grepl(",", country_code)) %>% 
-  filter(!grepl("europe", country_code)) %>% 
-  filter(!grepl("americas", country_code)) %>% 
-  filter(!grepl("asia", country_code)) %>% 
-  filter(!grepl("africa", country_code)) %>% 
-  mutate(country_code = trimws(country_code))
-
-# changing country codes to country name 
-country_codes$country <- countrycode(country_codes$country, origin = 'iso2c', destination = 'country.name')
-
-# changing Kosovo to have a valid country name 
-country_codes <- country_codes %>% 
-  mutate(country = ifelse(test = str_detect(string = country_code, pattern = "xk"), yes = "Kosovo", no = country)) 
-
-country_edgelist <- login_edgelist %>% 
-  rename(login = Source) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Source = country) %>% 
-  select(Source, Target, Weight)
-
-country_edgelist <- country_edgelist %>% 
-  rename(login = Target) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Target = country) %>% 
-  select(Source, Target)
-
-country_edgelist_08 <- country_edgelist %>% 
-  count(Source, Target) %>% 
-  arrange(-n)
-
-country_edgelist_08
 ```
 
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
+```{r }
 
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+# filter out the omitted_geographies 
+omitted_geographies <- c("Multiple Countries", "Europe", "Asia", "The Americas", "Africa")
+`%notin%` <- Negate(`%in%`)
+sna_intl_ctry_nodelist <- sna_intl_ctry_nodelist %>% 
+  filter(country %notin% omitted_geographies)
 
-# query the bipartite edgelist data from github data  
-bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight 
-                                 FROM github.intl_dyn_bp_el_new 
-                                 WHERE year > 2007 AND year < 2014")
+# create cumulative networks 
+ctry_edgelist_08 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
+  
+ctry_edgelist_0809 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
 
-# disconnect from postgresql
-dbDisconnect(conn)
+ctry_edgelist_0810 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
 
-# this code is taken from network scientists to reduce bipartite networks to single mode networks 
-bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
-              ncol=length(unique(bp_edgelist$slug)),
-              i = as.numeric(factor(bp_edgelist$login)),
-              j = as.numeric(factor(bp_edgelist$slug)),
-              x = rep(1, length(as.numeric(bp_edgelist$login))))
-row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
-colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
+ctry_edgelist_0811 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | year == "2011") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
+  
+ctry_edgelist_0812 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | year == "2011" | year == "2012") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
+  
+ctry_edgelist_0813 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | 
+         year == "2011" | year == "2012" | year == "2013") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
 
-# we then multiply these incidence matrices and impute zeroes to prevent self loops 
-login_matrix <- tcrossprod(bp_matrix)
-diag(login_matrix) <- 0
-rm(bp_matrix)
-
-# convert it into a network and removing the loops 
-login_network <- graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE)
-login_network <- simplify(login_network, remove.loops = TRUE)
-
-# getting the weighted edgelist from 
-login_edgelist  <- graph.adjacency(login_matrix, mode = "undirected", weighted=TRUE)
-login_edgelist <- get.data.frame(login_edgelist)
-head(login_edgelist)
-login_edgelist <- login_edgelist %>% 
-  filter(weight != 0) %>% 
-  rename(Source = from, Target = to, Weight = weight)
-login_edgelist %>% arrange(-Weight)
-
-
-
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-country_codes <- dbGetQuery(conn, "SELECT login, country_code
-                                   FROM github.users_gh_cc")
-
-dbDisconnect(conn)
-
-country_codes <- country_codes %>% 
-  filter(!grepl(",", country_code)) %>% 
-  filter(!grepl("europe", country_code)) %>% 
-  filter(!grepl("americas", country_code)) %>% 
-  filter(!grepl("asia", country_code)) %>% 
-  filter(!grepl("africa", country_code)) %>% 
-  mutate(country_code = trimws(country_code))
-
-# changing country codes to country name 
-country_codes$country <- countrycode(country_codes$country, origin = 'iso2c', destination = 'country.name')
-
-# changing Kosovo to have a valid country name 
-country_codes <- country_codes %>% 
-  mutate(country = ifelse(test = str_detect(string = country_code, pattern = "xk"), yes = "Kosovo", no = country)) 
-
-country_edgelist <- login_edgelist %>% 
-  rename(login = Source) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Source = country) %>% 
-  select(Source, Target, Weight)
-
-country_edgelist <- country_edgelist %>% 
-  rename(login = Target) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Target = country) %>% 
-  select(Source, Target)
-
-country_edgelist_0813 <- country_edgelist %>% 
-  count(Source, Target) %>% 
-  arrange(-n)
-
-country_edgelist_0813
-```
-
-
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
-
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-bp_edgelist <- dbGetQuery(conn, "SELECT login, slug, year, weight 
-                                 FROM github.intl_dyn_bp_el_new 
-                                 WHERE year > 2007 AND year < 2019")
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-# this code is taken from network scientists to reduce bipartite networks to single mode networks 
-bp_matrix <- spMatrix(nrow=length(unique(bp_edgelist$login)),
-              ncol=length(unique(bp_edgelist$slug)),
-              i = as.numeric(factor(bp_edgelist$login)),
-              j = as.numeric(factor(bp_edgelist$slug)),
-              x = rep(1, length(as.numeric(bp_edgelist$login))))
-row.names(bp_matrix) <- levels(factor(bp_edgelist$login))
-colnames(bp_matrix) <- levels(factor(bp_edgelist$slug))
-
-# we then multiply these incidence matrices and impute zeroes to prevent self loops 
-login_matrix <- tcrossprod(bp_matrix)
-diag(login_matrix) <- 0
-rm(bp_matrix)
-
-# convert it into a network and removing the loops 
-login_network <- graph_from_adjacency_matrix(login_matrix, mode = "undirected", weighted = TRUE)
-login_network <- simplify(login_network, remove.loops = TRUE)
-
-# getting the weighted edgelist from 
-login_edgelist  <- graph.adjacency(login_matrix, mode = "undirected", weighted=TRUE)
-login_edgelist <- get.data.frame(login_edgelist)
-head(login_edgelist)
-login_edgelist <- login_edgelist %>% 
-  filter(weight != 0) %>% 
-  rename(Source = from, Target = to, Weight = weight)
-login_edgelist %>% arrange(-Weight)
-
-
-
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
-                  host = "sdad.policy-analytics.net", port = 5436, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-country_codes <- dbGetQuery(conn, "SELECT login, country_code
-                                   FROM github.users_gh_cc")
-
-dbDisconnect(conn)
-
-country_codes <- country_codes %>% 
-  filter(!grepl(",", country_code)) %>% 
-  filter(!grepl("europe", country_code)) %>% 
-  filter(!grepl("americas", country_code)) %>% 
-  filter(!grepl("asia", country_code)) %>% 
-  filter(!grepl("africa", country_code)) %>% 
-  mutate(country_code = trimws(country_code))
-
-# changing country codes to country name 
-country_codes$country <- countrycode(country_codes$country, origin = 'iso2c', destination = 'country.name')
-
-# changing Kosovo to have a valid country name 
-country_codes <- country_codes %>% 
-  mutate(country = ifelse(test = str_detect(string = country_code, pattern = "xk"), yes = "Kosovo", no = country)) 
-
-country_edgelist <- login_edgelist %>% 
-  rename(login = Source) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Source = country) %>% 
-  select(Source, Target, Weight)
-
-country_edgelist <- country_edgelist %>% 
-  rename(login = Target) %>% 
-  inner_join(country_codes, by = "login") %>% 
-  rename(Target = country) %>% 
-  select(Source, Target)
-
-country_edgelist_0818 <- country_edgelist %>% 
-  count(Source, Target) %>% 
-  arrange(-n)
-
-country_edgelist_0818
-```
-
-```{r}
-
-write_csv(country_edgelist_08, "country_edgelist_08.csv")
-write_csv(country_edgelist_0813, "country_edgelist_0813.csv")
-write_csv(country_edgelist_0818, "country_edgelist_0818.csv")
-
-
+ctry_edgelist_0814 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | 
+         year == "2011" | year == "2012" | year == "2013" | year == "2014") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)  
+  
+ctry_edgelist_0815 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | 
+         year == "2011" | year == "2012" | year == "2013" | year == "2014" | year == "2015") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)  
+  
+ctry_edgelist_0816 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | year == "2011" | year == "2012" | 
+         year == "2013" | year == "2014" | year == "2015" | year == "2016") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)  
+  
+ctry_edgelist_0817 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | year == "2011" | year == "2012" | 
+         year == "2013" | year == "2014" | year == "2015" | year == "2016" | year == "2017") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
+  
+ctry_edgelist_0818 <- sna_intl_ctry_edgelist %>% 
+  filter(year == "2008" | year == "2009" | year == "2010" | year == "2011" | year == "2012" | 
+         year == "2013" | year == "2014" | year == "2015" | year == "2016" | year == "2017" | year == "2018") %>% 
+  select(country1, country2, repo_wts) %>% 
+  mutate(weight = repo_wts) %>% select(-repo_wts)
+  
+# edgelists 
+ctry_edgelist_08
+ctry_edgelist_0809
+ctry_edgelist_0810
+ctry_edgelist_0811
+ctry_edgelist_0812
+ctry_edgelist_0813
+ctry_edgelist_0814
+ctry_edgelist_0815
+ctry_edgelist_0816
+ctry_edgelist_0817
+ctry_edgelist_0818
 
 ```
-
 
 ```{r global network stats}
+
+# update edgelist 
+ctry_edgelist <- ctry_edgelist_0818
+
+# convert edgelists to networks 
+login_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE))
+
+
 # loading the network (if the instance crashes while doing network_stats)
-
-setwd("~/oss-2020")
-login_edgelist <- read_csv("country_edgelist_08.csv")
-login_edgelist <- login_edgelist %>% 
-  rename(from = Source,
-         to = Target, 
-         weight = n)
-
-
-login_network <- graph.data.frame(login_edgelist, directed = FALSE)
-
-
-network_stats <- data.frame(year="2008")                                          
+net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
+network_stats <- data.frame(year="2008-18") 
 
 # node and edge counts  
 network_stats$node_count <- gorder(login_network)  
 network_stats$edge_count <- gsize(login_network)
-network_stats$commits <- sum(login_edgelist$weight)
+network_stats$commits <- sum(ctry_edgelist$weight)
 
 # isolates, dyads and triads 
 network_stats$isolates <- sum(degree(login_network)==0)
 network_stats$dyads <- dyad_census(login_network)[1]
-#oss_triads <- triad.census(login_network)
-##network_stats$triads_003 <- oss_triads[1] 
-#network_stats$triads_102 <- oss_triads[3]
-#network_stats$triads_201 <- oss_triads[11]
-#network_stats$triads_300 <- oss_triads[16]
-
+net_counts <- data.frame(event="net_counts", time=now("EST"))
+time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
 
 # density and transitivity
 network_stats$density <- edge_density(login_network, loops=FALSE) 
 network_stats$transitivity <- transitivity(login_network)
 net_globals <- data.frame(event="net_globals", time=now("EST"))
-#time_log <- rbind(time_log, net_globals); rm(net_globals)
+time_log <- rbind(time_log, net_globals); rm(net_globals)
 
-# diameter and mean distance (very computationally intensive)
-network_stats$diameter <- diameter(login_network, directed = FALSE)
-network_stats$mean_distance <- mean_distance(login_network, directed = FALSE)
-louvain <- cluster_louvain(login_network)
-network_stats$louvain <- modularity(louvain, weights = TRUE)
- 
 # community detection (using louvain method)
 louvain <- cluster_louvain(login_network)
 network_stats$louvain <- modularity(louvain)
@@ -347,14 +162,14 @@ network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(login_network))
 decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
 
 net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
-#time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
+time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
 
 # now, we need to construct a nodelist 
 nodelist <- data.frame(id = c(1:(igraph::vcount(login_network))), login = igraph::V(login_network)$name)
 
 # degree, weighted degree, k core and modularity 
 node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
-#time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
+time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
 nodelist$degree <- degree(login_network)
 nodelist$wtd_degree <- strength(login_network)
 nodelist$k_core <- coreness(login_network)
@@ -365,30 +180,302 @@ nodelist$louvain_comm <- louvain$membership
 components <- components(login_network)
 nodelist$component <- components$membership
 
-
-nodelist <- nodelist %>% rename(country = login)
-
-#nodelist <- nodelist %>% rename(country_code = login)
-#nodelist$country_code <- toupper(nodelist$country_code)
-#nodelist$country <- countrycode(nodelist$country_code, origin = 'iso2c', destination = 'country.name')
-#nodelist <- nodelist %>% select(id, country_code, country, everything())
-#setwd("~/intl-dyn-ctry")
-#write_csv(nodelist, "country_nodelist_all_years.csv")
-
 node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
-#time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
+time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
-#setwd("~/intl-dyn-ctry")
-#saveRDS(network_stats, "global_netstats_2008-17.rds")  
-#saveRDS(decomposition_stats, "decomposition_stats_2008-17.rds") 
-#saveRDS(nodelist, "nodelist_2008-17.rds")  
-#saveRDS(time_log, "timelog_2008-17.rds")
+setwd("~/oss-data/intl-country-nets")
+saveRDS(network_stats, "global_netstats_2008-18.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008-18.rds") 
+saveRDS(nodelist, "nodelist_2008-18.rds")  
+saveRDS(time_log, "timelog_2008-18.rds")
 
 ```
 
+```{r}
+mean(degree(login_network))
+test <- as.data.frame(betweenness(login_network))
+mean(test$`betweenness(login_network)`)
 
+```
 
+```{r binding cumulative_nodelists}
+# read nodelists
+rm(list = ls())
 
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+setwd("~/oss-data/intl-country-nets")
+#setwd("~/oss_networks_cum/2008")
+nodelist_2008 <- readRDS("nodelist_2008.rds") 
+#setwd("~/oss_networks_cum/2008-09")
+nodelist_200809 <- readRDS("nodelist_2008-09.rds") 
+#setwd("~/oss_networks_cum/2008-10")
+nodelist_200810 <- readRDS("nodelist_2008-10.rds")
+#setwd("~/oss_networks_cum/2008-11")
+nodelist_200811 <- readRDS("nodelist_2008-11.rds") 
+#setwd("~/oss_networks_cum/2008-12")
+nodelist_200812 <- readRDS("nodelist_2008-12.rds") 
+#setwd("~/oss_networks_cum/2008-13")
+nodelist_200813 <- readRDS("nodelist_2008-13.rds")
+#setwd("~/oss_networks_cum/2008-14")
+nodelist_200814 <- readRDS("nodelist_2008-14.rds")
+#setwd("~/oss_networks_cum/2008-15")
+nodelist_200815 <- readRDS("nodelist_2008-15.rds")
+#setwd("~/oss_networks_cum/2008-16")
+nodelist_200816 <- readRDS("nodelist_2008-16.rds")
+#setwd("~/oss_networks_cum/2008-17")
+nodelist_200817 <- readRDS("nodelist_2008-17.rds")
+#setwd("~/oss_networks_cum/2008-18")
+nodelist_200818 <- readRDS("nodelist_2008-18.rds")
+
+full_nodelist <- nodelist_2008 %>% 
+  select(-id) %>% 
+  mutate(login = as.character(login)) %>% 
+  rename(deg08 = degree,
+         wtddeg08 = wtd_degree, 
+         kcore08 = k_core,
+         louvain08 = louvain_comm,
+         #fstgrdy08 = fstgrdy_comm, 
+         comp08 = component) %>%     
+  right_join(nodelist_200809, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0809 = degree,
+         wtddeg0809 = wtd_degree, 
+         kcore0809 = k_core,
+         louvain0809 = louvain_comm,
+         #fstgrdy0809 = fstgrdy_comm,
+         comp0809 = component) %>% 
+  right_join(nodelist_200810, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0810 = degree,
+         wtddeg0810 = wtd_degree, 
+         kcore0810 = k_core,
+         louvain0810 = louvain_comm,
+         #fstgrdy0810 = fstgrdy_comm,
+         comp0810 = component) %>% 
+  right_join(nodelist_200811, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0811 = degree,
+         wtddeg0811 = wtd_degree, 
+         kcore0811 = k_core,
+         louvain0811 = louvain_comm,
+         #fstgrdy0811 = fstgrdy_comm,
+         comp0811 = component) %>% 
+  right_join(nodelist_200812, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0812 = degree,
+         wtddeg0812 = wtd_degree, 
+         kcore0812 = k_core,
+         louvain0812 = louvain_comm,
+         #fstgrdy0812 = fstgrdy_comm,
+         comp0812 = component) %>% 
+  right_join(nodelist_200813, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0813 = degree,
+         wtddeg0813 = wtd_degree, 
+         kcore0813 = k_core,
+         louvain0813 = louvain_comm,
+         #fstgrdy0813 = fstgrdy_comm,
+         comp0813 = component) %>% 
+  right_join(nodelist_200814, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0814 = degree,
+         wtddeg0814 = wtd_degree, 
+         kcore0814 = k_core,
+         louvain0814 = louvain_comm,
+         #fstgrdy0814 = fstgrdy_comm,
+         comp0814 = component) %>% 
+  right_join(nodelist_200815, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0815 = degree,
+         wtddeg0815 = wtd_degree, 
+         kcore0815 = k_core,
+         louvain0815 = louvain_comm,
+         #fstgrdy0815 = fstgrdy_comm,
+         comp0815 = component) %>% 
+  right_join(nodelist_200816, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0816 = degree,
+         wtddeg0816 = wtd_degree, 
+         kcore0816 = k_core,
+         louvain0816 = louvain_comm,
+         #fstgrdy0816 = fstgrdy_comm,
+         comp0816 = component) %>% 
+  right_join(nodelist_200817, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0817 = degree,
+         wtddeg0817 = wtd_degree, 
+         kcore0817 = k_core,
+         louvain0817 = louvain_comm,
+         #fstgrdy0817 = fstgrdy_comm,
+         comp0817 = component) %>% 
+  right_join(nodelist_200818, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg0818 = degree,
+         wtddeg0818 = wtd_degree, 
+         kcore0818 = k_core,
+         louvain0818 = louvain_comm,
+         #fstgrdy0818 = fstgrdy_comm,
+         comp0818 = component) 
+
+setwd("~/oss-data/intl-country-nets")
+saveRDS(full_nodelist, "full_nodelist_cum.rds")
+```
+
+```{r concatenating global_netstats_cum}
+
+setwd("~/oss-data/intl-country-nets")
+#setwd("~/2008")
+global_netstats_2008 <- readRDS("global_netstats_2008.rds") 
+#setwd("~/2008-09")
+global_netstats_200809 <- readRDS("global_netstats_2008-09.rds") 
+#setwd("~/2008-10")
+global_netstats_200810 <- readRDS("global_netstats_2008-10.rds") 
+#setwd("~/2008-11")
+global_netstats_200811 <- readRDS("global_netstats_2008-11.rds") 
+#setwd("~/2008-12")
+global_netstats_200812 <- readRDS("global_netstats_2008-12.rds")
+#setwd("~/2008-13")
+global_netstats_200813 <- readRDS("global_netstats_2008-13.rds")
+#setwd("~/2008-14")
+global_netstats_200814 <- readRDS("global_netstats_2008-14.rds")
+#setwd("~/2008-15")
+global_netstats_200815 <- readRDS("global_netstats_2008-15.rds")
+#setwd("~/2008-16")
+global_netstats_200816 <- readRDS("global_netstats_2008-16.rds")
+#setwd("~/2008-17")
+global_netstats_200817 <- readRDS("global_netstats_2008-17.rds")
+#setwd("~/2008-18")
+global_netstats_200818 <- readRDS("global_netstats_2008-18.rds")
+
+global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809,
+                             global_netstats_200810, global_netstats_200811, 
+                             global_netstats_200812, global_netstats_200813, 
+                             global_netstats_200814, global_netstats_200815, 
+                             global_netstats_200816, global_netstats_200817, global_netstats_200818) 
+
+global_netstats_cum <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+                                   "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
+  bind_cols(global_netstats_cum) %>% # select(-year) %>% 
+  rename(time = value)
+
+# adding in weighted degree counts 
+
+edges <- as_tibble(c(sum(full_nodelist$deg08/ 2, na.rm = TRUE), sum(full_nodelist$deg0809/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0810/ 2, na.rm = TRUE), sum(full_nodelist$deg0811/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0812/ 2, na.rm = TRUE), sum(full_nodelist$deg0813/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0814/ 2, na.rm = TRUE), sum(full_nodelist$deg0815/ 2, na.rm = TRUE),
+            sum(full_nodelist$deg0816/ 2, na.rm = TRUE), sum(full_nodelist$deg0817/ 2, na.rm = TRUE), 
+            sum(full_nodelist$deg0818/ 2, na.rm = TRUE))) 
+
+weighted <- as_tibble(c(sum(full_nodelist$wtddeg08, na.rm = TRUE), sum(full_nodelist$wtddeg0809, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0810, na.rm = TRUE), sum(full_nodelist$wtddeg0811, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0812, na.rm = TRUE), sum(full_nodelist$wtddeg0813, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0814, na.rm = TRUE), sum(full_nodelist$wtddeg0815, na.rm = TRUE),
+            sum(full_nodelist$wtddeg0816, na.rm = TRUE), sum(full_nodelist$wtddeg0817, na.rm = TRUE), 
+            sum(full_nodelist$wtddeg0818, na.rm = TRUE))) 
+
+colnames(weighted) <- "wtd_edge_count"
+global_netstats_cum <- cbind(global_netstats_cum, weighted) 
+global_netstats_cum <- global_netstats_cum %>% 
+  select(time, year, node_count, edge_count, wtd_edge_count, everything()) %>% 
+  transform(dyads = as.numeric(dyads))
+
+global_netstats_cum
+
+setwd("~/oss-data/intl-country-nets")
+saveRDS(global_netstats_cum, "global_netstats_cum.rds") 
+
+```
+```{r k_core}
+
+setwd("~/oss-data/intl-country-nets")
+full_nodelist <- readRDS("full_nodelist_cum.rds")
+global_netstats_cum <- readRDS("global_netstats_cum.rds")
+
+# get k_core data from nodelist
+k08<-full_nodelist %>% drop_na(kcore08) %>% 
+  count(kcore08) %>% rename(core = kcore08, k08 = n)
+k09<-full_nodelist %>% drop_na(kcore0809) %>% 
+  count(kcore0809) %>% rename(core = kcore0809, k09 = n)
+k10<-full_nodelist %>% drop_na(kcore0810) %>% 
+  count(kcore0810) %>% rename(core = kcore0810, k10 = n)
+k11<-full_nodelist %>% drop_na(kcore0811) %>% 
+  count(kcore0811) %>% rename(core = kcore0811, k11 = n)
+k12<-full_nodelist %>% drop_na(kcore0812) %>% 
+  count(kcore0812) %>% rename(core = kcore0812, k12 = n)
+k13<-full_nodelist %>% drop_na(kcore0813) %>% 
+  count(kcore0813) %>% rename(core = kcore0813, k13 = n)
+k14<-full_nodelist %>% drop_na(kcore0814) %>% 
+  count(kcore0814) %>% rename(core = kcore0814, k14 = n)
+k15<-full_nodelist %>% drop_na(kcore0815) %>% 
+  count(kcore0815) %>% rename(core = kcore0815, k15 = n)
+k16<-full_nodelist %>% drop_na(kcore0816) %>% 
+  count(kcore0816) %>% rename(core = kcore0816, k16 = n)
+k17<-full_nodelist %>% drop_na(kcore0817) %>% 
+  count(kcore0817) %>% rename(core = kcore0817, k17 = n)
+k18<-full_nodelist %>% drop_na(kcore0818) %>% 
+  count(kcore0818) %>% rename(core = kcore0818, k18 = n)
+
+# join it all together 
+kcore_data <- right_join(k08,k09, by = "core")  
+kcore_data <- right_join(kcore_data,k10, by = "core")  
+kcore_data <- right_join(kcore_data,k11, by = "core")
+kcore_data <- right_join(kcore_data,k12, by = "core")
+kcore_data <- right_join(kcore_data,k13, by = "core")
+kcore_data <- right_join(kcore_data,k14, by = "core")
+kcore_data <- right_join(kcore_data,k15, by = "core")
+kcore_data <- right_join(kcore_data,k16, by = "core")
+kcore_data <- right_join(kcore_data,k17, by = "core")
+kcore_data <- right_join(kcore_data,k18, by = "core")
+
+# adding max_kcore to df 
+kmax_df = data.frame()
+kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
+                               "2013","2014","2015","2016","2017","2018"))
+kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
+                               max(k12$core),max(k13$core),max(k14$core),max(k15$core),
+                               max(k16$core),max(k17$core),max(k18$core)))
+
+global_netstats_cum <- right_join(global_netstats_cum,kmax_df, by = "time")
+
+setwd("~/oss-data/intl-country-nets")
+write_rds(kcore_data, "kcore_data_cum.rds")
+write_rds(global_netstats_cum, "global_netstats_cum.rds")
+
+```
+```{r decomp_stats}
+
+setwd("~/oss-data/intl-country-nets")
+dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomposition_stats_2008-09.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomposition_stats_2008-10.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_2008-11.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_2008-12.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_2008-13.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_2008-14.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_2008-15.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_2008-16.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_2008-17.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_2008-18.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+
+decomp_data_cum <- right_join(dc08,dc09, by = "decomp")  
+decomp_data_cum <- right_join(decomp_data_cum,dc10, by = "decomp")  
+decomp_data_cum <- right_join(decomp_data_cum,dc11, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc12, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc13, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc14, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc15, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc16, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc17, by = "decomp")
+decomp_data_cum <- right_join(decomp_data_cum,dc18, by = "decomp")
+
+setwd("~/oss-data/intl-country-nets")
+write_rds(decomp_data_cum, "decomp_data_cum.rds")
+
+```
 
 
 

@@ -110,7 +110,7 @@ saveRDS(nodelist, "nodelist_2008-18.rds")
 saveRDS(time_log, "timelog_2008-18.rds")
 ```
 
-```{r binding cum nodelists}
+```{r binding cumulative_nodelists}
 # read nodelists
 rm(list = ls())
 

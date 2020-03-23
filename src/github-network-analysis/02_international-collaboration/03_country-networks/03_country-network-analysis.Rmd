@@ -101,7 +101,10 @@ map_data("world") %>%
                    color = "black") + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#E57200", "#628ed8", "#232D4B")) +
+  scale_fill_manual(values = c("#E57200", # orange 
+                               "#628ed8", # light blue 
+                               "#232D4B"  # dark blue  
+                               )) +
   theme(plot.title = element_text(size = 13, hjust = 0.5), 
         axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
@@ -131,12 +134,7 @@ write_csv(intl_ctry_nodelist_gephi, "intl_ctry_nodelist_gephi.csv")
 write_csv(intl_ctry_edgelist_gephi, "intl_ctry_edgelist_gephi.csv") 
 
 ```
-
-
-
-
-
-
+# Creating Country-to-Country Network Visuals in Gephi 
 
 
 
