@@ -1,0 +1,826 @@
+---
+title: "PostgreSQL Edgelist Creation"
+output: html_document
+---
+
+The purpose of this file is to share the PostgreSQL code that converts user's contributions to repos (i.e. a bipartite edgelist) into contributor edgelists with shared repos, shared commits, shared additions and shared deletions as columns for use as edge weights. This code bypasses the need to project bipartite matrices and all of the computational problems this creates (i.e. lack of RAM).
+
+The procedures documented in this file are: 
+
+- Writing a toy dataset of bipartite relations (login, slug) to the database
+- Testing some practice code to make sure that it flattens the bipartite to a user-user network
+- Using some PostgreSQL code to write the user-user network to the database 
+- Indexing that table 
+- Writing a nodelist with attributes, including repos, commits, additions, deletions, and country_code
+- Writing another nodelist with these attributes but broken down into all available years 
+
+First we will create a toy dataset of contributions so that we can test our code. We create the data and write it to the database. 
+
+```{r testing postgresql code for edgelist_data, include=FALSE}
+
+# then we connect to the database 
+library(RPostgreSQL)
+
+# first, we create some toy data 
+login <- c("brandon","bayoan","gizem","brandon","gizem","teja","kathryn", "brandon", "gizem")
+slug  <- c("oss",    "oss",   "oss",  "ffx",    "oss",  "ffx",  "ffx",    "minerva", "minerva")
+committed_date <- as.Date(c('2018-01-01 13:35:08-05', 
+                            '2018-01-01 13:35:08-05',
+                            '2018-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05',
+                            '2017-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05', 
+                            '2017-01-01 13:35:08-05'))
+test_data <- data.frame(login, slug, committed_date)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+dbWriteTable(conn, 
+             name = c(schema = "gh" , 
+                      name = "test_data"), 
+             value = test_data, 
+             row.names = FALSE)
+
+dbDisconnect(conn)
+
+```
+
+Then we will test to see if our code accurately codes this data
+
+```{sql psql_test_query_yxy}
+
+-- then we plug this code into the database 
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,    --START OF THE JOIN 
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits
+         WHERE login IS NOT NULL
+         LIMIT 500) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug   -- END OF THE JOIN 
+   AND A.year = B.year
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
+GROUP BY YEAR,
+         ctr1,
+         ctr2; 
+         
+--this is what the data should look like...          
+--brandon gizem 2018 1  
+--brandon gizem 2017 1  
+--brandon bayoan 2018 1 
+--gizem bayoan 2017 1 
+--brandon teja 2017 1
+--brandon kathryn 2017 1 
+
+--WHEN YOU SEE THE RESULTS MATCH, YOU CAN DELETE THAT TABLE FROM THE DATABASE 
+
+```
+
+Next, we can write the actual edgelist to the database as a materialized view. 
+
+```{sql sna_ctr_edgelist_yxy}
+
+--then we write the actual data to the database (as a materialized view table)
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_yxy AS (
+SELECT ctr1,
+       ctr2,
+       YEAR,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,    --START OF THE JOIN 
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug   -- END OF THE JOIN 
+   AND A.year = B.year
+   WHERE A.login <= B.login) A  --- corrected code for self-loops 
+GROUP BY YEAR,
+         ctr1,
+         ctr2 
+);
+
+-- creates a table of 149177098 rows 
+```
+
+Next, we index our full edgelist. 
+
+```{sql}
+
+--NEXT WE ARE GOING TO INDEX THE CONTRIBUTOR COLUMNS IN THE ORIGINAL EDGELIST 
+--This will come in handy when making the sna_intl_ctr_edgelist
+
+CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1); 
+CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2); 
+
+```
+
+Now, we need to do this same process for the cumulative network. 
+
+```{sql practice_sna_ctr_edgelist_cum}
+
+-- THIS IS ESSENTIALLY THE SAME CODE AS ABOVE EXCEPT THAT THE SELECT AND GROUP BY ON YEAR (FOR TABLE B)
+
+-- 2008 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_08 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2009) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2009 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0809 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2010) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2010 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0810 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2011) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2011 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0811 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2012) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+--2008-2012
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0812 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2013) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+--2008-2013
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0813 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2014) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2014 TABLE 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0814 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2015) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2015 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0815 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2016) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2016 TABLE 
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0816 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2017) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2017
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0817 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2018) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2018
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0818 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2019) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+-- 2008-2019
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0819 AS (
+SELECT ctr1,
+       ctr2,
+       COUNT(*) AS repo_wts
+FROM
+  (SELECT A.slug,
+          A.year,
+          A.login AS ctr1,
+          B.login AS ctr2,
+          A.commits 
+   FROM
+     (SELECT slug,     
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) A
+   INNER JOIN
+     (SELECT slug,
+             YEAR,
+             login,
+             COUNT(*) AS commits
+      FROM
+        (SELECT login,
+                slug,
+                EXTRACT(YEAR
+                        FROM committed_date)::int AS YEAR
+         FROM gh.commits_pre
+         WHERE login IS NOT NULL) A
+      GROUP BY slug,
+               YEAR,
+               login) B ON A.slug = B.slug    
+   AND A.year = B.year
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2020) A 
+GROUP BY ctr1,
+         ctr2
+);
+
+
+```
+
+Then, we write our full nodelist with attributes. 
+
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES (sna_ctr_nodelist)
+--This code selects the login, commit count, number of repos each login commmitted to, and total additions and deletions. 
+--It also pulls country_code data from "login_ctry_codes" which is a table created in the 02_intl-network-construction.Rmd file.
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_full AS (
+SELECT A.login, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions
+	  FROM gh.commits_pre
+	  GROUP BY login) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
+```
+
+If we wanted to create dynamic nodelists with attributes based on any given year we would use this: 
+
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES FOR EACH YEAR (sna_ctr_nodelist_yxy)
+--THIS TAKES THE EXACT SAME CODE AS THE LAST SNIPPET AND ADDS A YEAR TO THE GROUP_BY 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_yxy AS (
+SELECT A.login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions, EXTRACT(YEAR FROM committed_date)::int AS YEAR
+	  FROM gh.commits 
+	  GROUP BY login, year) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
+```
+
+And then filter from this year-by-year: 
+
+```{sql }
+
+-- THIS CODE PULLS FROM THE PREVIOUS TABLE AND JUST FILTERS BASED ON YEAR 
+-- YOU WOULD CHANGE THE YEAR FOR ALL APPLICABLE YEARS 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_2008 AS (
+SELECT login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM   gh.sna_ctr_nodelist_yxy
+WHERE  year = '2008'  
+);
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

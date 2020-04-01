@@ -57,7 +57,7 @@ plot(intl_ctry_network,
      vertex.label.color="#232D4B",
      layout=layout_with_kk)
 
-```
+``` 
 
 This plot shows what we would expect. It looks as if (almost?) every country has some type of collaboration. But, in classic igraph fashion, the graph is (almost?) unbearable to look at. Let's export the node/edgelist into Gephi first and then we conduct break the network down over time to see what the dynamics look like. Before we do that, however, we want to perform use the Newman modularity algorithm on this network since Gephi's default Louvain algorithm is stochastic and harder to replicate for some plotting we do later. 
 
