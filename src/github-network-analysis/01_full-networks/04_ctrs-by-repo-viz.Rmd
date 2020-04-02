@@ -11,7 +11,7 @@ First, we have to write a repos_summary table to the database...
 
 CREATE MATERIALIZED VIEW gh.repos_summary AS (
 SELECT slug, COUNT(*) AS commits, COUNT(DISTINCT login) AS logins, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM gh.commits 
+FROM gh.commits_pre
 GROUP BY slug
 ); 
 
@@ -94,11 +94,11 @@ uva_cols <- function(...) {
 # create labels for our graph
 df <- cbind.data.frame(c("1 contributor\n(77.9%)",
                          "2 contributors\n(10.2%)",
-                         "3-5\ncontributors\n(6.4%)",
+                         "3-5\n(6.4%)",
                          "6-10\n(2.3%)", 
-                         "11-50 (2.2%)",
+                         "11-50\n(2.2%)",
                          "51-100 (0.3)",
-                         "101+"),
+                         "101+ (0.4)"),
                          summarized_breakdown$new_totals)
 colnames(df) <- c("contributors", "totals")
 
@@ -117,7 +117,7 @@ treemap(df,
         index="contributors", 
         vSize="totals",
         palette = pal, 
-        title="Number of contributors per repository (GitHub Data, 2008-2018)",
+        title="Number of contributors per repository (GitHub Data, 2008-2019)",
         fontsize.labels=c(12,1,1,1,1,1,1,1), 
         fontsize.title=15)
 

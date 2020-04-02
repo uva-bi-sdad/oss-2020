@@ -760,7 +760,7 @@ GROUP BY ctr1,
 
 ```
 
-Then, we write our full nodelist with attributes. 
+Then, we write our full nodelist with attributes. This table just provides the totals for all users 
 
 ```{sql}
 
@@ -797,21 +797,23 @@ ON A.login = B.login
 
 ```
 
-And then filter from this year-by-year: 
+To create nodelists, go to the individual network analysis files. Those files take the existing edgelists (created above) and extract the nodelist information out. Afterwards, they bind in all other relevant node attribute information pertinent for visualization or regression analysis and then writes that information to the database. 
 
-```{sql }
+# REPOS AND LICENSES TABLES 
 
--- THIS CODE PULLS FROM THE PREVIOUS TABLE AND JUST FILTERS BASED ON YEAR 
--- YOU WOULD CHANGE THE YEAR FOR ALL APPLICABLE YEARS 
+Now, we need to produce a table that has all of the 
 
-CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_2008 AS (
-SELECT login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
-FROM   gh.sna_ctr_nodelist_yxy
-WHERE  year = '2008'  
-);
+```{sql}
+
+SELECT slug, 
+        committed_date AS created, -- MUST UPDATE TO TAKE THE MIN
+        as_of                      -- MUST UPDATE TO TAKE THE MAX 
+FROM commits_pre
+GROUP BY slug 
+LIMIT 500
+
 
 ```
-
 
 
 

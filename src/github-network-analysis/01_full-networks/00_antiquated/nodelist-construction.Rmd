@@ -1,0 +1,52 @@
+
+Then, we write our full nodelist with attributes. 
+
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES (sna_ctr_nodelist)
+--This code selects the login, commit count, number of repos each login commmitted to, and total additions and deletions. 
+--It also pulls country_code data from "login_ctry_codes" which is a table created in the 02_intl-network-construction.Rmd file.
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_full AS (
+SELECT A.login, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions
+	  FROM gh.commits_pre
+	  GROUP BY login) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
+```
+
+If we wanted to create dynamic nodelists with attributes based on any given year we would use this: 
+
+```{sql}
+
+--NEXT WE WANT TO CREATE A NODELIST WITH ATTRIBUTES FOR EACH YEAR (sna_ctr_nodelist_yxy)
+--THIS TAKES THE EXACT SAME CODE AS THE LAST SNIPPET AND ADDS A YEAR TO THE GROUP_BY 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_yxy AS (
+SELECT A.login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM (SELECT login, COUNT(*) AS commits, COUNT(DISTINCT slug) AS repos, SUM(additions) AS additions, SUM(deletions) AS deletions, EXTRACT(YEAR FROM committed_date)::int AS YEAR
+	  FROM gh.commits 
+	  GROUP BY login, year) A
+LEFT JOIN gh.login_ctry_codes AS B
+ON A.login = B.login
+);
+
+```
+
+And then filter from this year-by-year: 
+
+```{sql }
+
+-- THIS CODE PULLS FROM THE PREVIOUS TABLE AND JUST FILTERS BASED ON YEAR 
+-- YOU WOULD CHANGE THE YEAR FOR ALL APPLICABLE YEARS 
+
+CREATE MATERIALIZED VIEW gh.sna_ctr_nodelist_2008 AS (
+SELECT login, year, repos, commits, additions, deletions, country_code, country_code_di, country_code_vis
+FROM   gh.sna_ctr_nodelist_yxy
+WHERE  year = '2008'  
+);
+
+```
