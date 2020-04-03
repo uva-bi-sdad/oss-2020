@@ -91,6 +91,84 @@ ggplot(data=df_bs_pl, aes(gof)) + geom_histogram() + labs(x="D", y="frequency") 
 bs_pl$p #p value
 ```
 
+##################################################### 
+#####################################################
+##################################################### NOT DONE YET 
+#####################################################
+#####################################################
+
+## Calculating Power Laws Based on Degree Distribution of Networks (Not Done)
+
+```{r fitting power laws}
+power_law_start <- data.frame(event="power_law_start", time=now("EST"))
+time_log <- rbind(time_log, power_law_start); rm(power_law_start)
+
+data <- nodelist$degree
+data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
+data.dist <- data.dist[data.dist$p_k>0,]
+ggplot(data.dist) + geom_point(aes(x=k, y=p_k)) + theme_bw()
+
+m_pl <- displ$new(data)
+est_pl <- estimate_xmin(m_pl)
+est_pl$xmin # initial estimation of kmin 
+est_pl$pars # initial estimation of γ
+est_pl$gof # calculate D with Kolgomorov-Smirnov test
+
+# finish remainder of process using https://rpubs.com/lgadar/power-law
+
+power_law_end <- data.frame(event="power_law_end", time=now("EST"))
+time_log <- rbind(time_log, power_law_end); rm(power_law_end)
+```
+
+## Normalizing Degree Distribributions with Cosine Similarity Scores (Not Done Yet)
+
+```{r normalizing networks}
+cos_norm <- proxfun(login_network, method="cos", value="edgelist") %>% 
+  filter(from < to) %>% 
+  rename(cos_norm = value)
+```
+
+## Testing for Assortativity and Homophily (Not Done Yet)
+
+```{r testing patterns in assortativity and homophily}
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad_data", 
+                  host = "sdad.policy-analytics.net", port = 5436, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+node_attributes <- dbGetQuery(conn, "SELECT name, country_code_vis
+                                 FROM github.intl_st_bp_nodes")
+# disconnect from postgresql
+dbDisconnect(conn); rm(conn)
+
+# adding country codes to the nodelist 
+nodelist <- dplyr::full_join(nodelist, node_attributes, by = c("nName" = "login")) %>% 
+  dplyr::mutate(new_col = ifelse(test = is.na(x = country_code), yes = paste("repo"), no = country_code)) %>% 
+  dplyr::select(-country_code) %>% 
+  dplyr::rename(name = nName, country_code = new_col)
+
+# testing homophily based on country_code
+assortativity_nominal(net, V(net)$media.type, directed=F)
+
+# using linkprediction to test for structural homophily 
+
+
+
+```
+
+## References 
+
+Blondel, V. D., Guillaume, J. L., Lambiotte, R., & Lefebvre, E. (2008). Fast unfolding of communities in large networks. Journal of statistical mechanics: theory and experiment, 2008(10), P10008.
+
+http://pablobarbera.com/big-data-upf/html/02b-networks-descriptive-analysis.html
+https://igraph.org/r/doc/cluster_louvain.html
+https://kateto.net/networks-r-igraph 
+https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
+https://rpubs.com/lgadar/power-law 
+http://recon.icm.edu.pl/wp-content/uploads/2019/05/linkprediction.pdf
+
+
 
 
 

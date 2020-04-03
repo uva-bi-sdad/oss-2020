@@ -1,0 +1,147 @@
+---
+title: "International Contributor Networks: Year by Year Stats"
+author: "Brandon L. Kramer"
+output: html_document
+---
+
+## Loading Data 
+
+We used this code to pull data (year-by-year and then cumulutively) for the construction of Github network data.
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
+                                  FROM gh.sna_intl_ctr_edgelist_yxy
+                                  WHERE year > 2007 AND year < 2009")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+# convert edgelist to network 
+ctr_edgelist <- ctr_edgelist %>% 
+  select(ctr1, ctr2, repo_wts) %>% 
+  rename(from = ctr1, to = ctr2, weight = repo_wts) %>% 
+  group_by(from, to) %>% 
+  summarize(weight = sum(weight)) %>% 
+  arrange(-weight)
+  
+login_network <- graph.data.frame(ctr_edgelist, directed = FALSE)
+login_network <- simplify(login_network, remove.loops = TRUE)
+
+```
+
+```{r global network stats}
+# loading the network (if the instance crashes while doing network_stats)
+net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
+network_stats <- data.frame(year="2008")                                          
+
+# node and edge counts  
+network_stats$node_count <- gorder(login_network)  
+network_stats$edge_count <- gsize(login_network)
+network_stats$commits <- sum(ctr_edgelist$weight)
+
+# isolates, dyads and triads 
+network_stats$isolates <- sum(degree(login_network)==0)
+network_stats$triads <- triad_census(login_network)[1]
+net_counts <- data.frame(event="net_counts", time=now("EST"))
+time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
+
+# density and transitivity
+network_stats$diameter <- diameter(login_network)
+network_stats$density <- edge_density(login_network, loops=FALSE) 
+network_stats$transitivity <- transitivity(login_network)
+net_globals <- data.frame(event="net_globals", time=now("EST"))
+time_log <- rbind(time_log, net_globals); rm(net_globals)
+
+# community detection (using louvain method)
+louvain <- cluster_louvain(login_network)
+network_stats$louvain <- modularity(louvain)
+network_stats$louvain_scaled <- modularity(louvain) / gorder(login_network)
+network_stats$louvain_logged <- modularity(louvain) / log(gorder(login_network))
+# community detection (using fast & greedy method)
+fstgrdy <- fastgreedy.community(login_network)
+network_stats$fstgrdy <- modularity(fstgrdy)
+network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(login_network)
+network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(login_network))
+
+# decomposition statistics 
+decomposition_stats <- table(sapply(decompose.graph(login_network), vcount))
+
+net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
+time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
+
+# now, we need to construct a nodelist 
+nodelist <- data.frame(id = c(1:(igraph::vcount(login_network))), login = igraph::V(login_network)$name)
+
+# degree, weighted degree, k core and modularity 
+node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
+time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
+nodelist$deg_cent <- degree(login_network)
+nodelist$wtd_deg_cent <- strength(login_network)
+nodelist$est_btw_cent <- estimate_betweenness(login_network, cutoff = 10) # using 3 ~ 5hrs; 5 ~ 6.2hrs; 10 ~ 8.8hrs; 15 ~ 10.5hrs
+nodelist$est_close_cent <- estimate_closeness(login_network, cutoff = 10) # using 3 ~ 6.3hrs; 5 ~ 6.8hrs; 10 ~ 10.1hrs; 15 ~ 12.2hrs
+nodelist$eigen_cent <- eigen_centrality(login_network)$vector
+nodelist$page_rank <- page_rank(login_network)$vector
+nodelist$auth_score <- authority.score(login_network)$vector
+nodelist$hub_score <- hub.score(login_network)$vector
+nodelist$k_core <- coreness(login_network)
+components <- components(login_network)
+nodelist$component <- components$membership
+nodelist$louvain_comm <- louvain$membership
+nodelist$fstgrdy_comm <- fstgrdy$membership
+
+
+node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
+time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
+
+setwd("~/oss-data/intl-ctr-nets-yxy")
+saveRDS(network_stats, "global_netstats_2008.rds")  
+saveRDS(decomposition_stats, "decomposition_stats_2008.rds") 
+saveRDS(nodelist, "nodelist_2008.rds")  
+saveRDS(time_log, "timelog_2008.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
