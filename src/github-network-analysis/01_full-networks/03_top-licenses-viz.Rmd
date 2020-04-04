@@ -7,7 +7,7 @@ First, we need to take all of the OSI-approved licenses from the gh.licenses tab
 
 ```{sql}
 
-CREATE MATERIALIZED VIEW gh.osi_licenses AS (
+CREATE MATERIALIZED VIEW gh.desc_osi_licenses AS (
 SELECT name, spdx FROM gh.licenses WHERE 
 spdx = '0BSD' OR spdx = 'AFL-3.0' OR spdx = 'AGPL-3.0' OR spdx = 'Apache-2.0' OR spdx = 'Artistic-2.0' OR 
 spdx = 'BSD-2-Clause' OR spdx = 'BSD-3-Clause' OR spdx = 'BSL-1.0' OR spdx = 'CECILL-2.1' OR spdx = 'ECL-2.0' OR 
@@ -36,11 +36,11 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # grab the licenses data 
 licenses <- dbGetQuery(conn, "SELECT name, spdx 
-                              FROM gh.osi_licenses")
+                              FROM gh.desc_osi_licenses")
 
 # grab the repos data 
 repos <- dbGetQuery(conn, "SELECT slug, spdx, created
-                           FROM gh.repos_info")
+                           FROM gh.desc_repos_info")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -75,7 +75,7 @@ ggplot(repos_by_license, aes(x=License, y=Proportion)) +
   theme_minimal() +
   coord_flip() +
   theme(plot.title = (element_text(colour="#232D4B", hjust = 0.25, size = 18)),
-        plot.caption = (element_text(colour="#232D4B", hjust = 1, size = 9)),
+        plot.caption = (element_text(colour="#232D4B", hjust = 1, size = 10)),
         panel.border = element_blank(),
         axis.ticks.y = element_blank(),
         axis.text.y = element_text(hjust=1),
@@ -83,8 +83,9 @@ ggplot(repos_by_license, aes(x=License, y=Proportion)) +
         axis.text=element_text(colour="#232D4B", size = 14),
         axis.title = element_text(colour="#232D4B", size = 16)) +
   scale_x_discrete(limits = positions) +
-  labs(title="    Proportion of Repositories with \n Top Licenses on GitHub (2008-2019)",
-       caption= "Note: Repositories limited to those that have machine detectable OSI-approved licenses")
+  labs(title="    Proportion of Repositories with \n Top Licenses on GitHub (2008-2019)"
+       , caption= "Note: Repositories limited to those with machine detectable OSI-approved licenses"
+       )
 
 ```
 

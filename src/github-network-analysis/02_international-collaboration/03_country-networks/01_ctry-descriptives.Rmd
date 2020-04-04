@@ -23,7 +23,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                FROM gh.sna_intl_ctry_nodelist")
+                                FROM gh.sna_intl_ctry_nodelist_full")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -82,8 +82,8 @@ intl_stats %>%
         axis.text=element_text(size=16),
         axis.title=element_text(size=20)) +
   labs(y = "Repositories (in Millions)") +
-  scale_y_continuous(breaks = c(0, 250000, 500000, 750000, 1000000, 1250000, 1500000, 1750000), 
-                                labels = c(0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75)) +
+  scale_y_continuous(breaks = c(0, 250000, 500000, 750000, 1000000, 1250000, 1500000), 
+                                labels = c(0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5)) +
   labs(title="Total Repositories for Top-10 Countries (GitHub, 2008-2018)")
 ```
 
@@ -107,8 +107,8 @@ intl_stats %>%
         axis.text=element_text(size=13),
         axis.title=element_text(size=20)) +
   labs(y = "Commits (in Millions)") +
-  scale_y_continuous(breaks = c(0, 20000000, 40000000, 60000000, 80000000, 100000000, 120000000), 
-                                labels = c(0, 20, 40, 60, 80, 100, 120)) +
+  scale_y_continuous(breaks = c(0, 20000000, 40000000, 60000000, 80000000, 100000000, 120000000, 140000000), 
+                                labels = c(0, 20, 40, 60, 80, 100, 120, 140)) +
   labs(title="Total Commits for Top-10 Countries (GitHub, 2008-2018)")
 
 ```

@@ -33,7 +33,7 @@ committed_date <- as.Date(c('2018-01-01 13:35:08-05',
                             '2017-01-01 13:35:08-05', 
                             '2017-01-01 13:35:08-05', 
                             '2017-01-01 13:35:08-05'))
-test_data <- data.frame(login, slug, committed_date)
+test_data_blk <- data.frame(login, slug, committed_date)
 
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 

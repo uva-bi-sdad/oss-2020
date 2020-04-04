@@ -8,7 +8,7 @@ rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
 
 # load packages 
-for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "igraph", "rworldmap",
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "igraph", 
               "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get data (in rivanna)
@@ -21,11 +21,11 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 sna_intl_ctry_nodelist <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                            FROM gh.sna_intl_ctry_nodelist")
+                                            FROM gh.sna_intl_ctry_nodelist_full")
 
 # query the bipartite edgelist data from github data  
-sna_intl_ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, ctrycode1, ctrycode2, year, repo_wts
-                                            FROM gh.sna_intl_ctry_edgelist")
+sna_intl_ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, ctrycode1, ctrycode2, repo_wts
+                                            FROM gh.sna_intl_ctry_edgelist_0819")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -42,14 +42,26 @@ sna_intl_ctry_edgelist_full <- sna_intl_ctry_edgelist %>%
   select(country1, country2, repo_wts) %>% 
   mutate(weight = repo_wts) %>% select(-repo_wts)
   
+intl_regular_network <- graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
+                              vertices=sna_intl_ctry_nodelist, directed=FALSE)
 
-# checking that our network comes together 
+# first, we create one network object where the multiples are combined and loops remain 
+# "multiples combined" means that combinations like albania-usa and usa-albania are collapsed
+# i validated that the edge weights are correct for the collapsed multiples 
 intl_ctry_network <- simplify(graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
-                                                    vertices=sna_intl_ctry_nodelist, directed=FALSE)) 
+                              vertices=sna_intl_ctry_nodelist, directed=FALSE), 
+                              edge.attr.comb = igraph_opt("edge.attr.comb"),
+                              remove.loops = FALSE)
 
-# let's take a look at the full network 
+# next, we create an object that collapses multiples but eliminates the loops 
+intl_ctry_network_noloops <- simplify(graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
+                              vertices=sna_intl_ctry_nodelist, directed=FALSE), 
+                              edge.attr.comb = igraph_opt("edge.attr.comb"),
+                              remove.loops = TRUE) 
+
+# let's take a look at the full network with loops 
 plot(intl_ctry_network, 
-     edge.color="#d3d3d3", 
+     edge.color="#a9a9a9", 
      edge.curved=0.1,
      edge.label=FALSE,
      vertex.size=8,
@@ -82,7 +94,63 @@ intl_ctry_nodelist_gephi <- intl_ctry_nodelist_gephi %>%
                                yes = "XK", no = country_code))
 
 # recode user ranges into categories  
-intl_ctry_nodelist_gephi$fstgrdy_comm <- cut(intl_ctry_nodelist_gephi$fstgrdy_comm, 
+intl_ctry_nodelist_gephi$recoded_comm <- cut(intl_ctry_nodelist_gephi$fstgrdy_comm, 
+                                             breaks=c(0,1,2,3,4,100), 
+                                             labels=c("1", "2", "3", "4", "5"))
+
+# graph the communities on the world map to see if they need consolidating
+map_data("world") %>% 
+  mutate(country_code = countrycode(region, 
+                                    origin = 'country.name', 
+                                    destination = 'iso2c')) %>% 
+  left_join(intl_ctry_nodelist_gephi,  
+            by = "country_code") %>% 
+  ggplot() +
+  theme_minimal() +
+  geom_polygon(aes(x = long, y = lat, 
+                   fill = recoded_comm, 
+                   group = group), 
+                   color = "black") + 
+  coord_fixed(1.2) +
+  guides(fill=FALSE) + 
+  scale_fill_manual(values = c("#990000", # dark red 
+                               "#628ed8", # light blue
+                               "#E57200", # orange 
+                               "#232D4B", # dark blue
+                               "#eaaa31"  # yellow
+                               )) +
+  theme(plot.title = element_text(size = 13, hjust = 0.5), 
+        plot.caption = element_text(size = 10, vjust = 8, hjust = 0.85),
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  labs(title= " Modularity Groupings for Country-Country \n Collaboration Networks (GitHub, 2008-2019)",
+       caption = "Note: Groupings Calculated with Loops in Network")
+
+```
+
+```{r}
+
+# add the community membership to the nodelist 
+sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist
+fstgrdy <- fastgreedy.community(intl_ctry_network_noloops)
+sna_intl_ctry_nodelist_noloops$fstgrdy_comm <- fstgrdy$membership
+sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist_noloops %>% 
+  rename(region = country) 
+
+#sna_intl_ctry_nodelist_noloops %>% filter(fstgrdy_comm != 1 & fstgrdy_comm != 2)
+
+sna_intl_ctry_nodelist_noloops$country_code <- countrycode(sna_intl_ctry_nodelist_noloops$region, 
+            origin = 'country.name', 
+            destination = 'iso2c') 
+
+sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist_noloops %>% 
+  mutate(country_code = ifelse(test = str_detect(string = region, 
+                               pattern = "Kosovo"), 
+                               yes = "XK", no = country_code))
+
+# recode user ranges into categories  
+intl_ctry_nodelist_gephi$recoded_noloops <- cut(sna_intl_ctry_nodelist_noloops$fstgrdy_comm, 
                                              breaks=c(0,1,2,100), 
                                              labels=c("1", "2", "3"))
 
@@ -96,20 +164,22 @@ map_data("world") %>%
   ggplot() +
   theme_minimal() +
   geom_polygon(aes(x = long, y = lat, 
-                   fill = fstgrdy_comm, 
+                   fill = recoded_noloops, 
                    group = group), 
                    color = "black") + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#E57200", # orange 
-                               "#628ed8", # light blue 
-                               "#232D4B"  # dark blue  
+  scale_fill_manual(values = c("#628ed8", # light blue
+                               "#E57200", # orange
+                               "#232D4B" # dark blue
                                )) +
   theme(plot.title = element_text(size = 13, hjust = 0.5), 
+        plot.caption = element_text(size = 10, vjust = 8, hjust = 0.87),
         axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(), axis.title.y=element_blank()) +
-  labs(title= " Modularity Groupings for Country-Country \n Collaboration Networks (GitHub, 2008-2018)")
+  labs(title= " Modularity Groupings for Country-Country \n Collaboration Networks (GitHub, 2008-2019)",
+       caption = "Note: Groupings Calculated without Loops")
 
 ```
 
@@ -129,11 +199,12 @@ intl_ctry_edgelist_gephi <- sna_intl_ctry_edgelist_full %>%
 intl_ctry_edgelist_gephi
 
 # export the full network nodelist and edgelist 
-setwd("~/oss-data/intl-country-nets")
+setwd("~/oss-data/intl-ctry-nets-cum")
 write_csv(intl_ctry_nodelist_gephi, "intl_ctry_nodelist_gephi.csv")
 write_csv(intl_ctry_edgelist_gephi, "intl_ctry_edgelist_gephi.csv") 
 
 ```
+
 # Creating Country-to-Country Network Visuals in Gephi 
 
 

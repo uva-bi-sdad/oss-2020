@@ -1,18 +1,18 @@
 ---
-title: "Contributors per Repo (GitHub, 2008-2018)"
+title: "Repos per Contributor"
 output: html_document
 ---
 
-Next, let's look at contributors per repo. 
+Next, let's look at descriptives per contributor. 
 
-First, we have to write a repos_summary table to the database... 
+First, we have to write a desc_ctrs_summary table to the database... 
 
 ```{sql}
 
-CREATE MATERIALIZED VIEW gh.desc_repos_summary AS (
-SELECT slug, COUNT(*) AS commits, COUNT(DISTINCT login) AS logins, SUM(additions) AS additions, SUM(deletions) AS deletions
+CREATE MATERIALIZED VIEW gh.desc_ctrs_summary AS (
+SELECT login, COUNT(DISTINCT slug) AS repos, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
 FROM gh.commits_pre
-GROUP BY slug
+GROUP BY login
 ); 
 
 ```
@@ -35,36 +35,36 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # grab the licenses data 
-repos_summary <- dbGetQuery(conn, "SELECT slug, logins, commits, additions, deletions  
-                                   FROM gh.desc_repos_summary")
+ctrs_summary <- dbGetQuery(conn, "SELECT login, repos, commits, additions, deletions  
+                                   FROM gh.desc_ctrs_summary")
 
 # disconnect from postgresql
 dbDisconnect(conn)
 ```
 
-Next, let's get the number of users per repo and re-categorize these totals into graphable groups and find the proportions. 
-
 ```{r}
 # group_by login and get total users_per_repo
-users_per_repo <- repos_summary %>% 
-  group_by(logins) %>% 
+repos_per_user <- ctrs_summary %>% 
+  group_by(repos) %>% 
   count() %>% 
   rename(totals = n) %>% 
-  filter(logins != 0) %>% 
-  mutate(new_logins = logins) 
+  filter(repos != 0)  
+
+repos_per_user
 
 # recode user ranges into categories  
-users_per_repo$new_logins <- cut(users_per_repo$new_logins, 
-                                 breaks=c(0,1,2,5,10,50,100,100000), 
-                                 labels=c("1", "2", "3-5", "6-10", "11-50", 
-                                          "51-100", "101+"))
+repos_per_user$repos <- cut(repos_per_user$repos, 
+                            breaks=c(0,1,3,5,10,50,100,100000), 
+                            labels=c("1", "2-3", "4-5", "6-10", 
+                                     "11-50", "51-100", "101+"))
 # get the percentage breakdowns
-summarized_breakdown <- users_per_repo %>% 
-  group_by(new_logins) %>% 
+summarized_breakdown <- repos_per_user %>% 
+  drop_na() %>% 
+  group_by(repos) %>% 
   mutate(new_totals = sum(totals)) %>% 
-  select(-logins, -totals) %>%   
-  distinct(new_logins, .keep_all = TRUE) %>% 
-  mutate(percent = round(new_totals * 100 / sum(users_per_repo$totals), 2))
+  select(-totals) %>%   
+  distinct(repos, .keep_all = TRUE) %>% 
+  mutate(percent = round(new_totals * 100 / sum(repos_per_user$totals), 2))
 summarized_breakdown
 ```
 
@@ -80,7 +80,7 @@ uva_colors <- c(
   `green`       = "#1d7c6b",
   `dark blue`   = "#232D4B", 
   `light blue`  = "#628ed8", 
-  `pink`        = "#7f345a",
+  #`pink`        = "#7f345a",
   `purple`      = "#4c1f36")
 
 # a function that extracts the hex codes from this vector by name
@@ -92,15 +92,15 @@ uva_cols <- function(...) {
 }
 
 # create labels for our graph
-df <- cbind.data.frame(c("1 contributor\n(76.5%)",
-                         "2 contributors\n(11.2%)",
-                         "3-5\n(6.8%)",
-                         "6-10\n(2.5%)", 
-                         "11-50\n(2.3%)",
-                         "51-100 (0.3%)",
-                         "101+ (0.4%)"),
+df <- cbind.data.frame(c("1 repo\n(50.5%)",
+                         "2-3 repos\n(23.2%)",
+                         "4-5 repos\n(8.1%)",
+                         "6-10 repos\n(7.9%)", 
+                         "11-50 repos\n(8.2%)",
+                         "51-100 (1.2%)",
+                         "101+ (1.1%)"),
                          summarized_breakdown$new_totals)
-colnames(df) <- c("contributors", "totals")
+colnames(df) <- c("repos", "totals")
 
 # apply the palette to the graph 
 pal <- c(uva_cols("dark blue"),       # 1 ctr
@@ -114,54 +114,14 @@ pal <- c(uva_cols("dark blue"),       # 1 ctr
 
 # create the tree map 
 treemap(df, 
-        index="contributors", 
+        index="repos", 
         vSize="totals",
         palette = pal, 
-        title="Number of contributors per repository (GitHub Data, 2008-2019)",
+        title="Number of repositories per contributor (GitHub Data, 2008-2019)",
         fontsize.labels=c(12,1,1,1,1,1,1,1), 
         fontsize.title=15)
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

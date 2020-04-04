@@ -46,6 +46,7 @@ intl_ctr_nodelist <- ctr_nodelist %>%
 
 # join the country_codes to ctr_edgelist
 intl_ctr_edgelist <- ctr_edgelist %>% 
+  filter(ctr1 != ctr2) %>% # removes all of the self-loops between individuals 
   rename(login = ctr1) %>% 
   inner_join(intl_ctr_nodelist, by = "login") %>% 
   rename(ctr1 = login, ctrycode1 = country_code) %>% 
@@ -151,11 +152,11 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # write the edgelist to the database
 dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctry_edgelist_0819"), 
-             value = sna_intl_ctry_edgelist, row.names = FALSE)
+             value = sna_intl_ctry_edgelist, row.names = FALSE, temporary = TRUE)
 
 # write the edgelist to the database
 dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_edgelist_0819"), 
-             value = sna_intl_ctr_edgelist, row.names = FALSE)
+             value = sna_intl_ctr_edgelist, row.names = FALSE, temporary = TRUE)
 
 # disconnect from postgresql
 dbDisconnect(conn)

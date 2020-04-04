@@ -5,7 +5,7 @@ output: html_document
 
 ```{sql}
 
-CREATE MATERIALIZED VIEW gh.repos_info AS (
+CREATE MATERIALIZED VIEW gh.desc_repos_info AS (
 SELECT slug, spdx, created
 FROM gh.repos
 WHERE status = 'DONE'
@@ -31,7 +31,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # grab the repos data 
 repos <- dbGetQuery(conn, "SELECT slug, spdx, created
-                           FROM gh.repos_info")
+                           FROM gh.desc_repos_info")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -54,9 +54,9 @@ repo_totals
 
 # graph those totals by year 
 ggplot(data=repo_totals, aes(x=year, y=n)) +
-  geom_bar(stat="identity", fill = "#232D4B")+
+  geom_bar(stat="identity", width = 0.8, fill = "#232D4B")+
   theme(plot.title = (element_text(colour="#232D4B", hjust = 2, size = 18)),
-        plot.caption = (element_text(colour="#232D4B", hjust = 1, size = 10)),
+        plot.caption = (element_text(colour="#232D4B", size = 10)),
         panel.background = element_rect(fill = "white", colour = "white",
                                         size = 2, linetype = "solid"),
         panel.grid.major = element_line(size = 0.5, linetype = 'solid',
@@ -67,10 +67,10 @@ ggplot(data=repo_totals, aes(x=year, y=n)) +
         axis.text=element_text(colour="#232D4B", size = 18),
         axis.title = element_text(colour="#232D4B", size = 20)) + 
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","",2018,"")) +
-  labs(title="Number of New Repositories Created on GitHub (2008-2019)", 
-       x="Year", y = "Repositories (in Millions)",
-       caption= "Note: Repositories limited to those that have machine detectable OSI-approved licenses") +
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) +
+  labs(title="  Number of New Repositories Created on GitHub (2008-2019)", 
+       x="Year", y = "Repositories (in Millions)", 
+       caption= "Note: Repositories limited to those with machine detectable OSI-approved licenses") +
   scale_y_continuous(limits = c(0, 2000000), breaks = seq(0, 2000000, by = 250000),
                      labels = c("0","0.25","0.5","0.75","1.0","1.25","1.5","1.75","2.0")) 
 
