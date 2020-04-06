@@ -46,7 +46,9 @@ intl_ctr_nodelist <- ctr_nodelist %>%
 
 # join the country_codes to ctr_edgelist
 intl_ctr_edgelist <- ctr_edgelist %>% 
-  filter(ctr1 != ctr2) %>% # removes all of the self-loops between individuals 
+  # in this file, we do NOT want to filter out self-loops 
+  # this would remove all isolates and bias our results for ctr nets 
+  #filter(ctr1 != ctr2) %>% 
   rename(login = ctr1) %>% 
   inner_join(intl_ctr_nodelist, by = "login") %>% 
   rename(ctr1 = login, ctrycode1 = country_code) %>% 
@@ -80,12 +82,6 @@ intl_ctr_edgelist <- intl_ctr_edgelist %>%
 sna_intl_ctr_edgelist <- intl_ctr_edgelist %>% 
   select(ctr1, ctr2, repo_wts)
 
-#create sna_intl_ctry_edgelist
-sna_intl_ctry_edgelist <- intl_ctr_edgelist %>% 
-  select(country1, country2, ctrycode1, ctrycode2, repo_wts) %>% 
-  group_by(country1, country2, ctrycode1, ctrycode2) %>% 
-  summarize(repo_wts = sum(repo_wts))
-
 ```
 
 Let's take a look at the degree distributions to see if the samples compare. 
@@ -106,13 +102,6 @@ intl_ctr_edgelist %>%
   ggplot(aes(x=repo_wts, y=count)) +
     geom_bar(stat="identity")
 
-sna_intl_ctry_edgelist %>% 
-  count(repo_wts) %>% 
-  rename(count = n) %>% 
-  filter(repo_wts < 500) %>% 
-  ggplot(aes(x=repo_wts, y=count)) +
-    geom_bar(stat="identity")
-
 ```
 
 Before we write these edgelists to the database, let's make sure that these can be converted to networks in igraph. igraph requires the nodelist and edgelist to match when you draw from both and I find this to be a good test that all the data is aligned. 
@@ -120,21 +109,17 @@ Before we write these edgelists to the database, let's make sure that these can 
 ```{r}
 
 # we will bring together our new intl_ctr_network & original nodelist (without the country_codes split into new rows)
-intl_ctr_network <- graph_from_data_frame(d=sna_intl_ctr_edgelist, vertices=ctr_nodelist, directed=FALSE) 
+intl_ctr_network <- graph.data.frame(sna_intl_ctr_edgelist, directed = FALSE)
 
-# from the recoded intl_ctr_nodelist, let's create a nodelist of all distinct country_codes
-intl_ctry_nodelist <- intl_ctr_nodelist %>% 
-  select(country_code) %>% 
-  distinct(country_code, .keep_all = TRUE) %>% 
-  arrange(country_code)
+# extract the nodelist from our new network  
+sna_intl_ctr_nodelist <- data.frame(id = c(1:(igraph::vcount(intl_ctr_network))), login = igraph::V(intl_ctr_network)$name)
 
-# also need to create a test edgelist that just has the country codes 
-sna_intl_ctry_edgelist_test <- as_tibble(sna_intl_ctry_edgelist) %>% 
-  rename(weight = repo_wts) %>% 
-  select(ctrycode1, ctrycode2, weight)
-
-# and then test to see if our network works out 
-intl_ctry_network <- graph_from_data_frame(d=sna_intl_ctry_edgelist_test, vertices=intl_ctry_nodelist, directed=FALSE) 
+# counting the number of isolates 
+gorder(intl_ctr_network) 
+gsize(intl_ctr_network)
+sum(degree(simplify(intl_ctr_network))==0)
+mean(degree(intl_ctr_network))
+#degree(intl_ctr_network)
 
 ```
 
@@ -149,10 +134,6 @@ conn <- dbConnect(drv = PostgreSQL(),
                   port = 5432, 
                   user = Sys.getenv("db_userid"), 
                   password = Sys.getenv("db_pwd"))
-
-# write the edgelist to the database
-dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctry_edgelist_0819"), 
-             value = sna_intl_ctry_edgelist, row.names = FALSE, temporary = TRUE)
 
 # write the edgelist to the database
 dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_edgelist_0819"), 

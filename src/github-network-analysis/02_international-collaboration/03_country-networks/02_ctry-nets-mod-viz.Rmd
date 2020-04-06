@@ -42,20 +42,17 @@ sna_intl_ctry_edgelist_full <- sna_intl_ctry_edgelist %>%
   select(country1, country2, repo_wts) %>% 
   mutate(weight = repo_wts) %>% select(-repo_wts)
   
-intl_regular_network <- graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
-                              vertices=sna_intl_ctry_nodelist, directed=FALSE)
+intl_regular_network <- graph.data.frame(sna_intl_ctry_edgelist_full, directed = FALSE)
 
 # first, we create one network object where the multiples are combined and loops remain 
 # "multiples combined" means that combinations like albania-usa and usa-albania are collapsed
 # i validated that the edge weights are correct for the collapsed multiples 
-intl_ctry_network <- simplify(graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
-                              vertices=sna_intl_ctry_nodelist, directed=FALSE), 
+intl_ctry_network <- simplify(graph.data.frame(sna_intl_ctry_edgelist_full, directed = FALSE), 
                               edge.attr.comb = igraph_opt("edge.attr.comb"),
                               remove.loops = FALSE)
 
 # next, we create an object that collapses multiples but eliminates the loops 
-intl_ctry_network_noloops <- simplify(graph_from_data_frame(d=sna_intl_ctry_edgelist_full, 
-                              vertices=sna_intl_ctry_nodelist, directed=FALSE), 
+intl_ctry_network_noloops <- simplify(graph.data.frame(sna_intl_ctry_edgelist_full, directed = FALSE), 
                               edge.attr.comb = igraph_opt("edge.attr.comb"),
                               remove.loops = TRUE) 
 
@@ -76,11 +73,12 @@ This plot shows what we would expect. It looks as if (almost?) every country has
 ```{r}
 
 # add the community membership to the nodelist 
-intl_ctry_nodelist_gephi <- sna_intl_ctry_nodelist
+intl_ctry_nodelist_gephi <- data.frame(id = c(1:(igraph::vcount(intl_ctry_network))), country = igraph::V(intl_ctry_network)$name)
+intl_ctry_nodelist_gephi <- intl_ctry_nodelist_gephi %>% 
+  inner_join(sna_intl_ctry_nodelist, by = "country") %>% 
+  rename(region = country)
 fstgrdy <- fastgreedy.community(intl_ctry_network)
 intl_ctry_nodelist_gephi$fstgrdy_comm <- fstgrdy$membership
-intl_ctry_nodelist_gephi <- intl_ctry_nodelist_gephi %>% 
-  rename(region = country) 
 
 #intl_ctry_nodelist_gephi %>% filter(fstgrdy_comm != 1 & fstgrdy_comm != 2)
 
@@ -132,11 +130,13 @@ map_data("world") %>%
 ```{r}
 
 # add the community membership to the nodelist 
-sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist
+sna_intl_ctry_nodelist_noloops <- data.frame(id = c(1:(igraph::vcount(intl_ctry_network_noloops))), 
+                                             country = igraph::V(intl_ctry_network_noloops)$name)
+sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist_noloops %>% 
+  inner_join(sna_intl_ctry_nodelist, by = "country") %>% 
+  rename(region = country)
 fstgrdy <- fastgreedy.community(intl_ctry_network_noloops)
 sna_intl_ctry_nodelist_noloops$fstgrdy_comm <- fstgrdy$membership
-sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist_noloops %>% 
-  rename(region = country) 
 
 #sna_intl_ctry_nodelist_noloops %>% filter(fstgrdy_comm != 1 & fstgrdy_comm != 2)
 
@@ -150,9 +150,9 @@ sna_intl_ctry_nodelist_noloops <- sna_intl_ctry_nodelist_noloops %>%
                                yes = "XK", no = country_code))
 
 # recode user ranges into categories  
-intl_ctry_nodelist_gephi$recoded_noloops <- cut(sna_intl_ctry_nodelist_noloops$fstgrdy_comm, 
-                                             breaks=c(0,1,2,100), 
-                                             labels=c("1", "2", "3"))
+#intl_ctry_nodelist_gephi$recoded_noloops <- cut(sna_intl_ctry_nodelist_noloops$fstgrdy_comm, 
+#                                             breaks=c(0,1,2,100), 
+#                                             labels=c("1", "2", "3"))
 
 # graph the communities on the world map to see if they need consolidating
 map_data("world") %>% 
@@ -164,15 +164,15 @@ map_data("world") %>%
   ggplot() +
   theme_minimal() +
   geom_polygon(aes(x = long, y = lat, 
-                   fill = recoded_noloops, 
+                   fill = fstgrdy_comm, 
                    group = group), 
                    color = "black") + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#628ed8", # light blue
-                               "#E57200", # orange
-                               "#232D4B" # dark blue
-                               )) +
+  #scale_fill_manual(values = c("#628ed8", # light blue
+  #                             #"#E57200", # orange
+  #                             "#232D4B" # dark blue
+  #                             )) +
   theme(plot.title = element_text(size = 13, hjust = 0.5), 
         plot.caption = element_text(size = 10, vjust = 8, hjust = 0.87),
         axis.line=element_blank(),axis.text.x=element_blank(),

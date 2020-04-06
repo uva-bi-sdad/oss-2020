@@ -1,0 +1,218 @@
+---
+title: "Country-to-Country Aggregation File"
+output: ''
+---
+
+```{r binding cumulative_nodelists}
+# read nodelists
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+nodelist_2008 <- readRDS("nodelist_2008.rds") 
+nodelist_200809 <- readRDS("nodelist_2008-09.rds") 
+nodelist_200810 <- readRDS("nodelist_2008-10.rds")
+nodelist_200811 <- readRDS("nodelist_2008-11.rds") 
+nodelist_200812 <- readRDS("nodelist_2008-12.rds") 
+nodelist_200813 <- readRDS("nodelist_2008-13.rds")
+nodelist_200814 <- readRDS("nodelist_2008-14.rds")
+nodelist_200815 <- readRDS("nodelist_2008-15.rds")
+nodelist_200816 <- readRDS("nodelist_2008-16.rds")
+nodelist_200817 <- readRDS("nodelist_2008-17.rds")
+nodelist_200818 <- readRDS("nodelist_2008-18.rds")
+nodelist_200819 <- readRDS("nodelist_2008-19.rds")
+
+nodelist_2008 <- nodelist_2008 %>% select(-id) %>% 
+  rename_all(paste0, "08") %>% rename(country = login08)
+nodelist_200809 <- nodelist_200809 %>% select(-id) %>% 
+  rename_all(paste0, "0809") %>% rename(country = login0809)
+nodelist_200810 <- nodelist_200810 %>% select(-id) %>% 
+  rename_all(paste0, "0810") %>% rename(country = login0810)
+nodelist_200811 <- nodelist_200811 %>% select(-id) %>% 
+  rename_all(paste0, "0811") %>% rename(country = login0811)
+nodelist_200812 <- nodelist_200812 %>% select(-id) %>% 
+  rename_all(paste0, "0812") %>% rename(country = login0812)
+nodelist_200813 <- nodelist_200813 %>% select(-id) %>% 
+  rename_all(paste0, "0813") %>% rename(country = login0813)
+nodelist_200814 <- nodelist_200814 %>% select(-id) %>% 
+  rename_all(paste0, "0814") %>% rename(country = login0814)
+nodelist_200815 <- nodelist_200815 %>% select(-id) %>% 
+  rename_all(paste0, "0815") %>% rename(country = login0815)
+nodelist_200816 <- nodelist_200816 %>% select(-id) %>% 
+  rename_all(paste0, "0816") %>% rename(country = login0816)
+nodelist_200817 <- nodelist_200817 %>% select(-id) %>% 
+  rename_all(paste0, "0817") %>% rename(country = login0817)
+nodelist_200818 <- nodelist_200818 %>% select(-id) %>% 
+  rename_all(paste0, "0818") %>% rename(country = login0818)
+nodelist_200819 <- nodelist_200819 %>% select(-id) %>% 
+  rename_all(paste0, "0819") %>% rename(country = login0819)
+
+full_nodelist <- nodelist_2008 %>% 
+  full_join(nodelist_200809,by = "country") %>% 
+  full_join(nodelist_200810,by = "country") %>% 
+  full_join(nodelist_200811,by = "country") %>% 
+  full_join(nodelist_200812,by = "country") %>% 
+  full_join(nodelist_200813,by = "country") %>% 
+  full_join(nodelist_200814,by = "country") %>% 
+  full_join(nodelist_200815,by = "country") %>%
+  full_join(nodelist_200816,by = "country") %>%
+  full_join(nodelist_200817,by = "country") %>% 
+  full_join(nodelist_200818,by = "country") %>% 
+  full_join(nodelist_200819,by = "country") %>% 
+  arrange(country)
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+saveRDS(full_nodelist, "full_nodelist_cum.rds")
+```
+
+```{r concatenating global_netstats_cum}
+# read nodelists
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+full_nodelist <- readRDS("full_nodelist_cum.rds") 
+global_netstats_2008 <- readRDS("global_netstats_2008.rds") 
+global_netstats_200809 <- readRDS("global_netstats_2008-09.rds") 
+global_netstats_200810 <- readRDS("global_netstats_2008-10.rds") 
+global_netstats_200811 <- readRDS("global_netstats_2008-11.rds") 
+global_netstats_200812 <- readRDS("global_netstats_2008-12.rds")
+global_netstats_200813 <- readRDS("global_netstats_2008-13.rds")
+global_netstats_200814 <- readRDS("global_netstats_2008-14.rds")
+global_netstats_200815 <- readRDS("global_netstats_2008-15.rds")
+global_netstats_200816 <- readRDS("global_netstats_2008-16.rds")
+global_netstats_200817 <- readRDS("global_netstats_2008-17.rds")
+global_netstats_200818 <- readRDS("global_netstats_2008-18.rds")
+global_netstats_200819 <- readRDS("global_netstats_2008-19.rds")
+
+global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809,
+                             global_netstats_200810, global_netstats_200811, 
+                             global_netstats_200812, global_netstats_200813, 
+                             global_netstats_200814, global_netstats_200815, 
+                             global_netstats_200816, global_netstats_200817, 
+                             global_netstats_200818, global_netstats_200819) 
+
+weighted <- as_tibble(c(sum(full_nodelist$wtd_deg_cent08, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0809, na.rm = TRUE),
+            sum(full_nodelist$wtd_deg_cent0810, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0811, na.rm = TRUE),
+            sum(full_nodelist$wtd_deg_cent0812, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0813, na.rm = TRUE),
+            sum(full_nodelist$wtd_deg_cent0814, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0815, na.rm = TRUE),
+            sum(full_nodelist$wtd_deg_cent0816, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0817, na.rm = TRUE), 
+            sum(full_nodelist$wtd_deg_cent0818, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0819, na.rm = TRUE))) 
+
+colnames(weighted) <- "wtd_edge_count"
+global_netstats_cum <- cbind(global_netstats_cum, weighted) 
+global_netstats_cum <- global_netstats_cum %>% 
+  select(year, node_count, edge_count, wtd_edge_count, everything()) 
+
+global_netstats_cum <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
+                             "2013", "2014", "2015", "2016", "2017", "2018", "2019")) %>% 
+  bind_cols(global_netstats_cum) %>% 
+  rename(time = value)
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+saveRDS(global_netstats_cum, "global_netstats_cum.rds") 
+```
+
+```{r k_core}
+rm(list = ls())
+setwd("~/oss-data/intl-ctry-nets-cum")
+full_nodelist <- readRDS("full_nodelist_cum.rds")
+global_netstats_cum <- readRDS("global_netstats_cum.rds")
+
+# get k_core data from nodelist
+k08<-full_nodelist %>% drop_na(k_core08) %>% 
+  count(k_core08) %>% rename(core = k_core08, k08 = n)
+k09<-full_nodelist %>% drop_na(k_core0809) %>% 
+  count(k_core0809) %>% rename(core = k_core0809, k09 = n)
+k10<-full_nodelist %>% drop_na(k_core0810) %>% 
+  count(k_core0810) %>% rename(core = k_core0810, k10 = n)
+k11<-full_nodelist %>% drop_na(k_core0811) %>% 
+  count(k_core0811) %>% rename(core = k_core0811, k11 = n)
+k12<-full_nodelist %>% drop_na(k_core0812) %>% 
+  count(k_core0812) %>% rename(core = k_core0812, k12 = n)
+k13<-full_nodelist %>% drop_na(k_core0813) %>% 
+  count(k_core0813) %>% rename(core = k_core0813, k13 = n)
+k14<-full_nodelist %>% drop_na(k_core0814) %>% 
+  count(k_core0814) %>% rename(core = k_core0814, k14 = n)
+k15<-full_nodelist %>% drop_na(k_core0815) %>% 
+  count(k_core0815) %>% rename(core = k_core0815, k15 = n)
+k16<-full_nodelist %>% drop_na(k_core0816) %>% 
+  count(k_core0816) %>% rename(core = k_core0816, k16 = n)
+k17<-full_nodelist %>% drop_na(k_core0817) %>% 
+  count(k_core0817) %>% rename(core = k_core0817, k17 = n)
+k18<-full_nodelist %>% drop_na(k_core0818) %>% 
+  count(k_core0818) %>% rename(core = k_core0818, k18 = n)
+k19<-full_nodelist %>% drop_na(k_core0819) %>% 
+  count(k_core0819) %>% rename(core = k_core0819, k19 = n)
+
+# join it all together 
+kcore_data <- full_join(k08,k09, by = "core")  
+kcore_data <- full_join(kcore_data,k10, by = "core")  
+kcore_data <- full_join(kcore_data,k11, by = "core")
+kcore_data <- full_join(kcore_data,k12, by = "core")
+kcore_data <- full_join(kcore_data,k13, by = "core")
+kcore_data <- full_join(kcore_data,k14, by = "core")
+kcore_data <- full_join(kcore_data,k15, by = "core")
+kcore_data <- full_join(kcore_data,k16, by = "core")
+kcore_data <- full_join(kcore_data,k17, by = "core")
+kcore_data <- full_join(kcore_data,k18, by = "core")
+kcore_data <- full_join(kcore_data,k19, by = "core") %>%
+  arrange(core)
+
+# adding max_kcore to df 
+kmax_df = data.frame()
+kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
+                               "2013","2014","2015","2016","2017","2018", "2019"))
+kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
+                               max(k12$core),max(k13$core),max(k14$core),max(k15$core),
+                               max(k16$core),max(k17$core),max(k18$core),max(k19$core)))
+
+global_netstats_cum <- full_join(global_netstats_cum,kmax_df, by = "time")
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+write_rds(kcore_data, "kcore_data_cum.rds")
+write_rds(global_netstats_cum, "global_netstats_cum.rds")
+
+```
+
+# No decomposition analyses conducted on the country-country networks since there is no variation. 
+
+```{r decomp_stats}
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq) 
+dc09 <- as.data.frame(readRDS("decomposition_stats_2008-09.rds")) %>% rename(decomp = Var1, dc09 = Freq) 
+dc10 <- as.data.frame(readRDS("decomposition_stats_2008-10.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_2008-11.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_2008-12.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_2008-13.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_2008-14.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_2008-15.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_2008-16.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_2008-17.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_2008-18.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+dc19 <- as.data.frame(readRDS("decomposition_stats_2008-19.rds")) %>% rename(decomp = Var1, dc19 = Freq)
+
+decomp_data_cum <- full_join(dc08,dc09, by = "decomp")  
+decomp_data_cum <- full_join(decomp_data_cum,dc10, by = "decomp")  
+decomp_data_cum <- full_join(decomp_data_cum,dc11, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc12, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc13, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc14, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc15, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc16, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc17, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc18, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc19, by = "decomp") %>% 
+  arrange(decomp)
+
+setwd("~/oss-data/intl-ctry-nets-cum")
+write_rds(decomp_data_cum, "decomp_data_cum.rds")
+
+```

@@ -6,125 +6,172 @@ output: html_document
 
 ```{r binding yxy nodelists}
 
+
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
               "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
 
 # read nodelists
 rm(list = ls())
-#setwd("~/2008")
 setwd("~/oss-data/intl-ctr-nets-yxy")
-nodelist_2008 <- read_rds("nodelist_yxy_2008.rds")
-#setwd("~/2009")
-nodelist_2009 <- read_rds("nodelist_yxy_2009.rds")
-#setwd("~/2010")
-nodelist_2010 <- read_rds("nodelist_yxy_2010.rds")
-#setwd("~/2011")
-nodelist_2011 <- read_rds("nodelist_yxy_2011.rds")
-#setwd("~/2012")
-nodelist_2012 <- read_rds("nodelist_yxy_2012.rds")
-#setwd("~/2013")
-nodelist_2013 <- read_rds("nodelist_yxy_2013.rds")
-#setwd("~/2014")
-nodelist_2014 <- read_rds("nodelist_yxy_2014.rds")
-#setwd("~/2015")
-nodelist_2015 <- read_rds("nodelist_yxy_2015.rds")
-#setwd("~/2016")
-nodelist_2016 <- read_rds("nodelist_yxy_2016.rds")
-#setwd("~/2017")
-nodelist_2017 <- read_rds("nodelist_yxy_2017.rds")
-#setwd("~/2018")
-nodelist_2018 <- read_rds("nodelist_yxy_2018.rds")
+nodelist_2008 <- read_rds("nodelist_2008.rds")
+nodelist_2009 <- read_rds("nodelist_2009.rds")
+nodelist_2010 <- read_rds("nodelist_2010.rds")
+nodelist_2011 <- read_rds("nodelist_2011.rds")
+nodelist_2012 <- read_rds("nodelist_2012.rds")
+nodelist_2013 <- read_rds("nodelist_2013.rds")
+nodelist_2014 <- read_rds("nodelist_2014.rds")
+nodelist_2015 <- read_rds("nodelist_2015.rds")
+nodelist_2016 <- read_rds("nodelist_2016.rds")
+nodelist_2017 <- read_rds("nodelist_2017.rds")
+nodelist_2018 <- read_rds("nodelist_2018.rds")
+nodelist_2019 <- read_rds("nodelist_2019.rds")
 
 full_nodelist <- nodelist_2008 %>% 
   select(-id) %>% 
   mutate(login = as.character(login)) %>% 
-  rename(deg08 = degree,
-         wtddeg08 = wtd_degree, 
+  rename(deg08 = deg_cent,
+         wtddeg08 = wtd_deg_cent, 
+         eigen08 = eigen_cent,
+         pgrank08 = page_rank,
+         auth08 = auth_score, 
+         hub08 = hub_score, 
          kcore08 = k_core,
          louvain08 = louvain_comm,
-         #fstgrdy08 = fstgrdy_comm,
+         fstgrdy08 = fstgrdy_comm, 
          comp08 = component) %>%     
-  right_join(nodelist_2009, by = "login") %>% 
+  full_join(nodelist_2009, by = "login") %>% 
   select(-id) %>% 
-  rename(deg09 = degree,
-         wtddeg09 = wtd_degree, 
+  rename(deg09 = deg_cent,
+         wtddeg09 = wtd_deg_cent, 
+         eigen09 = eigen_cent,
+         pgrank09 = page_rank,
+         auth09 = auth_score, 
+         hub09 = hub_score, 
          kcore09 = k_core,
          louvain09 = louvain_comm,
-         #fstgrdy09 = fstgrdy_comm,
-         comp09 = component) %>% 
-  right_join(nodelist_2010, by = "login") %>% 
+         fstgrdy09 = fstgrdy_comm, 
+         comp09 = component) %>%
+  full_join(nodelist_2010, by = "login") %>% 
   select(-id) %>% 
-  rename(deg10 = degree,
-         wtddeg10 = wtd_degree, 
+  rename(deg10 = deg_cent,
+         wtddeg10 = wtd_deg_cent, 
+         eigen10 = eigen_cent,
+         pgrank10 = page_rank,
+         auth10 = auth_score, 
+         hub10 = hub_score, 
          kcore10 = k_core,
          louvain10 = louvain_comm,
-         #fstgrdy10 = fstgrdy_comm,
+         fstgrdy10 = fstgrdy_comm, 
          comp10 = component) %>% 
-  right_join(nodelist_2011, by = "login") %>% 
+  full_join(nodelist_2011, by = "login") %>% 
   select(-id) %>% 
-  rename(deg11 = degree,
-         wtddeg11 = wtd_degree, 
+  rename(deg11 = deg_cent,
+         wtddeg11 = wtd_deg_cent, 
+         eigen11 = eigen_cent,
+         pgrank11 = page_rank,
+         auth11 = auth_score, 
+         hub11 = hub_score, 
          kcore11 = k_core,
          louvain11 = louvain_comm,
-         #fstgrdy11 = fstgrdy_comm,
+         fstgrdy11 = fstgrdy_comm, 
          comp11 = component) %>% 
-  right_join(nodelist_2012, by = "login") %>% 
+  full_join(nodelist_2012, by = "login") %>% 
   select(-id) %>% 
-  rename(deg12 = degree,
-         wtddeg12 = wtd_degree, 
+  rename(deg12 = deg_cent,
+         wtddeg12 = wtd_deg_cent, 
+         eigen12 = eigen_cent,
+         pgrank12 = page_rank,
+         auth12 = auth_score, 
+         hub12 = hub_score, 
          kcore12 = k_core,
          louvain12 = louvain_comm,
-         #fstgrdy12 = fstgrdy_comm,
-         comp12 = component) %>% 
-  right_join(nodelist_2013, by = "login") %>% 
+         fstgrdy12 = fstgrdy_comm, 
+         comp12 = component) %>%
+  full_join(nodelist_2013, by = "login") %>% 
   select(-id) %>% 
-  rename(deg13 = degree,
-         wtddeg13 = wtd_degree, 
+  rename(deg13 = deg_cent,
+         wtddeg13 = wtd_deg_cent, 
+         eigen13 = eigen_cent,
+         pgrank13 = page_rank,
+         auth13 = auth_score, 
+         hub13 = hub_score, 
          kcore13 = k_core,
          louvain13 = louvain_comm,
-         #fstgrdy13 = NA,
+         fstgrdy13 = fstgrdy_comm, 
          comp13 = component) %>% 
-  right_join(nodelist_2014, by = "login") %>% 
+  full_join(nodelist_2014, by = "login") %>% 
   select(-id) %>% 
-  rename(deg14 = degree,
-         wtddeg14 = wtd_degree, 
+  rename(deg14 = deg_cent,
+         wtddeg14 = wtd_deg_cent, 
+         eigen14 = eigen_cent,
+         pgrank14 = page_rank,
+         auth14 = auth_score, 
+         hub14 = hub_score, 
          kcore14 = k_core,
          louvain14 = louvain_comm,
-         #fstgrdy14 = NA,
-         comp14 = component) %>% 
-  right_join(nodelist_2015, by = "login") %>% 
+         fstgrdy14 = fstgrdy_comm, 
+         comp14 = component) %>%
+  full_join(nodelist_2015, by = "login") %>% 
   select(-id) %>% 
-  rename(deg15 = degree,
-         wtddeg15 = wtd_degree, 
+  rename(deg15 = deg_cent,
+         wtddeg15 = wtd_deg_cent, 
+         eigen15 = eigen_cent,
+         pgrank15 = page_rank,
+         auth15 = auth_score, 
+         hub15 = hub_score, 
          kcore15 = k_core,
          louvain15 = louvain_comm,
-         #fstgrdy15 = NA,
+         fstgrdy15 = fstgrdy_comm, 
          comp15 = component) %>% 
-  right_join(nodelist_2016, by = "login") %>% 
+  full_join(nodelist_2016, by = "login") %>% 
   select(-id) %>% 
-  rename(deg16 = degree,
-         wtddeg16 = wtd_degree, 
+  rename(deg16 = deg_cent,
+         wtddeg16 = wtd_deg_cent, 
+         eigen16 = eigen_cent,
+         pgrank16 = page_rank,
+         auth16 = auth_score, 
+         hub16 = hub_score, 
          kcore16 = k_core,
          louvain16 = louvain_comm,
-         #fstgrdy16 = NA,
+         fstgrdy16 = fstgrdy_comm, 
          comp16 = component) %>% 
-  right_join(nodelist_2017, by = "login") %>% 
+  full_join(nodelist_2017, by = "login") %>% 
   select(-id) %>% 
-  rename(deg17 = degree,
-         wtddeg17 = wtd_degree, 
+  rename(deg17 = deg_cent,
+         wtddeg17 = wtd_deg_cent, 
+         eigen17 = eigen_cent,
+         pgrank17 = page_rank,
+         auth17 = auth_score, 
+         hub17 = hub_score, 
          kcore17 = k_core,
          louvain17 = louvain_comm,
-         #fstgrdy17 = NA,
-         comp17 = component) %>% 
-  right_join(nodelist_2018, by = "login") %>% 
+         fstgrdy17 = fstgrdy_comm, 
+         comp17 = component) %>%
+  full_join(nodelist_2018, by = "login") %>% 
   select(-id) %>% 
-  rename(deg18 = degree,
-         wtddeg18 = wtd_degree, 
+  rename(deg18 = deg_cent,
+         wtddeg18 = wtd_deg_cent, 
+         eigen18 = eigen_cent,
+         pgrank18 = page_rank,
+         auth18 = auth_score, 
+         hub18 = hub_score, 
          kcore18 = k_core,
          louvain18 = louvain_comm,
-         #fstgrdy18 = NA,
-         comp18 = component) 
+         fstgrdy18 = fstgrdy_comm, 
+         comp18 = component) %>%
+  full_join(nodelist_2019, by = "login") %>% 
+  select(-id) %>% 
+  rename(deg19 = deg_cent,
+         wtddeg19 = wtd_deg_cent, 
+         eigen19 = eigen_cent,
+         pgrank19 = page_rank,
+         auth19 = auth_score, 
+         hub19 = hub_score, 
+         kcore19 = k_core,
+         louvain19 = louvain_comm,
+         fstgrdy19 = fstgrdy_comm, 
+         comp19 = component)
 
 setwd("~/oss-data/intl-ctr-nets-yxy")
 saveRDS(full_nodelist, "full_nodelist_yxy.rds")
@@ -132,52 +179,39 @@ saveRDS(full_nodelist, "full_nodelist_yxy.rds")
 
 ```{r concatenating global_netstats_yxy}
 
-#rm(list = ls())
+rm(list = ls())
 setwd("~/oss-data/intl-ctr-nets-yxy")
-global_netstats_2008 <- read_rds("global_netstats_yxy_2008.rds") 
-global_netstats_2009 <- read_rds("global_netstats_yxy_2009.rds") 
-global_netstats_2010 <- read_rds("global_netstats_yxy_2010.rds") 
-global_netstats_2011 <- read_rds("global_netstats_yxy_2011.rds")
-global_netstats_2012 <- read_rds("global_netstats_yxy_2012.rds") 
-global_netstats_2013 <- read_rds("global_netstats_yxy_2013.rds")
-global_netstats_2014 <- read_rds("global_netstats_yxy_2014.rds") 
-global_netstats_2015 <- read_rds("global_netstats_yxy_2015.rds") 
-global_netstats_2016 <- read_rds("global_netstats_yxy_2016.rds")
-global_netstats_2017 <- read_rds("global_netstats_yxy_2017.rds")
-global_netstats_2018 <- read_rds("global_netstats_yxy_2018.rds")
+global_netstats_2008 <- read_rds("global_netstats_2008.rds") 
+global_netstats_2009 <- read_rds("global_netstats_2009.rds") 
+global_netstats_2010 <- read_rds("global_netstats_2010.rds") 
+global_netstats_2011 <- read_rds("global_netstats_2011.rds")
+global_netstats_2012 <- read_rds("global_netstats_2012.rds") 
+global_netstats_2013 <- read_rds("global_netstats_2013.rds")
+global_netstats_2014 <- read_rds("global_netstats_2014.rds") 
+global_netstats_2015 <- read_rds("global_netstats_2015.rds") 
+global_netstats_2016 <- read_rds("global_netstats_2016.rds")
+global_netstats_2017 <- read_rds("global_netstats_2017.rds")
+global_netstats_2018 <- read_rds("global_netstats_2018.rds")
+global_netstats_2019 <- read_rds("global_netstats_2019.rds")
 
 global_netstats_yxy <- rbind(global_netstats_2008, global_netstats_2009, global_netstats_2010, global_netstats_2011,
                              global_netstats_2012, global_netstats_2013, global_netstats_2014, global_netstats_2015,
-                             global_netstats_2016, global_netstats_2017, global_netstats_2018) %>% 
-  transform(dyads = as.numeric(dyads))
+                             global_netstats_2016, global_netstats_2017, global_netstats_2018, global_netstats_2019) 
 
-setwd("~/oss-data/intl-dyn-ctr-nets-yxy")
+setwd("~/oss-data/intl-ctr-nets-yxy")
 full_nodelist_yxy <- read_rds("full_nodelist_yxy.rds")
-
-edges <- as_tibble(c(sum(full_nodelist_yxy$deg08/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg09/ 2, na.rm = TRUE),
-            sum(full_nodelist_yxy$deg10/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg11/ 2, na.rm = TRUE),
-            sum(full_nodelist_yxy$deg12/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg13/ 2, na.rm = TRUE),
-            sum(full_nodelist_yxy$deg14/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg15/ 2, na.rm = TRUE),
-            sum(full_nodelist_yxy$deg16/ 2, na.rm = TRUE), sum(full_nodelist_yxy$deg17/ 2, na.rm = TRUE), 
-            sum(full_nodelist_yxy$deg18/ 2, na.rm = TRUE))) 
 
 weighted <- as_tibble(c(sum(full_nodelist_yxy$wtddeg08, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg09, na.rm = TRUE),
             sum(full_nodelist_yxy$wtddeg10, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg11, na.rm = TRUE),
             sum(full_nodelist_yxy$wtddeg12, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg13, na.rm = TRUE),
             sum(full_nodelist_yxy$wtddeg14, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg15, na.rm = TRUE),
             sum(full_nodelist_yxy$wtddeg16, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg17, na.rm = TRUE), 
-            sum(full_nodelist_yxy$wtddeg18, na.rm = TRUE))) 
-
-global_netstats_yxy <- as_tibble(c("2008", "2009", "2010", "2011", "2012", 
-                                   "2013", "2014", "2015", "2016", "2017", "2018")) %>% 
-  bind_cols(global_netstats_yxy) %>% # select(-year) %>% 
-  rename(time = value)
+            sum(full_nodelist_yxy$wtddeg18, na.rm = TRUE), sum(full_nodelist_yxy$wtddeg19, na.rm = TRUE))) 
 
 colnames(weighted) <- "wtd_edge_count"
 global_netstats_yxy <- cbind(global_netstats_yxy, weighted) 
 global_netstats_yxy <- global_netstats_yxy %>% 
-  select(time, year, node_count, edge_count, wtd_edge_count, everything()) %>% 
-  transform(dyads = as.numeric(dyads))
+  select(year, node_count, edge_count, wtd_edge_count, everything()) 
 
 setwd("~/oss-data/intl-ctr-nets-yxy")
 saveRDS(global_netstats_yxy, "global_netstats_yxy.rds")
@@ -214,28 +248,31 @@ k17<-full_nodelist %>% drop_na(kcore17) %>%
   count(kcore17) %>% rename(core = kcore17, k17 = n)
 k18<-full_nodelist %>% drop_na(kcore18) %>% 
   count(kcore18) %>% rename(core = kcore18, k18 = n)
+k19<-full_nodelist %>% drop_na(kcore19) %>% 
+  count(kcore19) %>% rename(core = kcore19, k19 = n)
 
 # join it all together 
-kcore_data <- right_join(k08,k09, by = "core")  
-kcore_data <- right_join(kcore_data,k10, by = "core")  
-kcore_data <- right_join(kcore_data,k11, by = "core")
-kcore_data <- right_join(kcore_data,k12, by = "core")
-kcore_data <- right_join(kcore_data,k13, by = "core")
-kcore_data <- right_join(kcore_data,k14, by = "core")
-kcore_data <- right_join(kcore_data,k15, by = "core")
-kcore_data <- right_join(kcore_data,k16, by = "core")
-kcore_data <- right_join(kcore_data,k17, by = "core")
-kcore_data <- right_join(kcore_data,k18, by = "core")
+kcore_data <- full_join(k08,k09, by = "core")  
+kcore_data <- full_join(kcore_data,k10, by = "core")  
+kcore_data <- full_join(kcore_data,k11, by = "core")
+kcore_data <- full_join(kcore_data,k12, by = "core")
+kcore_data <- full_join(kcore_data,k13, by = "core")
+kcore_data <- full_join(kcore_data,k14, by = "core")
+kcore_data <- full_join(kcore_data,k15, by = "core")
+kcore_data <- full_join(kcore_data,k16, by = "core")
+kcore_data <- full_join(kcore_data,k17, by = "core")
+kcore_data <- full_join(kcore_data,k18, by = "core")
+kcore_data <- full_join(kcore_data,k19, by = "core")
 
 # adding max_kcore to df 
 kmax_df = data.frame()
-kmax_df <- data.frame(time = c("2008","2009","2010","2011","2012",
-                               "2013","2014","2015","2016","2017","2018"))
+kmax_df <- data.frame(year = c("2008","2009","2010","2011","2012",
+                               "2013","2014","2015","2016","2017","2018","2019"))
 kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max(k11$core),
                                max(k12$core),max(k13$core),max(k14$core),max(k15$core),
-                               max(k16$core),max(k17$core),max(k18$core)))
+                               max(k16$core),max(k17$core),max(k18$core),max(k19$core)))
 
-global_netstats_yxy <- right_join(global_netstats_yxy,kmax_df, by = "time")
+global_netstats_yxy <- right_join(global_netstats_yxy,kmax_df, by = "year")
 
 setwd("~/oss-data/intl-ctr-nets-yxy")
 write_rds(kcore_data, "kcore_data_yxy.rds")
@@ -246,62 +283,32 @@ write_rds(global_netstats_yxy, "global_netstats_yxy.rds")
 ```{r decomp_stats}
 
 setwd("~/oss-data/intl-ctr-nets-yxy")
-dc08 <- as.data.frame(readRDS("decomposition_stats_yxy_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
-dc09 <- as.data.frame(readRDS("decomposition_stats_yxy_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
-dc10 <- as.data.frame(readRDS("decomposition_stats_yxy_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
-dc11 <- as.data.frame(readRDS("decomposition_stats_yxy_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
-dc12 <- as.data.frame(readRDS("decomposition_stats_yxy_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
-dc13 <- as.data.frame(readRDS("decomposition_stats_yxy_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
-dc14 <- as.data.frame(readRDS("decomposition_stats_yxy_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
-dc15 <- as.data.frame(readRDS("decomposition_stats_yxy_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
-dc16 <- as.data.frame(readRDS("decomposition_stats_yxy_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
-dc17 <- as.data.frame(readRDS("decomposition_stats_yxy_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
-dc18 <- as.data.frame(readRDS("decomposition_stats_yxy_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomposition_stats_2009.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomposition_stats_2010.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomposition_stats_2011.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomposition_stats_2012.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomposition_stats_2013.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomposition_stats_2014.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomposition_stats_2015.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomposition_stats_2016.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomposition_stats_2017.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomposition_stats_2018.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+dc19 <- as.data.frame(readRDS("decomposition_stats_2019.rds")) %>% rename(decomp = Var1, dc19 = Freq)
 
-decomp_data_yxy <- right_join(dc08,dc09, by = "decomp")  
-decomp_data_yxy <- right_join(decomp_data_yxy,dc10, by = "decomp")  
-decomp_data_yxy <- right_join(decomp_data_yxy,dc11, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc12, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc13, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc14, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc15, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc16, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc17, by = "decomp")
-decomp_data_yxy <- right_join(decomp_data_yxy,dc18, by = "decomp")
+decomp_data_yxy <- full_join(dc08,dc09, by = "decomp")  
+decomp_data_yxy <- full_join(decomp_data_yxy,dc10, by = "decomp")  
+decomp_data_yxy <- full_join(decomp_data_yxy,dc11, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc12, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc13, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc14, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc15, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc16, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc17, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc18, by = "decomp")
+decomp_data_yxy <- full_join(decomp_data_yxy,dc19, by = "decomp")
 
 setwd("~/oss-data/intl-ctr-nets-yxy")
 write_rds(decomp_data_yxy, "decomp_data_yxy.rds")
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

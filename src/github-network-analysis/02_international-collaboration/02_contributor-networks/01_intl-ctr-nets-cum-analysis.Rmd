@@ -26,9 +26,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_intl_ctr_edgelist_0812")
+                                  FROM gh.sna_intl_ctr_edgelist_0816")
 
-analysis_year <- "2008-12"
+analysis_year <- "2008-16"
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -57,7 +57,7 @@ network_stats$edge_count <- gsize(login_network)
 network_stats$commits <- sum(ctr_edgelist$weight)
 
 # isolates, dyads and triads 
-network_stats$isolates <- sum(degree(login_network)==0)
+network_stats$isolates <- sum(degree(simplify(login_network))==0)
 oss_triads <- triad.census(login_network)
 network_stats$triads_003 <- oss_triads[1] 
 network_stats$triads_102 <- oss_triads[3]

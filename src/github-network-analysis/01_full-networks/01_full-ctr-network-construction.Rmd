@@ -123,7 +123,7 @@ Next, we can write the actual edgelist to the database as a materialized view.
 ```{sql sna_ctr_edgelist_yxy}
 
 --then we write the actual data to the database (as a materialized view table)
-CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_yxy AS (
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_yxy_test AS (
 SELECT ctr1,
        ctr2,
        YEAR,

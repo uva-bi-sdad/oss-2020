@@ -27,9 +27,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_intl_ctr_edgelist_yxy
-                                  WHERE year > 2012 AND year < 2014")
+                                  WHERE year = '2019'")
 
-analysis_year <- "2013"
+analysis_year <- "2019"
 
 # disconnect from postgresql
 dbDisconnect(conn)
