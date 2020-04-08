@@ -647,28 +647,13 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # writing the new users_gh_cc table to postgis_2
-dbWriteTable(conn, c("gh", "login_ctry_codes"), users_gh_cc)
+dbWriteTable(conn, c("gh", "sna_ctr_ctry_codes"), users_gh_cc)
 
 # disconnect from postgresql database  
 dbDisconnect(conn)
 ```
 
-## International Nodelist Creation 
 
-And to make the intl_nodelist for the intl_edgelist we can just filter down the full sna_edgelist we made in 01_full-network-construction. This nodelist is what we would want to use for any regression anaylses on international collaboration patterns. 
-
-```{sql write_sna_intl_ctr_nodelist}
-
----NEED TO TEST THIS TO MAKE SURE IT WORKS 
-CREATE MATERIALIZED VIEW gh.sna_intl_ctr_nodelist_full AS (
-SELECT login, repos, commits, deletions, country_code, country_code_di, country_code_vis 
-FROM gh.sna_ctr_nodelist_full
-WHERE country_code IS NOT NULL 
-); 
-
-```
-
-If we wanted to make dynamic nodelists that go year-by-year then we can use pull from our existing nodelist that has years. This will be taken from the year-by-year .Rmd files. 
 
 
 

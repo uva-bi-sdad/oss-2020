@@ -20,7 +20,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
-                                  FROM gh.login_ctry_codes")
+                                  FROM gh.sna_ctr_ctry_codes")
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 

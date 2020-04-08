@@ -23,7 +23,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                FROM gh.sna_intl_ctry_nodelist_full")
+                                FROM gh.sna_intl_ctry_nodelist_temp")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -33,8 +33,19 @@ dbDisconnect(conn)
 # recoding coutry names for graphing purposes
 intl_stats$country <- recode(intl_stats$country, `United States` = "USA", `United Kingdom` = "UK")
 
-intl_stats
+intl_comps <- intl_stats %>% 
+  top_n(25, users) %>% 
+  mutate(repos_user = round(repos / users, 1)) %>% 
+  mutate(commits_repo = round(commits / repos, 1)) %>% 
+  mutate(adds_commit = round(additions / commits, 1)) %>% 
+  mutate(dels_commit = round(deletions / commits, 1)) %>% 
+  mutate(adds_dels = round(deletions / additions, 1))
+  #select(country, repos_user, commits_repo, adds_commit, dels_commit)
+
+mean(intl_comps$repos_user)
 ```
+
+
 ```{r, fig.width=11.5, fig.height=5, echo=FALSE}
 
 # pull out a character vector 
@@ -60,7 +71,7 @@ intl_stats %>%
   labs(y = "Contributors (in Thousands)") +
   scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000), 
                                 labels = c(0,  50, 100, 150,  200)) +
-  labs(title="Total Contributors for Top-10 Countries (GitHub, 2008-2018)")
+  labs(title="Total Contributors for Top-10 Countries (GitHub, 2008-2019)")
 
 ```
 

@@ -52,7 +52,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 ctrs_by_ctry <- dbGetQuery(conn, "SELECT login, country_code, country_code_di, country_code_vis
-                                  FROM gh.login_ctry_codes
+                                  FROM gh.sna_ctr_ctry_codes
                                   WHERE country_code IS NOT NULL")
 
 # disconnect from postgresql
@@ -189,7 +189,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd")) 
 
 # writing the new users_gh_cc table to postgis_2
-dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctry_nodelist_full"), 
+dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctry_summary"), 
              value = stats_by_country, row.names = FALSE)
 
 # disconnect from postgresql database  

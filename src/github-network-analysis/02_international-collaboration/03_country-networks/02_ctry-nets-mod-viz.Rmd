@@ -111,9 +111,9 @@ map_data("world") %>%
                    color = "black") + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#990000", # dark red 
+  scale_fill_manual(values = c("#E57200", # dark red 
                                "#628ed8", # light blue
-                               "#E57200", # orange 
+                               "#990000", # orange 
                                "#232D4B", # dark blue
                                "#eaaa31"  # yellow
                                )) +

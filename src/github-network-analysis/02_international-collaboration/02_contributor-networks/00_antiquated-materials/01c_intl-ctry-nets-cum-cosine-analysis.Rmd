@@ -8,8 +8,7 @@ rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
 
 # load packages 
-for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", 
-              "igraph", "netrankr", "centiserve", "expm", "intergraph",
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "igraph", "netrankr", "centiserve", "expm", "lsa",
               "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get data (in rivanna)
@@ -24,9 +23,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0819")
+                                   FROM gh.sna_intl_ctry_edgelist_08")
 
-analysis_year <- "2008-19"
+analysis_year <- "2008"
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -38,8 +37,25 @@ ctry_edgelist <- ctry_edgelist %>%
   group_by(from, to) %>% 
   summarize(weight = sum(weight)) %>% 
   arrange(-weight)
-  
+
+# original edgelist to network 
 ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
+                         remove.loops = FALSE, 
+                         edge.attr.comb = igraph_opt("edge.attr.comb"))
+is_weighted(ctry_network)
+
+# converts network to cosine normalized weighted edgelist
+# note: the edgelist is longer because the matrix extraction now 
+# includes all combinations (even 0s) where the original edgelist did not 
+ctry_cosine_edgelist <- reshape2::melt(cosine(as.matrix(as_adjacency_matrix(ctry_network, attr = "weight")), y = NULL))
+
+# removing all of the edge weights below 0.01 as wagner et al. 2015 did 
+ctry_cosine_edgelist <- ctry_cosine_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  filter(weight > 0.01) %>% arrange(-weight)
+
+# converting that back to a network and conducting the analyses 
+ctry_network <- simplify(graph.data.frame(ctry_cosine_edgelist, directed = FALSE), 
                          remove.loops = FALSE, 
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
@@ -55,12 +71,12 @@ network_stats <- data.frame(year=analysis_year)
 network_stats$node_count <- gorder(ctry_network)  
 network_stats$edge_count <- gsize(ctry_network)
 network_stats$commits <- sum(ctry_edgelist$weight)
-network_stats$mean_deg <- mean(igraph::degree(ctry_network))
-network_stats$mean_btw <- mean(round(sna::betweenness(intergraph::asNetwork(ctry_network), cmode="undirected"), 4))
+network_stats$mean_deg <- mean(degree(ctry_network))
+network_stats$mean_btw <- mean(betweenness(ctry_network))
 
 # isolates, dyads and triads 
-network_stats$isolates <- sum(igraph::degree(simplify(ctry_network))==0)
-oss_triads <- igraph::triad.census(ctry_network)
+network_stats$isolates <- sum(degree(simplify(ctry_network))==0)
+oss_triads <- triad.census(ctry_network)
 network_stats$triads_003 <- oss_triads[1] 
 network_stats$triads_102 <- oss_triads[3]
 network_stats$triads_201 <- oss_triads[11]
@@ -69,7 +85,7 @@ net_counts <- data.frame(event="net_counts", time=now("EST"))
 time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
 
 # density and transitivity
-network_stats$diameter <- diameter(ctry_network,directed=FALSE,unconnected=FALSE, weights=NA)
+network_stats$diameter <- diameter(ctry_network,directed=FALSE,unconnected=FALSE,weights=NULL)
 network_stats$density <- edge_density(ctry_network, loops=FALSE) 
 network_stats$transitivity <- transitivity(ctry_network)
 net_globals <- data.frame(event="net_globals", time=now("EST"))
@@ -99,10 +115,10 @@ nodelist <- data.frame(id = c(1:(igraph::vcount(ctry_network))), login = igraph:
 # degree, weighted degree, k core and modularity 
 node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
 time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
-nodelist$deg_cent <- igraph::degree(ctry_network)
+nodelist$deg_cent <- degree(ctry_network)
 nodelist$wtd_deg_cent <- strength(ctry_network)
-nodelist$btw_cent <- round(sna::betweenness(intergraph::asNetwork(ctry_network), cmode="undirected"), 4)
-nodelist$close_cent <- closeness(ctry_network) 
+nodelist$btw_cent <- betweenness(ctry_network) # using 3 ~ 5hrs; 5 ~ 6.2hrs; 10 ~ 8.8hrs; 15 ~ 10.5hrs
+nodelist$close_cent <- closeness(ctry_network) # using 3 ~ 6.3hrs; 5 ~ 6.8hrs; 10 ~ 10.1hrs; 15 ~ 12.2hrs
 nodelist$eigen_cent <- eigen_centrality(ctry_network)$vector
 nodelist$alpha_cent <- alpha_centrality(ctry_network)
 nodelist$power_cent <- power_centrality(ctry_network)
@@ -130,7 +146,7 @@ nodelist$close_res <- centiserve::closeness.residual(ctry_network)
 nodelist$comm_bet <- centiserve::communibet(ctry_network)
 #nodelist$decay <- centiserve::decay(ctry_network)
 nodelist$diff_deg <- centiserve::diffusion.degree(ctry_network)     
-nodelist$entropy <- 1/centiserve::entropy(ctry_network)
+nodelist$entrophy <- 1/centiserve::entropy(ctry_network)
 nodelist$geokpath <- centiserve::geokpath(ctry_network)
 nodelist$laplacian <- centiserve::laplacian(ctry_network)
 nodelist$leverage <- centiserve::leverage(ctry_network)             
@@ -146,59 +162,45 @@ nodelist$topocoefficient <- 1/centiserve::topocoefficient(ctry_network)
 node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
-setwd("~/oss-data/intl-ctry-nets-cum")
+setwd("~/oss-data/intl-ctry-nets-cum-cosine")
 saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))  
 saveRDS(decomposition_stats, str_c("decomposition_stats_",analysis_year,".rds")) 
 saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))  
 saveRDS(time_log, str_c("timelog_",analysis_year,".rds"))
 ```
 
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
+```{r}
+setwd("~/oss-data/intl-ctry-nets-cum")
+comp_nodelist <- read_rds("full_nodelist_cum.rds")
+comp_globals <- read_rds("global_netstats_cum.rds")
 
-# load packages 
-for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
-              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
 
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
 
-# query the bipartite edgelist data from github data  
-intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                FROM gh.sna_intl_ctry_nodelist_full")
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-# rename columns and merge data for gephi files 
-nodelist_merged <- nodelist %>% 
-  select(-id) %>%  
-  rename(country = login) %>% 
-  inner_join(intl_stats, by = "country") %>% 
-  rename(id = country)
-ctry_edgelist <- ctry_edgelist %>% 
-  rename(source = from, target = to)
-
-# export files to gephi 
-setwd("~/oss-data/intl-ctry-nets-cum/edgelists")
-write_csv(nodelist_merged, str_c("intl_ctry_nodelist_gephi_",analysis_year,".csv"))
-write_csv(ctry_edgelist, str_c("intl_ctry_edgelist_gephi_",analysis_year,".csv"))
 
 ```
 
+
+
+
+# Constructing Cosine Similarity Index
 
 ```{r}
-nodelist %>% 
-  top_n(25, deg_cent) %>% 
-  arrange(-btw_cent)
+library(lsa)
+ctry_matrix <- as.matrix(get.adjacency(ctry_network))
+cosine_matrix <- cosine(ctry_matrix, y = NULL) 
+ctry_cosine_edgelist <- get.data.frame(graph.adjacency(cosine_matrix, weighted = TRUE))
+ctry_cosine_edgelist %>% 
+  filter(from != to) %>% 
+  arrange(-weight)
 ```
 
+# Constructing Jaccard Similarity Index 
+
+```{r}
 
 
+
+```
 
 
 
