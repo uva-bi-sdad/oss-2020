@@ -24,9 +24,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0819")
+                                   FROM gh.sna_intl_ctry_edgelist_0816")
 
-analysis_year <- "2008-19"
+analysis_year <- "2008-16"
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -55,7 +55,7 @@ network_stats <- data.frame(year=analysis_year)
 network_stats$node_count <- gorder(ctry_network)  
 network_stats$edge_count <- gsize(ctry_network)
 network_stats$commits <- sum(ctry_edgelist$weight)
-network_stats$mean_deg <- mean(igraph::degree(ctry_network))
+network_stats$mean_deg <- mean(degree(ctry_network, mode = "all"))
 network_stats$mean_btw <- mean(round(sna::betweenness(intergraph::asNetwork(ctry_network), cmode="undirected"), 4))
 
 # isolates, dyads and triads 
@@ -69,9 +69,12 @@ net_counts <- data.frame(event="net_counts", time=now("EST"))
 time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
 
 # density and transitivity
-network_stats$diameter <- diameter(ctry_network,directed=FALSE,unconnected=FALSE, weights=NA)
-network_stats$density <- edge_density(ctry_network, loops=FALSE) 
-network_stats$transitivity <- transitivity(ctry_network)
+network_stats$diameter <- diameter(ctry_network,directed=FALSE, 
+                                   unconnected=if (network_stats$isolates == 0) {FALSE} else {TRUE}, weights=NA)
+network_stats$mean_distance <- mean_distance(ctry_network, directed = FALSE, 
+                                   unconnected = if (network_stats$isolates == 0) {FALSE} else {TRUE})
+network_stats$density <- edge_density(ctry_network, loops=TRUE) 
+network_stats$transitivity <- transitivity(ctry_network, weights = TRUE, type = "undirected")
 net_globals <- data.frame(event="net_globals", time=now("EST"))
 time_log <- rbind(time_log, net_globals); rm(net_globals)
 
@@ -87,6 +90,13 @@ network_stats$fstgrdy <- modularity(fstgrdy)
 network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(ctry_network)
 network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(ctry_network))
 
+# added later 
+network_stats$centr_deg <- round(centr_degree(ctry_network)$centralization, 3)
+network_stats$centr_clo <- round(centr_clo(ctry_network, mode = "all")$centralization, 3)
+network_stats$centr_btw <- round(centr_betw(ctry_network, directed = FALSE)$centralization, 3)
+network_stats$centr_eigen <- round(centr_eigen(ctry_network, directed = FALSE)$centralization, 3)
+network_stats$centr_scores <- cbind(year, centr_deg, centr_clo, centr_btw, centr_eigen)
+
 # decomposition statistics 
 decomposition_stats <- table(sapply(decompose.graph(ctry_network), vcount))
 
@@ -99,10 +109,10 @@ nodelist <- data.frame(id = c(1:(igraph::vcount(ctry_network))), login = igraph:
 # degree, weighted degree, k core and modularity 
 node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
 time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
-nodelist$deg_cent <- igraph::degree(ctry_network)
+nodelist$deg_cent <- igraph::degree(ctry_network, mode = "all")
 nodelist$wtd_deg_cent <- strength(ctry_network)
 nodelist$btw_cent <- round(sna::betweenness(intergraph::asNetwork(ctry_network), cmode="undirected"), 4)
-nodelist$close_cent <- closeness(ctry_network) 
+nodelist$close_cent <- closeness(ctry_network, mode = "all") 
 nodelist$eigen_cent <- eigen_centrality(ctry_network)$vector
 nodelist$alpha_cent <- alpha_centrality(ctry_network)
 nodelist$power_cent <- power_centrality(ctry_network)
@@ -174,11 +184,14 @@ intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions
 # disconnect from postgresql
 dbDisconnect(conn)
 
+```
+
+```{r}
 # rename columns and merge data for gephi files 
 nodelist_merged <- nodelist %>% 
   select(-id) %>%  
   rename(country = login) %>% 
-  inner_join(intl_stats, by = "country") %>% 
+  #inner_join(intl_stats, by = "country") %>% 
   rename(id = country)
 ctry_edgelist <- ctry_edgelist %>% 
   rename(source = from, target = to)
@@ -189,17 +202,6 @@ write_csv(nodelist_merged, str_c("intl_ctry_nodelist_gephi_",analysis_year,".csv
 write_csv(ctry_edgelist, str_c("intl_ctry_edgelist_gephi_",analysis_year,".csv"))
 
 ```
-
-
-```{r}
-nodelist %>% 
-  top_n(25, deg_cent) %>% 
-  arrange(-btw_cent)
-```
-
-
-
-
 
 
 

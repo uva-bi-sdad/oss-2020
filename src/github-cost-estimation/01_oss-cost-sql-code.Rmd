@@ -1,0 +1,52 @@
+---
+title: "OSS Cost PostgreSQL Code"
+---
+
+```{sql}
+--create merged table 
+CREATE MATERIALIZED VIEW gh.cost_commits_summary AS (
+SELECT slug, commits_pre.login, EXTRACT(YEAR FROM committed_date)::int AS year, users_gh_cc.country_code, additions, deletions, 
+       (additions + deletions) AS adds_plus_dels, (additions - deletions) AS adds_minus_dels
+FROM gh.commits_pre
+FULL JOIN github.users_gh_cc
+ON commits_pre.login = users_gh_cc.login
+);
+```
+
+```{sql}
+--create merged table 
+CREATE MATERIALIZED VIEW gh.cost_by_login AS (
+SELECT slug, login, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM gh.cost_commits_summary
+GROUP BY slug, login, country_code
+);
+```
+
+```{sql}
+--create merged table 
+CREATE MATERIALIZED VIEW gh.cost_by_country AS (
+SELECT slug, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM gh.cost_commits_summary
+GROUP BY slug, country_code
+); 
+
+```
+
+```{sql}
+GRANT ALL ON gh.cost_commits_summary to ncses_oss; 
+GRANT ALL ON gh.cost_by_login to ncses_oss;
+GRANT ALL ON gh.cost_by_country to ncses_oss;
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -20,29 +20,29 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # query the bipartite edgelist data from github data  
-ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_intl_ctr_edgelist_0816")
+ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
+                                   FROM gh.sna_intl_ctry_edgelist_0819")
 
 # disconnect from postgresql
 dbDisconnect(conn)
 
 # convert edgelist to network 
-ctr_edgelist <- ctr_edgelist %>% 
-  select(ctr1, ctr2, repo_wts) %>% 
-  rename(from = ctr1, to = ctr2, weight = repo_wts) %>% 
+ctry_edgelist <- ctry_edgelist %>% 
+  select(country1, country2, repo_wts) %>% 
+  rename(from = country1, to = country2, weight = repo_wts) %>% 
   group_by(from, to) %>% 
   summarize(weight = sum(weight)) %>% 
   arrange(-weight)
   
-login_network <- graph.data.frame(ctr_edgelist, directed = FALSE)
-login_network <- simplify(login_network, remove.loops = TRUE)
-is_weighted(login_network)
+ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
+                         remove.loops = FALSE, 
+                         edge.attr.comb = igraph_opt("edge.attr.comb"))
+is_weighted(ctry_network)
 ```
-
 ```{r fit_powerlaw}
-data <- degree(login_network)
+data <- degree(ctry_network)
 data <- data[data>0]
-data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
+data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(ctry_network))
 data.dist <- data.dist[data.dist$p_k>0,]
 ggplot(data.dist) + geom_point(aes(x=k, y=p_k)) + theme_bw()
 ```
@@ -95,7 +95,6 @@ fit.data <- lines(m_pl, draw = F)
 ggplot(plot.data) + geom_point(aes(x=log(x), y=log(y))) + labs(x="log(k)", y="log(CDF)") + theme_bw() + 
   geom_line(data=fit.data, aes(x=log(x), y=log(y)), colour="red")
 ```
-
 ```{r}
 #threads=core number of processor that used by function
 #parallel::detectCores() #determines how many cores in your computer
@@ -173,14 +172,14 @@ xmin_sd <- sd(bs_pl$bootstraps$xmin)
 gof <- bs_pl$gof
 pvalue <- bs_pl$p
 power_law_data <- as.data.frame(cbind(year, alpha, alpha_sd, xmin, xmin_sd, pvalue, gof))
-setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+setwd("~/oss-data/intl-ctry-nets-cum/02_power-law-data")
 saveRDS(power_law_data, str_c("power_law_data_",year,".rds"))
 ```
 
 # Aggregate Results 
 
 ```{r}
-setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+setwd("~/oss-data/intl-ctry-nets-cum/02_power-law-data")
 powerlaw_2008 <- read_rds("power_law_data_2008.rds")
 powerlaw_2009 <- read_rds("power_law_data_2008-09.rds")
 powerlaw_2010 <- read_rds("power_law_data_2008-10.rds")
@@ -195,7 +194,7 @@ powerlaw_2018 <- read_rds("power_law_data_2008-18.rds")
 powerlaw_2019 <- read_rds("power_law_data_2008-19.rds")
 power_law_data_all <- rbind(powerlaw_2008, powerlaw_2009, powerlaw_2010, powerlaw_2011, powerlaw_2012, powerlaw_2013,
                             powerlaw_2014, powerlaw_2015, powerlaw_2016, powerlaw_2017, powerlaw_2018, powerlaw_2019)
-setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+setwd("~/oss-data/intl-ctry-nets-cum/02_power-law-data")
 saveRDS(power_law_data_all, "power_law_data_all.rds")
 ```
 

@@ -175,6 +175,11 @@ louvain_cum_logged<-ggplot(global_netstats_cum) +
   geom_line(aes(x=time, y=louvain_logged, group=1), size=2) + 
   labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank())
+dist_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=mean_distance, group=1), size=2) + 
+  labs(y = "Mean Distance", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank())
+
 
 all_others<-ggplot(global_netstats_cum, aes(time)) + 
   geom_line(aes(y = node_count, colour = "Node Count", group= 1), size=2) + 
@@ -195,7 +200,7 @@ all_others<-ggplot(global_netstats_cum, aes(time)) +
 
 grid.arrange(density_cum, louvain_cum, 
              transitivity_cum, louvain_cum_scaled,  
-             all_others, louvain_cum_logged, nrow=3, ncol=2,
+             dist_cum, louvain_cum_logged, nrow=3, ncol=2,
              top="Network Measures")
 
 network_descriptives <- global_netstats_cum %>% 
@@ -203,7 +208,8 @@ network_descriptives <- global_netstats_cum %>%
 paged_table(network_descriptives, options = list(rows.print = 15))
 
 ```
-```{r, fig.width=10, fig.height=2.75, echo=FALSE, layout="l-body-outset"}
+
+```{r, fig.width=11, fig.height=2.2, echo=FALSE, layout="l-body-outset"}
 density_cum<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=density,group=1), size=1.5) + 
   labs(y = "Density", x = "Year", colour = "#990000") + 
@@ -216,14 +222,60 @@ transitivity_cum<-ggplot(global_netstats_cum) +
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019))
-louvain_cum_logged<-ggplot(global_netstats_cum) + 
+fstgrdy_cum_logged<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=fstgrdy_logged, group=1), size=1.5) + 
   labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019))
-grid.arrange(density_cum, transitivity_cum, louvain_cum_logged, nrow=1, ncol=3)
+dist_cum<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=mean_distance, group=1), size=1.5) + 
+  labs(y = "Mean Distance", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+
+grid.arrange(density_cum, dist_cum, transitivity_cum, fstgrdy_cum_logged, nrow=1, ncol=4)
 ```
+```{r, fig.width=11, fig.height=2.2, echo=FALSE, layout="l-body-outset"}
+mean_btw<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=mean_btw,group=1), size=1.5) + 
+  labs(y = "Density", x = "Year", colour = "#990000") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+
+
+centr_deg<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=centr_deg, group=1), size=1.5) + 
+  labs(y = "centr_deg", x = "Year", colour = "#D96403") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+centr_btw<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=centr_btw, group=1), size=1.5) + 
+  labs(y = "centr_btw", x = "Year", colour = "#D96403") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+centr_clo<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=centr_clo, group=1), size=1.5) + 
+  labs(y = "centr_clo", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+centr_eigen<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=centr_eigen, group=1), size=1.5) + 
+  labs(y = "centr_eigen", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019))
+
+grid.arrange(centr_deg, centr_btw, centr_clo, centr_eigen, nrow=1, ncol=4)
+```
+
+
+
 
 ```{r percentage-change, echo=FALSE, fig.width=9.5}
 
@@ -426,10 +478,64 @@ grid.arrange(a, b, c, d, nrow=2, ncol=2)
 
 
 
+```{r}
+setwd("~/oss-data/intl-ctry-nets-cum")
+full_nodelist <- readRDS("full_nodelist_cum.rds") 
+
+community_explore <- full_nodelist %>% 
+  arrange(-deg_cent0819) %>% 
+  select(country, starts_with("fstgrdy"))
+
+add08 <- community_explore %>% group_by(fstgrdy_comm08) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2008") %>% rename("value" = n)
+add0809 <- community_explore %>% group_by(fstgrdy_comm0809) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2009") %>% rename("value" = n)
+add0810 <- community_explore %>% group_by(fstgrdy_comm0810) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2010") %>% rename("value" = n)
+add0811 <- community_explore %>% group_by(fstgrdy_comm0811) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2011") %>% rename("value" = n)
+add0812 <- community_explore %>% group_by(fstgrdy_comm0812) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2012") %>% rename("value" = n)
+add0813 <- community_explore %>% group_by(fstgrdy_comm0813) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2013") %>% rename("value" = n)
+add0814 <- community_explore %>% group_by(fstgrdy_comm0814) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2014") %>% rename("value" = n)
+add0815 <- community_explore %>% group_by(fstgrdy_comm0815) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2015") %>% rename("value" = n)
+add0816 <- community_explore %>% group_by(fstgrdy_comm0816) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2016") %>% rename("value" = n)
+add0817 <- community_explore %>% group_by(fstgrdy_comm0817) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2017") %>% rename("value" = n)
+add0818 <- community_explore %>% group_by(fstgrdy_comm0818) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2018") %>% rename("value" = n)
+add0819 <- community_explore %>% group_by(fstgrdy_comm0819) %>% count() %>% 
+  rename_at(1,~"group") %>% drop_na() %>% mutate(year = "2019") %>% rename("value" = n)
+
+new_data <- as_tibble(rbind(add08, add0809, add0810, add0811, add0812, add0813, add0814, add0815, add0816, add0817, add0818, add0819))
+ 
+new_data$group <- recode(new_data$group, `1` = "A", `2` = "B", `3` = "C", `4` = "D", `5` = "E")
+new_data$group <- as.factor(new_data$group)
+new_data$year <- as.numeric(new_data$year)
+
+
+test_data <- new_data %>% 
+  filter(group == "A" | group == "B" | group == "C")
 
 
 
 
+ggplot(test_data, aes(x=time, y=value, fill=group)) + 
+    geom_area()
+ 
+# create data
+time <- as.numeric(rep(seq(1,7),each=7))  # x Axis
+value <- runif(49, 10, 100)               # y Axis
+group <- rep(LETTERS[1:7],times=7)        # group, one shape per group
+data <- data.frame(time, value, group)
+
+
+test_data
+```
 
 
 
