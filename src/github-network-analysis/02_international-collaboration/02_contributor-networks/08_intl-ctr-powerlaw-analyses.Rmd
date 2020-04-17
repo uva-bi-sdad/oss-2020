@@ -21,7 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_intl_ctr_edgelist_0816")
+                                  FROM gh.sna_intl_ctr_edgelist_0817")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -44,12 +44,12 @@ data <- degree(login_network)
 data <- data[data>0]
 data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
 data.dist <- data.dist[data.dist$p_k>0,]
+m_pl <- displ$new(data)
 ggplot(data.dist) + geom_point(aes(x=k, y=p_k)) + theme_bw()
 ```
 
 ```{r initial_estimation}
 # run initial estimation 
-m_pl <- displ$new(data)
 est_pl <- estimate_xmin(m_pl)
 # initial estimation of kmin
 est_pl$xmin  
@@ -58,6 +58,7 @@ est_pl$pars
 # calculate D with Kolgomorov-Smirnov test
 est_pl$gof 
 ```
+
 ```{r}
 (est = estimate_pars(m_pl))
 (est = estimate_xmin(m_pl))
@@ -86,6 +87,8 @@ ggplot(data=d_est, aes(x=K_min, y=D)) + geom_line() + theme_bw() +
   geom_vline(xintercept=K.min_D.min, colour="red") + annotate("text", x=K.min_D.min, y=max(d_est$D)/3*2, label=K.min_D.min)
 ggplot(data=d_est, aes(x=K_min, y=gamma)) + geom_line() + theme_bw() + 
   geom_vline(xintercept=K.min_D.min, colour="red") + annotate("text", x=K.min_D.min, y=max(d_est$gamma)/3*2, label=K.min_D.min)
+setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+saveRDS(d_est, "d_est_0818.rds")
 ```
 
 ```{r}
@@ -110,7 +113,20 @@ bs_pl <- bootstrap_p(m_pl, no_of_sims=1000, threads=15, seed = 123)
 df_bs_pl <- bs_pl$bootstraps
 ggplot(data=df_bs_pl, aes(pars)) + geom_histogram() + labs(x="alpha", y="frequency") + theme_bw()
 ggplot(data=df_bs_pl, aes(xmin)) + geom_histogram() + labs(x="K_min", y="frequency") + theme_bw()
+#setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+#saveRDS(d_est, "d_est_0818.rds")
+#saveRDS(bs_pl, "bs_pl_0818.rds")
 ```
+```{r}
+setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+d_est <- read_rds("d_est_0817.rds")
+bs_pl <- read_rds("bs_pl_0817.rds")
+K.min_D.min <- d_est[which.min(d_est$D), 1]
+df_bs_pl <- bs_pl$bootstraps
+ggplot(data=df_bs_pl, aes(pars)) + geom_histogram() + labs(x="alpha", y="frequency") + theme_bw()
+ggplot(data=df_bs_pl, aes(xmin)) + geom_histogram() + labs(x="K_min", y="frequency") + theme_bw()
+```
+
 ```{r}
 gamma_D.min <- d_est[which.min(d_est$D), 2]
 ggplot(data=df_bs_pl, aes(x=xmin, y=pars)) + labs(x="K_min", y="alpha") + theme_bw() + 
@@ -165,7 +181,7 @@ lines(m_exp, col="magenta")
 ```
 
 ```{r}
-year <- "2008-19"
+year <- "2008-17"
 alpha <- est$pars
 alpha_sd <- sd(bs_pl$bootstraps$pars)
 xmin <- est$xmin

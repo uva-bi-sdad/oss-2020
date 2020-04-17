@@ -111,7 +111,7 @@ map_data("world") %>%
                    color = "black") + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#E57200", # dark red 
+  scale_fill_manual(values = c("#E57200", # dark red    
                                "#628ed8", # light blue
                                "#990000", # orange 
                                "#232D4B", # dark blue
@@ -208,14 +208,119 @@ write_csv(intl_ctry_edgelist_gephi, "intl_ctry_edgelist_gephi.csv")
 # Creating Country-to-Country Network Visuals in Gephi 
 
 
+```{r}
+
+library("HiveR")
+
+?HiveR
+test_edgelist <- sna_intl_ctry_edgelist %>% 
+  select(-ctrycode1, -ctrycode2) %>% 
+  rename(lab1 = country1, lab2 = country2, weight = repo_wts)
+
+class(test_edgelist)
+class(edges)
+
+test <- edge2HPD(test_edgelist, axis.cols = NULL)
+
+
+edges <- data.frame(lab1 = LETTERS[c(1:8, 7)],
+					lab2 = LETTERS[c(2:4, 1:3, 4, 2, 2)],
+					weight = c(1, 1, 2, 2, 3, 1, 2, 3, 1))
+					
+td <- edge2HPD(edge_df = edges, desc = "Test of edge2HPD")
+plotptd.out <- sumHPD(td, plot.list = TRUE)
+
+
+
+gAdj <- get.adjacency(intl_ctry_network, type = "upper", edges = FALSE, names = TRUE, sparse = FALSE)
+hive1 <- adj2HPD(gAdj, type = "2D")
+hive2 <- mineHPD(hive1, option = "rad <- tot.edge.count")
+hive3 <- mineHPD(hive2, option = "axis <- source.man.sink")
+hive4 <- mineHPD(hive3, option = "remove zero edge")
+plotHive(hive4, method = "abs", bkgnd = "white", axLabs = c("source", "hub", "sink"), axLab.pos = 1)
 
 
 
 
 
+############################################################################################
+# Create a graph. Use simplify to ensure that there are no duplicated edges or self loops
+gD <- intl_ctry_network
+
+# Print number of nodes and edges
+# vcount(gD)
+# ecount(gD)
+
+# Calculate some node properties and node similarities that will be used to illustrate
+# different plotting abilities
+
+# Calculate degree for all nodes
+degAll <- degree(gD, v = V(gD), mode = "all")
+
+# Calculate betweenness for all nodes
+betAll <- betweenness(gD, v = V(gD), directed = FALSE) / (((vcount(gD) - 1) * (vcount(gD)-2)) / 2)
+betAll.norm <- (betAll - min(betAll))/(max(betAll) - min(betAll))
+
+node.list <- data.frame(name = V(gD)$name, degree = degAll, betw = betAll.norm)
+
+# Calculate Dice similarities between all pairs of nodes
+dsAll <- similarity.dice(gD, vids = V(gD), mode = "all")
+
+# Calculate edge weight based on the node similarity
+F1 <- function(x) {data.frame(V4 = dsAll[which(V(gD)$name == as.character(x$V1)), which(V(gD)$name == as.character(x$V2))])}
+dataSet.ext <- ddply(dataSet, .variables=c("V1", "V2", "V3"), function(x) data.frame(F1(x)))
+
+rm(degAll, betAll, betAll.norm, F1)
+############################################################################################
+#Determine node/edge color based on the properties
+
+# Calculate node size
+# We'll interpolate node size based on the node betweenness centrality, using the "approx" function
+# And we will assign a node size for each node based on its betweenness centrality
+approxVals <- approx(c(0.5, 1.5), n = length(unique(node.list$bet)))
+nodes_size <- sapply(node.list$bet, function(x) approxVals$y[which(sort(unique(node.list$bet)) == x)])
+node.list <- cbind(node.list, size = nodes_size)
+rm(approxVals, nodes_size)
+
+# Define node color
+# We'll interpolate node colors based on the node degree using the "colorRampPalette" function from the "grDevices" library
+library("grDevices")
+# This function returns a function corresponding to a collor palete of "bias" number of elements
+F2 <- colorRampPalette(c("#F5DEB3", "#FF0000"), bias = length(unique(node.list$degree)), space = "rgb", interpolate = "linear")
+# Now we'll create a color for each degree
+colCodes <- F2(length(unique(node.list$degree)))
+# And we will assign a color for each node based on its degree
+nodes_col <- sapply(node.list$degree, function(x) colCodes[which(sort(unique(node.list$degree)) == x)])
+node.list <- cbind(node.list, color = nodes_col)
+rm(F2, colCodes, nodes_col)
+
+# Assign visual attributes to edges using the same approach as we did for nodes
+F2 <- colorRampPalette(c("#FFFF00", "#006400"), bias = length(unique(dataSet.ext$V4)), space = "rgb", interpolate = "linear")
+colCodes <- F2(length(unique(dataSet.ext$V4)))
+edges_col <- sapply(dataSet.ext$V4, function(x) colCodes[which(sort(unique(dataSet.ext$V4)) == x)])
+dataSet.ext <- cbind(dataSet.ext, color = edges_col)
+rm(F2, colCodes, edges_col)
+
+############################################################################################
+# Assign nodes to axes
+
+# Randomly
+nodeAxis <- sample(3, nrow(node.list), replace = TRUE )
+node.list <- cbind(node.list, axis = nodeAxis)
+rm(nodeAxis)
+
+############################################################################################
+#Create a hive plot
+
+source("mod.edge2HPD.R")
+
+hive1 <- mod.edge2HPD(edge_df = dataSet.ext[, 1:2], edge.weight = dataSet.ext[, 3], edge.color = dataSet.ext[, 5], node.color = node.list[,c("name", "color")], node.size = node.list[,c("name", "size")], node.radius = node.list[,c("name", "degree")], node.axis = node.list[,c("name", "axis")])
+#sumHPD(hive1)
+
+hive2 <- mineHPD(hive1, option = "remove zero edge")
+
+plotHive(hive2, method = "abs", bkgnd = "white",  axLab.pos = 1)
 
 
 
-
-
-
+````

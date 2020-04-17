@@ -26,9 +26,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_intl_ctr_edgelist_0816")
+                                  FROM gh.sna_intl_ctr_edgelist_0813")
 
-analysis_year <- "2008-16"
+analysis_year <- "2008-13"
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -44,6 +44,17 @@ ctr_edgelist <- ctr_edgelist %>%
 login_network <- graph.data.frame(ctr_edgelist, directed = FALSE)
 login_network <- simplify(login_network, remove.loops = TRUE)
 is_weighted(login_network)
+```
+
+```{r}
+# added later 
+network_stats <- data.frame(year=analysis_year) 
+network_stats$centr_deg <- centr_degree(login_network)$centralization
+network_stats$centr_clo <- centr_clo(login_network, mode = "all")$centralization
+network_stats$centr_btw <- centr_betw(login_network, directed = FALSE)$centralization
+network_stats$centr_eigen <- centr_eigen(login_network, directed = FALSE)$centralization
+setwd("~/oss-data/intl-ctr-nets-cum")
+saveRDS(network_stats, str_c("centr_stats_",analysis_year,".rds"))  
 ```
 
 ```{r global network stats}

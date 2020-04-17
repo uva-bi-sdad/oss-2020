@@ -310,10 +310,11 @@ global_netstats_cum <- global_netstats_cum %>%
   mutate(kmax_pctcng = (kmax/lag(kmax) - 1) * 100) %>%
   mutate(commits_pctcng = (commits/lag(commits) - 1) * 100) %>% 
   mutate(isolates_pctcng = (isolates/lag(isolates) - 1) * 100) %>% 
-  mutate(dyads_pctcng = (dyads/lag(dyads) - 1) * 100) %>% 
+  #mutate(dyads_pctcng = (dyads/lag(dyads) - 1) * 100) %>% 
   select(time, year, node_count, nodes_pctcng, edge_count, edges_pctcng, 
          wtd_edge_count, wtd_edges_pctcng, commits, commits_pctcng, 
-         isolates, isolates_pctcng, dyads, dyads_pctcng, kmax, kmax_pctcng)
+         isolates, isolates_pctcng, #dyads, dyads_pctcng, 
+         kmax, kmax_pctcng)
 #global_netstats_cum
 global_netstats_cum %>% filter(time != 2008) %>% ggplot(aes(time)) + 
   geom_line(aes(y = nodes_pctcng, colour = "nodes_pctcng", group= 1), size=2) + 
@@ -322,7 +323,7 @@ global_netstats_cum %>% filter(time != 2008) %>% ggplot(aes(time)) +
   geom_line(aes(y = kmax_pctcng, colour = "kmax_pctcng", group= 4), size=2) +
   geom_line(aes(y = commits_pctcng, colour = "commits_pctcng", group= 5), size=2) +   
   geom_line(aes(y = isolates_pctcng, colour = "isolates_pctcng", group = 6), size=2) +
-  geom_line(aes(y = dyads_pctcng, colour = "dyads_pctcng", group = 7), size=0.5) + 
+  #geom_line(aes(y = dyads_pctcng, colour = "dyads_pctcng", group = 7), size=0.5) + 
   scale_colour_manual(values = 
   c("#990000","#DA3330","#D96403","#eaaa31","#628ed8","#1d7c6b","#600080")) + 
   labs(y = "Node Count", x = "Year", colour = "",
@@ -333,7 +334,8 @@ percentage_change <- global_netstats_cum %>%
   filter(year != 2008) %>% 
   select(year, nodes_pctcng, edges_pctcng, 
          wtd_edges_pctcng, commits_pctcng, 
-         isolates_pctcng, dyads_pctcng, kmax_pctcng)
+         isolates_pctcng, #dyads_pctcng, 
+         kmax_pctcng)
 paged_table(percentage_change, options= list(rows.print = 15))
 ```
 

@@ -20,8 +20,6 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"), 
                   password = Sys.getenv("db_pwd"))
 
-
-
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
                                    FROM gh.sna_intl_ctry_edgelist_0816")
