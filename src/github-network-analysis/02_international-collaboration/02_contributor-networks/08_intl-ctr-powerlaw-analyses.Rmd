@@ -21,7 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_intl_ctr_edgelist_0817")
+                                  FROM gh.sna_intl_ctr_edgelist_0819")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -88,7 +88,7 @@ ggplot(data=d_est, aes(x=K_min, y=D)) + geom_line() + theme_bw() +
 ggplot(data=d_est, aes(x=K_min, y=gamma)) + geom_line() + theme_bw() + 
   geom_vline(xintercept=K.min_D.min, colour="red") + annotate("text", x=K.min_D.min, y=max(d_est$gamma)/3*2, label=K.min_D.min)
 setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
-saveRDS(d_est, "d_est_0818.rds")
+saveRDS(d_est, "d_est_0819.rds")
 ```
 
 ```{r}
@@ -113,12 +113,13 @@ bs_pl <- bootstrap_p(m_pl, no_of_sims=1000, threads=15, seed = 123)
 df_bs_pl <- bs_pl$bootstraps
 ggplot(data=df_bs_pl, aes(pars)) + geom_histogram() + labs(x="alpha", y="frequency") + theme_bw()
 ggplot(data=df_bs_pl, aes(xmin)) + geom_histogram() + labs(x="K_min", y="frequency") + theme_bw()
-#setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
-#saveRDS(d_est, "d_est_0818.rds")
-#saveRDS(bs_pl, "bs_pl_0818.rds")
+setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+#saveRDS(d_est, "d_est_0819.rds")
+saveRDS(bs_pl, "bs_pl_0819.rds")
 ```
 ```{r}
 setwd("~/oss-data/intl-ctr-nets-cum/02_power-law-data")
+#est <- read_rds("est_0817.rds")
 d_est <- read_rds("d_est_0817.rds")
 bs_pl <- read_rds("bs_pl_0817.rds")
 K.min_D.min <- d_est[which.min(d_est$D), 1]
