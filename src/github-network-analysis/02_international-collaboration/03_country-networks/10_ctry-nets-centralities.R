@@ -20,7 +20,7 @@ nodelist <- nodelist %>%
 
 nodelist <- nodelist %>%
   mutate(Community = recode(nodelist$fstgrdy_comm, `1` = "American", `2` = "European",
-                                    `3` = "Asian", `4` = "Southern", `5` = "Southern"))
+                                    `3` = "Asian", `4` = "Southern", `5` = "Southern")) %>% filter(deg_cent > 65)
 
 ggplot(nodelist) +
   geom_point(aes(x=deg_cent, y=btw_cent, color=Community, size = btw_cent)) +
@@ -30,10 +30,12 @@ ggplot(nodelist) +
   scale_colour_manual(values = c("American"="#E57200", "European"="#628ED8",
                                  "Asian"="#990000","Southern"="#232D4B")) +
   theme_minimal() + theme(plot.title = element_text(size = 11, hjust = 0.36, vjust = 2),
-                          legend.position=c(0.148,0.84),
-                          legend.title=element_blank(),
-                          legend.text = element_text(size = 9),
-                          legend.background = element_rect(colour = NA)) +
+                          #legend.position=c(0.148,0.84),
+                          #legend.title=element_blank(),
+                          #legend.text = element_text(size = 9),
+                          #legend.background = element_rect(colour = NA)
+                          legend.position="none"
+                          ) +
   guides(size = FALSE, colour = guide_legend(override.aes = list(size=3))) +
   xlab("Degree Centrality") + ylab("Betweenness Centrality") +
   labs(title= "Comparing Centrality Measures for Country-Country \n Collaboration Networks (GitHub, 2008-2019)")

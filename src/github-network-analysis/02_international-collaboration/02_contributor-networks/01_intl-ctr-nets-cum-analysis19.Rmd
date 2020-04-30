@@ -26,9 +26,9 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_ctr_edgelist_0819")
+                                  FROM gh.sna_intl_ctr_edgelist_0818")
 
-analysis_year <- "2008-19"
+analysis_year <- "2008-18"
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -46,6 +46,17 @@ login_network <- simplify(login_network, remove.loops = TRUE)
 is_weighted(login_network)
 ```
 
+```{r}
+# added later 
+network_stats <- data.frame(year=analysis_year) 
+network_stats$centr_deg <- centr_degree(login_network)$centralization
+network_stats$centr_clo <- centr_clo(login_network, mode = "all")$centralization
+network_stats$centr_btw <- centr_betw(login_network, directed = FALSE)$centralization
+network_stats$centr_eigen <- centr_eigen(login_network, directed = FALSE)$centralization
+setwd("~/oss-data/intl-ctr-nets-cum")
+saveRDS(network_stats, str_c("centr_stats_",analysis_year,".rds"))  
+```
+
 ```{r global network stats}
 # loading the network (if the instance crashes while doing network_stats)
 net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
@@ -58,11 +69,11 @@ network_stats$commits <- sum(ctr_edgelist$weight)
 
 # isolates, dyads and triads 
 network_stats$isolates <- sum(degree(simplify(login_network))==0)
-#oss_triads <- triad.census(login_network)
-#network_stats$triads_003 <- oss_triads[1] 
-#network_stats$triads_102 <- oss_triads[3]
-#network_stats$triads_201 <- oss_triads[11]
-#network_stats$triads_300 <- oss_triads[16]
+oss_triads <- triad.census(login_network)
+network_stats$triads_003 <- oss_triads[1] 
+network_stats$triads_102 <- oss_triads[3]
+network_stats$triads_201 <- oss_triads[11]
+network_stats$triads_300 <- oss_triads[16]
 net_counts <- data.frame(event="net_counts", time=now("EST"))
 time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
 
@@ -72,9 +83,6 @@ network_stats$density <- edge_density(login_network, loops=FALSE)
 network_stats$transitivity <- transitivity(login_network)
 net_globals <- data.frame(event="net_globals", time=now("EST"))
 time_log <- rbind(time_log, net_globals); rm(net_globals)
-
-setwd("~/oss-data/full-ctr-nets-cum")
-saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds")) 
 
 # community detection (using louvain method)
 louvain <- cluster_louvain(login_network)
@@ -117,7 +125,7 @@ nodelist$fstgrdy_comm <- fstgrdy$membership
 node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
 time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
-setwd("~/oss-data/full-ctr-nets-cum")
+setwd("~/oss-data/intl-ctr-nets-cum")
 saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))  
 saveRDS(decomposition_stats, str_c("decomposition_stats_",analysis_year,".rds")) 
 saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))  
