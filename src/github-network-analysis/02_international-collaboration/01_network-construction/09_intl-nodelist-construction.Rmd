@@ -1,0 +1,82 @@
+---
+title: "Creating the International Nodelist"
+output: html_notebook
+---
+
+
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+setwd("~/oss-data/intl-ctr-nets-cum")
+nodelist_200819 <- readRDS("nodelist_2008-19.rds")
+
+```
+
+```{r}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the country_codes
+country_codes <- dbGetQuery(conn, "SELECT login, country_code, country_code_di, country_code_vis 
+                                   FROM gh.sna_ctr_ctry_codes")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+```
+
+```{r}
+# BE SURE TO ADD IN COUNTRY CODES TO NODELIST 
+full_nodelist <- nodelist_200819 %>% 
+  inner_join(country_codes, by = "login") %>% 
+  select(login, country_code, country_code_di, country_code_vis, everything(), -id)
+```
+```{r writing stats_by_country to the database}
+# reconnecting to the database 
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd")) 
+
+# writing the new users_gh_cc table to postgis_2
+dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_nodelist"), 
+             value = full_nodelist, row.names = FALSE)
+
+# disconnect from postgresql database  
+dbDisconnect(conn)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{sql}
+
+CREATE MATERIALIZED VIEW gh.desc_ctrs_summary_yxy AS (
+SELECT login, EXTRACT(YEAR FROM committed_date)::int AS YEAR, COUNT(DISTINCT slug) AS repos, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
+FROM gh.commits_pre
+GROUP BY login, EXTRACT(YEAR FROM committed_date)::int
+); 
+
+```

@@ -64,6 +64,7 @@ summarized_breakdown <- repos_per_owner %>%
   select(-totals) %>%   
   distinct(repos, .keep_all = TRUE) %>% 
   mutate(percent = round(new_totals * 100 / sum(repos_per_owner$totals), 2))
+sum(summarized_breakdown$percent)
 summarized_breakdown
 ```
 
@@ -91,11 +92,11 @@ uva_cols <- function(...) {
 }
 
 # create labels for our graph
-df <- cbind.data.frame(c("1 repo\n(58.9%)",
-                         "2-3 repos\n(24.8%)",
-                         "4-5 repos\n(7.59%)",
-                         "6-20 repos\n(8.87%)", 
-                         "21+ repos (3.58%)"),
+df <- cbind.data.frame(c("1 repo\n(58.2%)",
+                         "2-3 repos\n(24.3%)",
+                         "4-5 repos\n(7.6%)",
+                         "6-20 repos\n(8.8%)", 
+                         "21+ repos (1.1%)"),
                          summarized_breakdown$new_totals)
 colnames(df) <- c("repos", "totals")
 
@@ -115,11 +116,11 @@ pal <- c(uva_cols("dark blue"),       # 1 ctr
          )     # 3-5 ctrs
 
 # create the tree map 
-treemap(df, 
+treemap::treemap(df, 
         index="repos", 
         vSize="totals",
         palette = pal, 
-        title="Number of repositories per repo owner (GitHub Data, 2008-2019)",
+        title="Number of repositories per repo owner (All GitHub Data, 2008-19)",
         fontsize.labels=c(12,1,1,1,1,1,1,1), 
         fontsize.title=15)
 

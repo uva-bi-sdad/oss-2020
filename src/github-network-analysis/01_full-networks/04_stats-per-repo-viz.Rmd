@@ -113,11 +113,11 @@ pal <- c(uva_cols("dark blue"),       # 1 ctr
          uva_cols("yellow"))     # 3-5 ctrs
 
 # create the tree map 
-treemap(df, 
+treemap::treemap(df, 
         index="contributors", 
         vSize="totals",
         palette = pal, 
-        title="Number of contributors per repository (GitHub Data, 2008-2019)",
+        title="Number of contributors per repository (All GitHub Data, 2008-19)",
         fontsize.labels=c(12,1,1,1,1,1,1,1), 
         fontsize.title=15)
 

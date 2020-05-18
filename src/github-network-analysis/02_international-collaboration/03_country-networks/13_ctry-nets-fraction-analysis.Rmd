@@ -44,12 +44,20 @@ is_weighted(ctry_network)
 
 as_edgelist(ctry_network, names = TRUE)
 
-as_adjacency_matrix(ctry_network,attr = "weight",sparse = T)
-
-ctry_edgelist %>% 
+as_adjacency_matrix(ctry_network,attr = "weight", sparse = T)
 
 
+test_network <- as.undirected(ctry_network, mode = c("mutual"), edge.attr.comb = igraph_opt("edge.attr.comb"))
 
+
+ctry_edgelist
+  
+adjacency.to.edgelist(adjacency, directed = NULL, weighted = NULL)
+
+```  
+
+```{r}
+##### use "mututal" otpion in https://igraph.org/r/doc/as.directed.html
 
 
 fractions <- ctry_edgelist %>% 
