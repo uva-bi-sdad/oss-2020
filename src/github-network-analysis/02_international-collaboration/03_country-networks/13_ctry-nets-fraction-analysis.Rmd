@@ -42,47 +42,49 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
-as_edgelist(ctry_network, names = TRUE)
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
 
-as_adjacency_matrix(ctry_network,attr = "weight", sparse = T)
-
-
-test_network <- as.undirected(ctry_network, mode = c("mutual"), edge.attr.comb = igraph_opt("edge.attr.comb"))
-
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
 
 ctry_edgelist
-  
-adjacency.to.edgelist(adjacency, directed = NULL, weighted = NULL)
-
-```  
-
-```{r}
-##### use "mututal" otpion in https://igraph.org/r/doc/as.directed.html
-
 
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
 colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- fractions; full_dataset
-
-ctry_edgelist
 
 ```
 
@@ -118,21 +120,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -140,6 +164,8 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -172,21 +198,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -194,6 +242,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -226,21 +275,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -248,6 +319,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -280,21 +352,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -302,6 +396,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -334,21 +429,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -356,6 +473,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -388,21 +506,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -410,6 +550,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -442,21 +583,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -464,6 +627,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -496,21 +660,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -518,6 +704,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -550,21 +737,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -572,6 +781,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -604,21 +814,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -626,6 +858,7 @@ colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
 
 full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
+
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -658,21 +891,43 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist
+
 fractions <- ctry_edgelist %>% 
   filter(from == to) %>% 
   select(from, weight) %>% 
   rename(country = from, domestic = weight)
 
-fractions <- ctry_edgelist %>% 
+calculation1 <- ctry_edgelist %>% 
   filter(from != to) %>%
   rename(country = from) %>% 
   group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
+  summarise(foreign = sum(weight)) 
+
+calculation2 <- ctry_edgelist %>% 
+  filter(from != to) %>%
+  rename(country = to) %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(weight)) 
+
+combined_calcs <- rbind(calculation1, calculation2)
+
+combined_calcs <- combined_calcs %>% 
+  group_by(country) %>% 
+  summarise(foreign = sum(foreign)) %>% 
+  arrange(-foreign)
+
+fractions <- combined_calcs %>%
   full_join(fractions, by = "country") %>% 
   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
   select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+  mutate(fraction = round(domestic / (domestic + foreign), 4)*100) 
 
 colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
 colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
@@ -701,7 +956,7 @@ full_dataset %>%
         legend.title=element_blank()) +
   ylab("Domestic-Foreign Collaboration Fraction") +
   scale_color_manual(values=c("#628ed8", "#628ed8", "#990000", "#628ed8", "#628ed8", "#232D4B", "#628ed8", "#628ed8", "#628ed8", "#E57200")) +
-  ggtitle("Change in Domestic-Foreign Collaboration Fractions \n for Top-10 Countries (GitHub, 2008-2019)")
+  ggtitle("   Change in Domestic-Foreign Collaboration \n Fractions for Top-10 Countries (GitHub, 2008-2019)")
 
 ```
 ```{r}
@@ -713,18 +968,64 @@ full_dataset %>%
          "2014" = frac0814, "2015" = frac0815, "2016" = frac0816, 
          "2017" = frac0817, "2018" = frac0818, "2019" = frac0819) %>% 
   select(country, "2008", "2019") 
-
 ```
 
+```{r}
+biggest_changes <- full_dataset %>% 
+  select(country, frac08, frac0810, frac0812, frac0814, frac0819) %>%
+  mutate(diff0819 = abs(frac08   - frac0819)) %>% 
+  mutate(diff1019 = abs(frac0810 - frac0819)) %>% 
+  mutate(diff1219 = abs(frac0812 - frac0819)) %>% 
+  mutate(diff1419 = abs(frac0814 - frac0819)) %>% 
+  arrange(-diff0819); biggest_changes
+```
+
+# Calculating fractions based on how often they collaborate with the US 
+
+```{r}
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
+                                   FROM gh.sna_intl_ctry_edgelist_0819")
+
+analysis_year <- "0819"
+
+# disconnect from postgresql
+dbDisconnect(conn)
 
 
-# Next calculate fraction based on how often they collaborate with the US 
+# convert edgelist to network 
+ctry_edgelist <- ctry_edgelist %>% 
+  select(country1, country2, repo_wts) %>% 
+  rename(from = country1, to = country2, weight = repo_wts) %>% 
+  group_by(from, to) %>% 
+  summarize(weight = sum(weight)) %>% 
+  arrange(-weight)
+  
+ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
+                         remove.loops = FALSE, 
+                         edge.attr.comb = igraph_opt("edge.attr.comb"))
+is_weighted(ctry_network)
+
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
+
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
+
+ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "United States" | to == "United States")
 
 
-
-
-
-
+```
 
 
 
