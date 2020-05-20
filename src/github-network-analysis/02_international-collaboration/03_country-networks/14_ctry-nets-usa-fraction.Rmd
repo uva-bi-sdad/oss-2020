@@ -3,619 +3,6 @@ title: "Create Edgelists"
 output: html_document
 ---
 
-```{r loading edgelist data, warning=FALSE, echo=FALSE}
-rm(list = ls())
-# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
-
-# load packages 
-for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", 
-              "igraph", "netrankr", "centiserve", "expm", "intergraph",
-              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
-
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0819")
-
-analysis_year <- "0819"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-testset <- ctry_edgelist %>% 
-  filter(from == "China" | to == "China") 
-
-testset  
-
-```
-
-
-```{r}
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- fractions; full_dataset
-
-```
-
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0809")
-
-analysis_year <- "0809"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0810")
-
-analysis_year <- "0810"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0811")
-
-analysis_year <- "0811"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0812")
-
-analysis_year <- "0812"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0813")
-
-analysis_year <- "0813"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0814")
-
-analysis_year <- "0814"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0815")
-
-analysis_year <- "0815"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0816")
-
-analysis_year <- "0816"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0817")
-
-analysis_year <- "0817"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0818")
-
-analysis_year <- "0818"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
-
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
-
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
-```
 ```{r}
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -648,88 +35,341 @@ ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE),
                          edge.attr.comb = igraph_opt("edge.attr.comb"))
 is_weighted(ctry_network)
 
-fractions <- ctry_edgelist %>% 
-  filter(from == to) %>% 
-  select(from, weight) %>% 
-  rename(country = from, domestic = weight)
+ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
 
-fractions <- ctry_edgelist %>% 
-  filter(from != to) %>%
-  rename(country = from) %>% 
-  group_by(country) %>% 
-  summarise(foreign = sum(weight)) %>% 
-  arrange(-foreign) %>% 
-  full_join(fractions, by = "country") %>% 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
-  select(country, domestic, foreign) %>% 
-  mutate(fraction = round(domestic / (domestic + foreign), 4)*100)  
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  arrange(-weight)
 
-colnames(fractions)[2] <- stringi::stri_join("dom", analysis_year)
-colnames(fractions)[3] <- stringi::stri_join("for", analysis_year)
-colnames(fractions)[4] <- stringi::stri_join("frac", analysis_year)
-
-full_dataset <- full_dataset %>% full_join(fractions, by = "country"); full_dataset
 ```
 
 ```{r}
 
-full_dataset %>% 
-  top_n(10, for0819) %>% 
-  select(country, starts_with("frac")) %>%  
-  rename("2008" = frac08, "2009"= frac0809, "2010" = frac0810, 
-         "2011" = frac0811, "2012" = frac0812, "2013" = frac0813, 
-         "2014" = frac0814, "2015" = frac0815, "2016" = frac0816, 
-         "2017" = frac0817, "2018" = frac0818, "2019" = frac0819) %>% 
-  pivot_longer(-country, names_to = "year", values_to = "fraction") %>% 
-  ggplot(aes(x=year, y=fraction, color=country)) +
-  geom_line(aes(group=country), size = 1.3) + 
-  geom_point(aes(shape=country), size=2) + 
-  scale_shape_manual(values=c(3,16,NA,2,11,NA,10,9, 8, NA)) +
-  theme_minimal() +
-  theme(plot.title = element_text(size = 13, hjust = 0.5),
-        axis.title.x=element_blank(),
-        legend.title=element_blank()) +
-  ylab("Domestic-Foreign Collaboration Fraction") +
-  scale_color_manual(values=c("#628ed8", "#628ed8", "#990000", "#628ed8", "#628ed8", "#232D4B", "#628ed8", "#628ed8", "#628ed8", "#E57200")) +
-  ggtitle("Change in Domestic-Foreign Collaboration Fractions \n for Top-10 Countries (GitHub, 2008-2019)")
+top10 <- "Australia|Canada|China|France|Germany|India|Japan|Netherlands|United Kingdom|United States"
+accidents <- "Hong Kong SAR China|Macau SAR China|Caribbean Netherlands|British Indian Ocean Territory"
 
+usa_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "United States" | to == "United States") %>% 
+  summarize(weight = sum(weight))
+
+usa_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "United States" | to == "United States") %>% 
+  filter(grepl(top10, from)) %>% 
+  filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% 
+  filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / usa_total$weight*100, 2)) %>% 
+  arrange(-fraction) %>% 
+  select(from, fraction) %>% 
+  rename(country = from, USA = fraction)
+usa_vector
+
+```
+
+```{r}
+
+uk_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "United Kingdom" | to == "United Kingdom") %>% 
+  summarize(weight = sum(weight))
+
+uk_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "United Kingdom" | to == "United Kingdom") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / uk_total$weight*100, 2)) %>% 
+  arrange(-fraction) %>% 
+  select(from, fraction) %>% 
+  rename(country = from, UK = fraction)
+
+uk_vector$country[1] <- "United States"
+
+fraction_data <- uk_vector %>% full_join(usa_vector); fraction_data
+
+```
+
+```{r}
+
+china_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "China" | to == "China") %>% 
+  summarize(weight = sum(weight))
+
+china_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "China" | to == "China") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / china_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- china_vector %>% 
+  slice(1:4) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- china_vector %>% 
+  slice(5:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(China = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+
+```{r}
+
+germany_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Germany" | to == "Germany") %>% 
+  summarize(weight = sum(weight))
+
+germany_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Germany" | to == "Germany") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / germany_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- germany_vector %>% 
+  slice(1:2) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- germany_vector %>% 
+  slice(3:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(Germany = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+
+```{r}
+
+australia_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Australia" | to == "Australia") %>% 
+  summarize(weight = sum(weight))
+
+australia_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Australia" | to == "Australia") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / australia_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- australia_vector %>% 
+  slice(1:7) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- australia_vector %>% 
+  slice(8:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(Australia = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
 ```
 ```{r}
-full_dataset %>% 
-  #top_n(10, for0819) %>% 
-  select(country, starts_with("frac")) %>%  
-  rename("2008" = frac08, "2009"= frac0809, "2010" = frac0810, 
-         "2011" = frac0811, "2012" = frac0812, "2013" = frac0813, 
-         "2014" = frac0814, "2015" = frac0815, "2016" = frac0816, 
-         "2017" = frac0817, "2018" = frac0818, "2019" = frac0819) %>% 
-  select(country, "2008", "2019") 
 
+canada_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Canada" | to == "Canada") %>% 
+  summarize(weight = sum(weight))
+
+canada_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Canada" | to == "Canada") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / canada_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- canada_vector %>% 
+  slice(1:4) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- canada_vector %>% 
+  slice(5:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(Canada = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+```{r}
+
+france_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "France" | to == "France") %>% 
+  summarize(weight = sum(weight))
+
+france_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "France" | to == "France") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / france_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- france_vector %>% 
+  slice(1:6) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- france_vector %>% 
+  slice(7:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(France = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+```{r}
+
+india_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "India" | to == "India") %>% 
+  summarize(weight = sum(weight))
+
+india_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "India" | to == "India") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / india_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- india_vector %>% 
+  slice(1:7) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- india_vector %>% 
+  slice(8:10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(India = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+```{r}
+
+japan_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Japan" | to == "Japan") %>% 
+  summarize(weight = sum(weight))
+
+japan_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Japan" | to == "Japan") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / japan_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+temp <- japan_vector %>% 
+  slice(1:9) %>% 
+  mutate(country = to) %>% 
+  select(country, fraction)
+
+fraction_data <- japan_vector %>% 
+  slice(10) %>% 
+  mutate(country = from) %>% 
+  select(country, fraction) %>% 
+  bind_rows(temp) %>% 
+  arrange(-fraction) %>% 
+  rename(Japan = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
+```
+```{r}
+
+netherlands_total <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Netherlands" | to == "Netherlands") %>% 
+  summarize(weight = sum(weight))
+
+netherlands_vector <- ctry_edgelist %>% 
+  filter(weight != 0) %>% 
+  filter(from == "Netherlands" | to == "Netherlands") %>% 
+  filter(grepl(top10, from)) %>% filter(!grepl(accidents, from)) %>%
+  filter(grepl(top10, to)) %>% filter(!grepl(accidents, to)) %>%
+  mutate(fraction = round(weight / netherlands_total$weight*100, 2)) %>% 
+  arrange(-fraction)
+
+fraction_data <- netherlands_vector %>% 
+  mutate(country = to) %>% 
+  select(country, fraction) %>% 
+  arrange(-fraction) %>% 
+  rename(Netherlands = fraction) %>% 
+  right_join(fraction_data, by = "country"); rm(temp)
+
+fraction_data
 ```
 
+```{r}
 
+heatmap_df <- fraction_data %>% 
+  mutate(country = recode(country, "United States" = "USA", "United Kingdom" = "UK")) %>% 
+  arrange(match(country, c("Australia", "Canada", "China", "France", "Germany", "India", "Japan", "Netherlands", "UK", "USA"))) %>% 
+  #select(country, Australia, Canada, China, France, Germany, India, Japan, Netherlands, UK, USA) %>% 
+  select(country, USA, UK, Netherlands, Japan, India, Germany, France, China, Canada, Australia) %>% 
+  rename(Country = country)
+heatmap_df
 
-# Next calculate fraction based on how often they collaborate with the US 
+heatmap_matrix <- as.matrix(fraction_data %>% 
+  mutate(country = recode(country, "United States" = "USA", "United Kingdom" = "UK")) %>% 
+  arrange(match(country, c("Australia", "Canada", "China", "France", "Germany", "India", "Japan", "Netherlands", "UK", "USA"))) %>% 
+  select(country, Australia, Canada, China, France, Germany, India, Japan, Netherlands, UK, USA) %>% 
+  column_to_rownames(var = "country"))
+t(heatmap_matrix)
+```
 
+```{r}
 
+melted_for_heatmap <- melt(heatmap_df)
 
+melted_for_heatmap %>% 
+  mutate(Country = fct_relevel(Country, "Australia", "Canada", "China", "France", "Germany", "India", "Japan", "Netherlands", "UK", "USA")) %>% 
+  #mutate(variable = fct_relevel(variable, "Australia", "Canada", "China", "France", "Germany", "India", "Japan", "Netherlands", "UK", "USA")) %>%
+  ggplot(aes(Country, variable, fill= value)) + 
+  geom_tile() +
+  scale_fill_distiller(palette = "Spectral") +
+  theme(axis.title.y=element_blank(), #legend.position="bottom",
+        #axis.text.x = element_text(angle=20, hjust = 1),
+        #axis.text.y = element_text(angle=20, hjust = 1),
+        plot.title = element_text(size=15, hjust =0.46)) +
+  scale_x_discrete(name = "Fraction of Total Commits to Other Countries") + 
+  ggtitle("Fraction of Total Commits to \n Other Top-10 Countries (GitHub, 2019)") +
+  guides(fill=guide_legend(title="Fraction"))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 

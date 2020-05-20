@@ -8,7 +8,7 @@ rm(list = ls())
 # install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
 
 # load packages 
-for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "reshape2", 
               "igraph", "netrankr", "centiserve", "expm", "intergraph",
               "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
 
@@ -980,52 +980,6 @@ biggest_changes <- full_dataset %>%
   arrange(-diff0819); biggest_changes
 ```
 
-# Calculating fractions based on how often they collaborate with the US 
-
-```{r}
-# connect to postgresql to get data (in rivanna)
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195", 
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the bipartite edgelist data from github data  
-ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0819")
-
-analysis_year <- "0819"
-
-# disconnect from postgresql
-dbDisconnect(conn)
-
-
-# convert edgelist to network 
-ctry_edgelist <- ctry_edgelist %>% 
-  select(country1, country2, repo_wts) %>% 
-  rename(from = country1, to = country2, weight = repo_wts) %>% 
-  group_by(from, to) %>% 
-  summarize(weight = sum(weight)) %>% 
-  arrange(-weight)
-  
-ctry_network <- simplify(graph.data.frame(ctry_edgelist, directed = FALSE), 
-                         remove.loops = FALSE, 
-                         edge.attr.comb = igraph_opt("edge.attr.comb"))
-is_weighted(ctry_network)
-
-ctry_edgelist <- melt(as.matrix(as_adjacency_matrix(ctry_network, type = "lower", attr = "weight", sparse = T)))
-
-ctry_edgelist <- ctry_edgelist %>% 
-  rename(from = Var1, to = Var2, weight = value) %>% 
-  arrange(-weight)
-
-ctry_edgelist %>% 
-  filter(weight != 0) %>% 
-  filter(from == "United States" | to == "United States")
-
-
-```
 
 
 
