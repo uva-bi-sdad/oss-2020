@@ -367,8 +367,8 @@ melted_for_heatmap %>%
         #axis.text.x = element_text(angle=20, hjust = 1),
         #axis.text.y = element_text(angle=20, hjust = 1),
         plot.title = element_text(size=15, hjust =0.46)) +
-  scale_x_discrete(name = "Fraction of Total Commits to Other Countries") + 
-  ggtitle("Fraction of Total Commits to \n Other Top-10 Countries (GitHub, 2019)") +
+  scale_x_discrete(name = "Fraction of Total Collaborations") + 
+  ggtitle("Fraction of Total Collaborations with \n Other Top-10 Countries (GitHub, 2019)") +
   guides(fill=guide_legend(title="Fraction"))
 
 ```
