@@ -1,0 +1,288 @@
+---
+title: "Classifing Users Across Sectors & OSS in the Business Sector"
+description: "This page focuses on classifying GitHub users across all sectors and the business domain."
+tags: ["Python","R","text analysis/regex","matching"]
+weight: 2
+draft: false
+output: html_document
+---
+
+```{css, echo=FALSE}
+/* this chunk of code centers all of the headings */
+h1, h2, h3, h4 {
+  text-align: center;
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### General Approach 
+
+To assign users into the business sector, we took an exclusionary approach that depends on the other four sectors. First, we worked to standardize the affiliation column by removing (1) all website domain information using [manually curated terms](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/curatedDomains.csv) originally based on [DataHub's Domain Entries](https://datahub.io/core/top-level-domain-names), (2) all legal entity nomenclature based on [manually curated version](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/danBranch/ossPy/keyFiles/curatedLegalEntitesRaw.csv) of [Gleif's legal entity abbreviations](https://www.gleif.org/en/about-lei/code-lists/iso-20275-entity-legal-forms-code-list), and (3) a list of [commonly occurring arbitrary symbols](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/symbolRemove.csv). After these procedures were applied, we removed (a) all users classified into the academic, government, non-profit or household sectors and (b) all users that did not list an institution that was mentioned in the affiliation column more than five times. This critical threshold of 5 is arbitrary but helps us to establish some degree of commonality among those in the business sector. Furthermore, while this exclusionary approach is less than ideal, classifying GitHub users into the business sector is complicated by the absence of a publicly available data source that comprehensively lists all businesses around the world. While we present the results at the top half of this page, the most valuable aspects of this sector come from the experimental text analysis process we detail in the second half of the page. 
+
+```{r pull_data, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "DT",
+              "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi", "gridExtra")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+github_users <- dbGetQuery(conn, "SELECT login, email, company FROM gh.ctrs_extra;")
+
+academic <- dbGetQuery(conn, "SELECT login, company_cleaned, is_academic FROM gh.sna_ctr_academic;")
+government <- dbGetQuery(conn, "SELECT login, is_gov FROM gh.sna_ctr_gov;")
+nonprofit <- dbGetQuery(conn, "SELECT login, is_nonprofit FROM gh.sna_ctr_nonprofits;")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+# joining the datasets 
+combined_user_data <- github_users %>% 
+  full_join(academic, by = "login") %>% 
+  mutate(is_academic = replace_na(is_academic, 0))
+
+combined_user_data <- combined_user_data %>% 
+  full_join(government, by = "login") %>% 
+  mutate(is_gov = replace_na(is_gov, 0))
+
+combined_user_data <- combined_user_data %>% 
+  full_join(nonprofit, by = "login") %>% 
+  mutate(is_nonprofit = replace_na(is_nonprofit, 0))
+
+# household 
+household <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/individualKeys.csv", header=FALSE)
+household <- household %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+household$strings <- substring(household$strings, 2)
+household$strings <- substr(household$strings,1, nchar(household$strings)-1)
+
+combined_user_data <- combined_user_data %>% 
+  mutate(is_household = ifelse(test = str_detect(string = company, 
+         pattern = paste(c("\\b(?i)(z3x", na.omit(household$strings), 
+         "z3x|self-employed|unemployed|available for hire)\\b"), collapse = "|")), 
+         yes = TRUE, no = NA)) %>% 
+  mutate(is_household = replace_na(is_household, 0))
+
+# null values 
+null_values <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/nullKeys.csv", header=FALSE)
+null_values <- null_values %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+null_values$strings <- substring(null_values$strings, 2)
+null_values$strings <- substr(null_values$strings,1, nchar(null_values$strings)-1)
+
+combined_user_data <- combined_user_data %>% 
+  mutate(is_nullvalue = ifelse(test = str_detect(string = company, 
+         pattern = paste(c("\\b(?i)(z3x", na.omit(null_values$strings), "z3x)\\b"), collapse = "|")), 
+         yes = TRUE, no = NA)) %>% 
+  mutate(is_nullvalue = replace_na(is_nullvalue, 0)); combined_user_data
+
+# implementing daniel's approaches 
+legal_entities <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/curatedLegalEntitesRaw.csv", header=FALSE)
+legal_entities <- legal_entities %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+legal_entities$strings <- substring(legal_entities$strings, 2)
+legal_entities$strings <- substr(legal_entities$strings,1, nchar(legal_entities$strings)-1)
+
+symbol_strings <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/symbolRemove.csv", header=FALSE)
+symbol_strings <- symbol_strings %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+symbol_strings$strings <- substring(symbol_strings$strings, 2)
+symbol_strings$strings <- substr(symbol_strings$strings,1, nchar(symbol_strings$strings)-1)
+symbol_strings <- symbol_strings %>% slice(-17:-20)
+
+curated_domains <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/curatedDomains.csv", header=FALSE)
+curated_domains <- curated_domains %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+curated_domains$strings <- substring(curated_domains$strings, 2)
+curated_domains$strings <- substr(curated_domains$strings,1, nchar(curated_domains$strings)-1)
+
+combined_user_data <- combined_user_data %>% 
+  mutate(company_original = company) %>%
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(legal_entities$strings), 
+                                                    "zqx|, Inc.)"), collapse = "|"), "")) %>% 
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(symbol_strings$strings), 
+                                                    ", $|,$|zqx)"), collapse = "|"), "")) %>%
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(curated_domains$strings), 
+                                                    "zqx)"), collapse = "|"), "")) %>%
+  mutate(company = tolower(company)); combined_user_data
+  #filter(grepl(".br", company_original)) %>% 
+  #select(company, company_original)
+
+#### additional cleaning steps 
+potential_business <- combined_user_data %>%
+  select(-company_cleaned, -company_original) %>% 
+  filter(is_academic == 0 & is_gov == 0 & is_nonprofit == 0 & is_household == 0 & is_nullvalue == 0) %>% 
+  filter(company != "china" & company != "japan" & company != "none" & company != "no"); potential_business 
+
+company_totals <- potential_business %>% 
+  group_by(company) %>% 
+  count() %>% 
+  arrange(-n)# %>% filter(grepl("microsoft", company))
+
+# this bit classifies an additional 6,000 academic developers 
+new_academic_list <- company_totals %>% 
+  filter(grepl("university|college", company)) %>% 
+  filter(n > 1) %>% 
+  rename(institutions = company); new_academic_list
+
+combined_user_data <- combined_user_data %>% 
+  mutate(new_academic = ifelse(test = str_detect(string = company, 
+         pattern = paste(c("\\b(?i)(z3x", na.omit(new_academic_list$institutions), "z3x)\\b"), collapse = "|")), 
+         yes = TRUE, no = NA)) %>% 
+  mutate(new_academic = replace_na(new_academic, 0))
+
+potential_business <- combined_user_data %>%
+  filter(is_academic == 0 & is_gov == 0 & is_nonprofit == 0 & is_household == 0 & is_nullvalue == 0 & new_academic == 0) %>% 
+  filter(company != "china" & company != "japan" & company != "none" & company != "no"); potential_business 
+  #%>% drop_na(email)
+
+company_totals <- potential_business %>% 
+  group_by(company) %>% 
+  count(company) %>% 
+  arrange(-n) %>% 
+  filter(n != 4601) %>% 
+  rename(total = n) ; company_totals# %>% filter(grepl("microsoft", company))
+
+business <- combined_user_data %>% 
+  full_join(company_totals, by = "company") %>% 
+  select(login, company, total) %>% 
+  filter(total > 5) %>% 
+  select(-total, -company) %>% 
+  mutate(is_business = 1) 
+
+combined_user_data <- combined_user_data %>% 
+  full_join(business, by = "login") %>% 
+  mutate(is_business = replace_na(is_business, 0))
+
+combined_user_data %>% 
+  filter(is_academic == 1 | new_academic == 1) %>% 
+  count()
+
+combined_user_data %>% 
+  filter(is_gov == 1) %>%
+  count()
+
+combined_user_data %>% 
+  filter(is_nonprofit == 1) %>%
+  count()
+
+combined_user_data %>% 
+  filter(is_household == 1) %>%
+  count()
+
+combined_user_data %>% 
+  filter(is_business == 1) %>%
+  count()
+
+final_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+                           total = as.numeric(c("115893", "46403", "5455", "3576", "823")))
+
+positions <- c("business", "academic","houshold","government", "nonprofit")
+```
+
+### Sectoring Results 
+
+```{r, fig.height = 7, fig.width=12, echo=FALSE}
+ggplot(data=final_counts, aes(x=sector, y=total)) +
+  geom_bar(stat="identity",  fill = c("#232D4B", "#E57200", "#0E879C", "#D9E12B",  "#ADD8E6")) +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Number of GitHub Users") +
+  ggtitle("Total GitHub Users Classified by Economic Sector")
+```
+
+Our original GHTorrent data contained ~2.1 million users. Of these total users, only 578,852 (or 27%) had valid email information while only 422,517 (or 19.7%) had valid affiliation information. Working from this subset, we were able to classify 46,403 users into the academic sector, 5,455 users into the household sector, 3,576 users into the government sector and 823 users into the non-profit sector. After removing users that provided an organization that was listed fewer than five times, this left us with around 116,000 users that we allocated to the business sector. 
+
+How valid are these results? So far, we feel most confident in our sectoring of academic results. This is because academics seemed to use more formalized modes of entry in the affiliation data and because we had the Hipo Labs data to "ground truth" our matching approach. The government, household, and non-profit sectors created major challenges because users vary quite a bit in what they put in their self-report data. We have allocated considerably less time to those domains to date, which means we will likely see some improvements in the coming months. Of course, the business sectoring is the most difficult of these domains - largely because we do not have a good list of businesses around the world to match entries against. We had to make several assumptions in our sectoring approach, but these preliminary results have opened a number of future approaches that we can explore. In fact, we have documented some of the more experimental strategies we are toying with toward the end of this page. 
+
+### Word Cloud of Top Affiliations in Open Source Software
+
+<center>
+![](/findings/business_files/wordcloud.svg)
+</center>
+
+To visualize the top affiliations in OSS, we created a wordcloud. In this visualization, the size of the word corresponds to the number of times that word was mentioned in the affiliation column. The largest institution represented in the image is Microsoft at just over 6,000 total mentions. 
+
+### Top Businesses Developing Open Source Software
+
+```{r, echo=FALSE, fig.height = 8, fig.width=12}
+
+top20companies <- company_totals %>% 
+  filter(total > 399)
+
+company_positions <- data.frame(company = c("microsoft", "google","red hat", "ibm", "facebook",
+                                                 "intel", "thoughtworks","alibaba","tencent", "amazon",
+                                                 "baidu", "esri","sap","shopify", "mozilla",
+                                                 "pivotal", "oracle","salesforce","yandex", "linkedin"), 
+                                   countries = as.factor(c("usa","usa","usa","usa","usa",
+                                                 "usa","usa","china","china","usa",
+                                                 "china", "usa", "germany", "canada", "usa",
+                                                 "usa","usa","usa","russia","usa"))) 
+top20companies <- top20companies %>% 
+  full_join(company_positions, by = "company")
+
+top20companies$company <- fct_relevel(top20companies$company, 
+                                      "linkedin", "yandex","salesforce", "oracle", "pivotal",
+                                      "mozilla","shopify", "sap", "esri", "baidu",
+                                      "amazon", "tencent", "alibaba", "thoughtworks", "intel",
+                                      "facebook", "ibm","red hat", "google","microsoft")
+ 
+ggplot(top20companies) +
+  geom_point(aes(x = company, y = total, colour = countries), size = 4) +
+  geom_segment( aes(x=company, xend=company, y=0, yend=total, colour = countries)) +
+  #ggtitle("Most Prominent Businesses\nDeveloping OSS (By GitHub Users)") +
+  coord_flip() +
+  theme_minimal() +
+  scale_color_manual(labels=c("canada", "china",   "germany", "russia", "usa"),
+                     values=c("#D9E12B", "#232D4B", "#0E879C",  "#ADD8E6", "#E57200")) +
+  theme(plot.title = element_text(size=23, hjust = 0.5),
+        #axis.title.x=element_blank(),
+        axis.title =element_text(size=18),
+        axis.title.y =element_blank(),
+        #axis.text.x = element_text(size = 18),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        legend.title=element_text(size=18, hjust = 0.5, face="bold"),
+        legend.text=element_text(size=18),
+        legend.position = c(.9, .1),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.margin = margin(6, 6, 6, 6),
+        legend.background = element_rect(fill="white",
+                                  size=0.5, linetype="solid", 
+                                  colour ="black")) +
+  labs(y = "Total GitHub Users", title = "Most Prominent Businesses\nDeveloping OSS (By GitHub Users)") 
+```
+
+Who are the top businesses developing OSS on GitHub? In a sense, the answers are not surprising, as they align with some of major tech companies around the world. Those based in the US include Microsoft, Google, Red Hat, IBM and Facebook while Chinese (Alibaba, Tencent and Baidu), German (SAP), Canadian (Shoplify), and Russian (Yandex) companies are all represented in the top-20. One remarkable thing that stuck out about these companies was how many of them are based in California. Like we saw in the academic sector, the major tech hub of Silicon Valley has had a huge impact on OSS production. While these findings are interesting, our future work will need to assess how collaboration tendencies impact production output. In this sense, we can learn more about how the structure of collaboration may outweigh total users or the production of raw code. 
+
+### [Detailed Classification Process in Python](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/Notebooks/Business_User_Bool_Vec_Creation_Web_Vers.ipynb)
+
+As part of our overarching strategy for assigning users to specific sectors, we need to be able to assign users to business as well. Given the specifics of our source dataset (GHTorrent), we can reasonably assume that the more frequently that a company name appears, the more "authoratative" (reflective of a consensus) of a representation of that company name it is.  Once we've removed the user entries that correspond to the non-business sectors, we can be reasonably confident in mapping users whose worplace affiliation listing is shared with some critical threshold of other users (i.e. 5) to the business sector. 
+
+In contrast to the rest of the team using R, we used Python to carry out the classification process in the business sector. Using a [set of functions developed by Daniel Bullock](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/3a4431544bc32ac6abc82f14f8ccdd9f90923089/ossPy/ossPyFuncs.py#L9), we pulled data from our PostgreSQL database to pull GitHub user data. In these tables, academic, governnment and nonprofit users were already codified, which helped to remove around 45,000 users. In order to perform a full sectoring we also need the information for household and null values. We classified (or removed) those users by drawing from source keylists for [household](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/individualKeys.csv) and [null values](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/nullKeys.csv). After we derived the list of users which have yet to be assigned, we cleaned their input in the company column in preperation for subsequent processing. We cleaned these entries for substrings related to [legal entities](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/curatedLegalEntitesRaw.csv), [web domains](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/curatedDomains.csv), and [extraneous symbols](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/keyFiles/symbolRemove.csv) as described in [another notebook](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/Notebooks/Company%20Cleaning%20Narritive.ipynb) and [quantatively profiled in another](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/master/ossPy/Notebooks/Cleaning%20heuristic%20assesment.ipynb).
+
+For more details on the experimental approach we took in the business sector, see our [GitHub page](https://github.com/DSPG-Young-Scholars-Program/dspg20oss/tree/master/ossPy). 
+
+

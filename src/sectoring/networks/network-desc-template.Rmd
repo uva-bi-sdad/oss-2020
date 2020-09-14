@@ -24,7 +24,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
                                    FROM gh.sna_intl_ctry_edgelist_08")
 
-analysis_year <- "2008-16"
+analysis_year <- "2008"
 
 # disconnect from postgresql
 dbDisconnect(conn)

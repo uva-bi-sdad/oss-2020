@@ -1,0 +1,203 @@
+---
+title: "Company Counts on GitHub"
+author: "Brandon L. Kramer"
+date: "11/26/2019"
+output: html_document
+---
+
+```{r loading data}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+users_gh <- dbGetQuery(conn, "SELECT * 
+                              FROM gh.ctrs_extra")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+
+users_gh
+
+length(users_gh$company) 
+# 2,143,407 total entries 
+# note: there are actually 2,435,698 total users
+
+valid_company_codes <- users_gh %>% drop_na(company) 
+length(valid_company_codes$company)
+# 422517 users with some company_code information 
+length(valid_company_codes$company) / length(users_gh$company)
+# putting us at 19.7124% that are identifiable for now 
+
+users_gh %>% 
+  drop_na(company) %>% 
+  mutate(organization = str_to_lower(company)) %>% 
+  mutate(organization = str_trim(organization)) %>% 
+  group_by(organization) %>% 
+  count() %>% arrange(-n)
+
+```
+
+```{r company counts}
+organization_counts <- users_gh %>% 
+  drop_na(company) %>% 
+  mutate(organization = str_to_lower(company)) %>% 
+  mutate(organization = str_trim(organization)) %>% 
+  mutate(organization = ifelse(test = str_detect(string = organization, 
+                              pattern = "\\b(?i)(freelancer|freelance|freelancing|freelancers|freelances|self|personal|home|private|individual|myself|me|independent|independent contractor|contractor|private|household|house|home|my house|jobless|looking for a job|looking for job|seeking employment|seeking|actively seeking employment|seeking opportunities|seeking internship|seeking work)\\b"), 
+                              yes = "household", no = organization)) %>%
+  mutate(organization = ifelse(test = str_detect(string = organization, 
+                              pattern = "\\b(?i)(n/a|none|null|no|na)\\b"),      
+                              yes = "none/null", no = organization)) %>% 
+  group_by(organization) %>% count() %>% arrange(-n) 
+
+organization_counts 
+
+```
+
+```{r editing refusal data}
+
+# getting the totals before refusals 
+sum(organization_counts$n)
+sum(organization_counts$n) / 2435698
+
+# getting the totals of refusals (none/null) 
+organization_counts %>% 
+  filter(organization == "none/null"|organization == ""|organization == "-") 
+39803+3851+311 # total of all three 
+
+# removing country codes in org code column 
+organization_counts %>%
+  filter(organization == "china"|organization == "japan")
+334+183
+
+```
+
+```{r creating final totals }
+# removing refusals and countries from dataset 
+organization_counts <- organization_counts %>% 
+  filter(organization != "none/null") %>% filter(organization != "") %>% filter(organization != "-") %>% 
+  filter(organization != "china") %>% filter(organization != "japan")
+  
+# i used this snippet of code to search through all of the top-50 academic and top-50 non-academic organizations to catch variations 
+# filter(organization_counts, grepl('google', organization))
+
+# this gets the total number and percentage of logins with organization codes 
+sum(organization_counts$n)
+sum(organization_counts$n) / 2435698
+
+# output to a csv file 
+write.csv(organization_counts, "organization_counts.csv")
+#saveRDS(company_counts, "company_counts.rds")
+```
+
+This suggests that only 15% of the data has valid information in the company column. 
+
+```{r}
+users_gh %>% filter(is.na(company))
+```
+
+When we look at the logins with missing company data, we can find out more about them on their GitHub profiles. A quick check of these top login sites shows that there is additional information out there in their profiles that we could use to identify sector information. For now, let's just try to categorize what we have. 
+
+# Codifying the Data into Sectors 
+
+The original sectors from the GitHub project in Summer 2019 are business, nonprofit, government, university and individual/private. Let's see if we can get some estimates. 
+
+```{r}
+
+# individual, freelancer or student
+individual_counts <- organization_counts %>% 
+  filter(grepl('(individual|freelancer|student)', organization))
+individual_counts
+sum(individual_counts$n)
+sum(individual_counts$n) / 2435698
+# 8365 or 0.34% 
+
+```
+
+```{r}
+
+# government institutions 
+government_counts <- organization_counts %>% 
+  filter(grepl('(national laboratory|national institute|national institutes|nih|gov|government|authority|council|department|commission|office|county|administration|.gov$)', organization)) %>% 
+  filter(!grepl('(college|university)', organization))
+government_counts
+sum(government_counts$n)
+sum(government_counts$n) / 2435698
+# 1409 or 0.05% 
+
+```
+
+```{r}
+
+# nonprofit institutions 
+nonprofit_counts <- organization_counts %>% 
+  filter(grepl('(?i)association|foundation|fund|board of realtors|assoc.|society|societies|organization|.org$', organization)) %>% 
+  filter(!grepl('(geckoboard|moduscreateorg)', organization))
+nonprofit_counts
+sum(nonprofit_counts$n)
+sum(nonprofit_counts$n) / 2435698
+# 1830 or 0.07%
+
+```
+
+```{r}
+
+# academic institutions 
+academic_counts <- organization_counts %>% 
+  filter(grepl('(university|college|institute)', organization))
+academic_counts
+sum(academic_counts$n)
+sum(academic_counts$n) / 2435698
+# 30789 or 1.26%
+
+```
+```{r}
+
+# businesses 
+business_counts <- organization_counts %>% 
+  filter(grepl('(?i)(corp|.?com|llp|inc.j|corporation)\\.?$|(lc.|Group|Entertainment|Computing|Software)$|Service.*|Consulting|Consultants|Business|Laboratories|Technologies|Technology|Bank|Company|Studios|Solutions|inc.|l\\.?l\\.?c.?|ltd|employer|Systems|System|Limited|Publishing', organization)) %>% 
+  filter(!grepl('(?i)(college|university|institute of technology)', organization))
+business_counts
+sum(business_counts$n)
+sum(business_counts$n) / 2435698
+# 
+
+```
+
+```{r}
+
+# non-academic institutions 
+other_counts <- organization_counts %>% 
+  filter(!grepl('(individual|freelancer|student)', organization)) %>% 
+  filter(!grepl('(national laboratory|national institute|national institutes|nih|gov|government|authority|council|department|commission|office|county|administration|.gov$)', organization)) %>% 
+  filter(!grepl('(?i)association|foundation|fund|board of realtors|assoc.|society|societies|organization|.org$', organization)) %>%
+  filter(!grepl('(university|college|institute)', organization)) %>% 
+  filter(!grepl('(?i)(corp|.?com|llp|inc.j|corporation)\\.?$|(lc.|Group|Entertainment|Computing|Software)$|Service.*|Consulting|Consultants|Business|Laboratories|Technologies|Technology|Bank|Company|Studios|Solutions|inc.|l\\.?l\\.?c.?|ltd|employer|Systems|System|Limited|Publishing', organization))
+other_counts
+
+# write csvs 
+#write.csv(non_academic_counts, "non_academic_counts.csv")
+#write.csv(academic_counts, "academic_counts.csv")
+
+```
+
+
+
+
+
+
+
+

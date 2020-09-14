@@ -1,0 +1,136 @@
+---
+title: "Data Viz"
+author: "Morgan Klutzke"
+date: "7/7/2020"
+output: html_document
+---
+
+```{r}
+# get some good numbers
+percent_us_institution <- length(filter(academic_counts, country == "United States")$organization) / length(academic_counts$organization) # 0.317
+percent_us_users <- sum(filter(academic_counts, country == "United States")[, "n"]) / sum(academic_counts[, "n"]) # 0.539
+percent_academic_users <- sum(academic_counts[,"n"]) / 2435698 # 0.015
+
+options(scipen = 10)
+country_user_percentages <- academic_counts %>% group_by(country) %>% select(country, n) %>% summarise(n = sum(n) / sum(academic_counts[, "n"])) %>% arrange(-n)
+country_user_percentages
+```
+
+```{r}
+country_frequency_users <- academic_counts %>% group_by(country) %>% count(sort = TRUE)
+country_frequency_institutions <- academic_counts %>% group_by(country) %>% count(wt = n(), sort = TRUE)
+```
+
+Sunburst chart
+
+```{r}
+# NO
+library(plotly)
+
+us_5 <- academic_counts %>% filter(country == "United States") %>% dt_mutate(organization = fct_reorder(organization, n))
+us_5 <- us_5[1:5, ]
+cn_5 <- academic_counts %>% filter(country == "China") %>% dt_mutate(organization = fct_reorder(organization, n))
+cn_5 <- cn_5[1:5, ]
+uk_5 <- academic_counts %>% filter(country == "United Kingdom") %>% dt_mutate(organization = fct_reorder(organization, n))
+uk_5 <- uk_5[1:5, ]
+ca_5 <- academic_counts %>% filter(country == "Canada") %>% dt_mutate(organization = fct_reorder(organization, n))
+ca_5 <- ca_5[1:5, ]
+jp_5 <- academic_counts %>% filter(country == "Japan") %>% dt_mutate(organization = fct_reorder(organization, n))
+jp_5 <- jp_5[1:5, ]
+
+labels <- country_frequency_users$country[1:5] %>%
+  append(us_5$organization) %>%
+  append(cn_5$organization) %>%
+  append(uk_5$organization) %>%
+  append(ca_5$organization) %>%
+  append(jp_5$organization)
+
+parents <- c("", "", "", "", "") %>%
+  append(rep("United States", length.out = 5)) %>%
+  append(rep("China", length.out = 5)) %>%
+  append(rep("United Kingdom", length.out = 5)) %>%
+  append(rep("Canada", length.out = 5)) %>%
+  append(rep("Japan", length.out = 5))
+
+values <- country_frequency_users$n[1:5] %>%
+  append(us_5$n) %>%
+  append(cn_5$n) %>%
+  append(uk_5$n) %>%
+  append(ca_5$n) %>%
+  append(jp_5$n)
+
+fig <- plot_ly(
+  labels = labels, 
+  parents = parents,
+  values = values,
+  type = 'sunburst'
+)
+
+fig
+```
+
+
+
+```{r}
+# NO
+grid.arrange(ggplot(us_5, aes(x = organization, y = n)) + geom_col() + coord_flip(),
+             ggplot(uk_5, aes(x = organization, y = n)) + geom_col() + coord_flip(),
+             ggplot(cn_5, aes(x = organization, y = n)) + geom_col() + coord_flip(),
+             ggplot(ca_5, aes(x = organization, y = n)) + geom_col() + coord_flip())
+```
+
+
+
+```{r,fig.height=7}
+academic_counts_sorted <- academic_counts %>%
+  arrange(n) %>%
+  #arrange(desc(n))[1:50, ] %>%
+  dt_mutate(organization = factor(organization, levels = organization))
+
+
+ggplot(academic_counts_sorted[(.N-50):.N, ], aes(color = country)) +
+  geom_point(aes(x = organization, y = n)) +
+  geom_segment(data = academic_counts_sorted[(.N-50):.N, ], mapping = aes(x = organization, xend = organization, y = 0, yend = n)) +
+  scale_color_manual(values = c("United States" = "#8F8F8F", "China" = "#E57200", "United Kingdom" = "#12B2CE", "Canada" = "#485C99")) +
+  labs(x = "Academic Institution", y = "Number of Users", color = "Country") +
+  theme_classic() +
+  coord_flip()
+```
+```{r, fig.height = 7, fig.width = 12}
+
+ggplot(academic_counts_sorted[(.N-20):.N, ], aes(color = country)) +
+  geom_point(aes(x = organization, y = n), size = 4) +
+  geom_segment(data = academic_counts_sorted[(.N-20):.N, ], mapping = aes(x = organization, xend = organization, y = 0, yend = n), size = 1) +
+  scale_color_manual(values = c("United States" = "#485C99", "China" = "#E57200", "Canada" = "#12B2CE")) +
+  labs(x = "Academic Institution", y = "Number of Users", color = "Country", title = "Top 20 universities by number of users") +
+  #theme_classic() +
+  theme(axis.text.y = element_text(size = 12)) +
+  coord_flip()
+```
+
+
+```{r,fig.height=7}
+us_academic_counts <- academic_counts_sorted %>% filter(country == "United States")
+
+ggplot(us_academic_counts[(.N-50):.N, ]) +
+  geom_point(aes(x = organization, y = n)) +
+  geom_segment(data = us_academic_counts[(.N-50):.N, ], mapping = aes(x = organization, xend = organization, y = 0, yend = n)) +
+  labs(x = "Academic Institution", y = "Number of Users") +
+  theme_classic() +
+  coord_flip()
+```
+
+```{r,fig.height=7}
+country_users_sorted <- country_frequency_users %>%
+  arrange(n) %>%
+  #arrange(desc(n))[1:50, ] %>%
+  dt_mutate(country = factor(country, levels = country))
+
+ggplot(country_users_sorted[(.N-50):.N, ]) +
+  geom_point(aes(x = country, y = n)) +
+  geom_segment(data = country_users_sorted[(.N-50):.N, ], mapping = aes(x = country, xend = country, y = 0, yend = n)) +
+  labs(x = "Country", y = "Number of Users") +
+  theme_classic() +
+  scale_y_log10() +
+  coord_flip()
+```

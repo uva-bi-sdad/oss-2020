@@ -1,0 +1,97 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+us_gov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
+
+# query the users_gh data (table of all github users) 
+us_gov_azindex <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_azindex_clean")
+
+# query the users_gh data (table of all github users) 
+us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+```
+
+```{r}
+
+az_list <- distinct(us_gov_azindex, agency) %>% rename(institution = agency)
+az_list$dataset <- "azindex"
+ffrdc_list <- distinct(us_gov_ffrdcs, FFRDC_Name)  %>% rename(institution = FFRDC_Name)
+ffrdc_list$dataset <- "ffrdc"
+usman_list <- distinct(us_gov_manual, AgencyName)  %>% rename(institution = AgencyName)
+usman_list$dataset <- "usman"
+all_lists <- rbind(az_list, ffrdc_list, usman_list)
+all_lists <- distinct(all_lists, institution, .keep_all = TRUE)
+all_lists <- all_lists %>% arrange(institution)
+test <- as.data.frame(unlist(strsplit(all_lists$institution, "\\(")))
+
+
+```
+
+
+```{r gov_branches}
+gov_branches <- us_gov_azindex %>% 
+  group_by(gov_branch) %>% 
+  count() %>% 
+  arrange(-n); gov_branches
+
+us_gov_azindex %>% 
+  select(gov_branch, gov_agency, agency) %>% 
+  arrange(gov_branch) %>% 
+  group_by(gov_branch) 
+```
+
+```{r gov_agencies}
+gov_agencies <- us_gov_azindex %>% 
+  drop_na(gov_agency) %>% 
+  group_by(gov_agency) %>% 
+  count() %>% 
+  arrange(-n); gov_agencies
+```
+
+```{r child_agencies}
+child_agencies <- us_gov_azindex %>%
+  drop_na(child_agency) %>% 
+  group_by(child_agency) %>% 
+  count() %>% 
+  arrange(-n); child_agencies
+```
+
+```{r}
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+dbDisconnect(conn)
+```
+
+
+
+
+
+

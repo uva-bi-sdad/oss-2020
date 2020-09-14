@@ -1,0 +1,108 @@
+---
+title: "Company Counts on GitHub"
+author: "Brandon L. Kramer"
+date: "11/26/2019"
+output: html_document
+---
+
+```{r loading data}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+users_gh <- dbGetQuery(conn, "SELECT * 
+                              FROM gh.ctrs_extra")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+
+users_gh
+
+length(users_gh$company) 
+# 2,143,407 total entries 
+# note: there are actually 2,435,698 total users
+
+valid_company_codes <- users_gh %>% drop_na(company) 
+length(valid_company_codes$company)
+# 422517 users with some company_code information 
+length(valid_company_codes$company) / length(users_gh$company)
+# putting us at 19.7124% that are identifiable for now 
+
+users_gh %>% 
+  drop_na(company) %>% 
+  mutate(organization = str_to_lower(company)) %>% 
+  mutate(organization = str_trim(organization)) %>% 
+  group_by(organization) %>% 
+  count() %>% arrange(-n)
+
+```
+
+```{r company counts}
+organization_counts <- users_gh %>% 
+  drop_na(company) %>% 
+  mutate(organization = str_to_lower(company)) %>% 
+  mutate(organization = str_trim(organization)) %>% 
+  mutate(organization = ifelse(test = str_detect(string = organization, 
+                              pattern = "\\b(?i)((?i)^self$|^personal$|^home$|^private$|^individual$|^myself$|^me$|^house$|^independent$|independent contractor|^consultant$|freelancer|freelance|freelancing|self employed|my home|me, myself|me myself|household|my house|jobless|looking for a job|looking for job|seeking employment|^seeking|seeking opportunities|seeking internship|seeking work|web developer|independent consultant|software developer|independent developer)\\b"), 
+                              yes = "household", no = organization)) %>%
+  group_by(organization) %>% count() %>% arrange(-n) 
+
+organization_counts 
+
+```
+
+See also 
+
+https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/danBranch/ossPy/keyFiles/individualKeys.csv
+https://github.com/DSPG-Young-Scholars-Program/dspg20oss/blob/danBranch/ossPy/keyFiles/nullKeys.csv
+
+
+'(?i)^self$'
+'(?i)^personal$'
+'(?i)^home$'
+'(?i)^private$'
+'(?i)^individual$'
+'(?i)^myself$'
+'(?i)^me$'
+'(?i)^house$'
+'(?i)^independent$'
+'(?i)independent contractor'
+'(?i)^consultant$'
+'(?i)freelancer'
+'(?i)freelance'
+'(?i)freelancing'
+'(?i)self employed'
+'(?i)my home'
+'(?i)me, myself'
+'(?i)me myself'
+'(?i)household'
+'(?i)my house'
+'(?i)jobless'
+'(?i)looking for a job'
+'(?i)looking for job'
+'(?i)seeking employment'
+'(?i)^seeking$'
+'(?i)seeking opportunities'
+'(?i)seeking internship'
+'(?i)seeking work'
+'(?i)web developer'
+'(?i)independent consultant'
+'(?i)software developer'
+'(?i)independent developer'
+
+
+
+

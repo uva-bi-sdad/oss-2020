@@ -1,0 +1,31 @@
+
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+orgs_data <- dbGetQuery(conn, "SELECT * FROM gh.orgs_data")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+
+```{r}
+orgs_data %>% 
+  select(login, company, type) %>% 
+  count(login) %>% 
+  arrange(-n)
+```
