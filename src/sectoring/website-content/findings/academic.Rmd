@@ -30,7 +30,7 @@ Besides the self-reported affiliation information, we also investigated email ad
 rm(list = ls())
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "DT",
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "DT", "tidytext",
               "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi", "gridExtra")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get our data
@@ -81,6 +81,7 @@ institutions_hipolabs <- institutions_hipolabs %>%
   add_row(institution = "nazarbayev university", country = "Kazakhstan", domains = "nu.edu.kz") %>% 
   add_row(institution = "turing school", country = "United States", domains = "turing.io") %>%
   add_row(institution = "flatiron school", country = "United States", domains = "flatironschool.com") %>%
+  add_row(institution = "galvanize", country = "United States", domains = "galvanize.com") %>%
   dt_mutate(institution = if_else(institution == "xi'an university of electronic science and technology", "xidian university", institution))
 ```
 
@@ -584,6 +585,9 @@ orgs_clean <- users_gh %>%
   dt_mutate(organization = ifelse(test = str_detect(string = organization, 
                               pattern = "\\b(?i)(turingschool|^turing school$)\\b"),
                               yes = "turing school", no = organization)) %>%
+  dt_mutate(organization = ifelse(test = str_detect(string = organization, 
+                              pattern = "\\b(?i)(^galvanize$|gschool)\\b"),
+                              yes = "galvanize", no = organization)) %>%
   dt_mutate(organization = str_replace_all(organization, 
       "\\b(?i)(university of so paulo|university of sao paulo|universidade de so paulo|universidade de sao paulo)\\b", "universidade de são paulo")) %>% 
   dt_mutate(organization = str_replace_all(organization, 
@@ -762,16 +766,16 @@ all_gh_users <- all_gh_users %>%
 # new count is n = 48939 
 all_gh_users %>% 
   filter(is_academic == 1) %>% count()
+```
 
+```{r}
 # get counts 
 academic_counts_original <- all_gh_users %>% 
   filter(is_academic == 1) %>% 
   select(company, institution, is_academic) %>% 
   mutate(institution = replace_na(institution, "misc. student")) %>% 
   count(institution) %>% 
-  arrange(-n) 
-  
-academic_counts_original
+  arrange(-n); academic_counts_original
 
 # this process can still be improved within the sector 
 # as of sept 14, 2020, the most common errors are: 
@@ -779,6 +783,7 @@ academic_counts_original
 ## foreign universities not being in our database 
 ## someone could add ^ and # to the regex to make them more inclusive (could catch more false positives)
 ## someone could embed this into a nested dictionary (as csv) and then convert to a package 
+## we also decided to include a few top bootcamps in the academic sector but we could more systematically include those institutions later
 ```
 
 ```{r}
@@ -830,73 +835,22 @@ collapsed_countries <- academic_counts_original %>%
   #select(institution, country) %>% 
   arrange(-n) 
       
+# bring collapsed_countries & collapsed_emails together 
 academic_counts <- collapsed_countries %>% 
   select(institution, country) %>% 
-  full_join(collapsed_emails, by = "institution")
+  full_join(collapsed_emails, by = "institution") %>% 
+  rename(organization = institution)
 
+# let's just check and see if bigrams help 
 academic_counts %>% 
-  filter(country == "NA")
-```
+  filter(country == "NA") %>%
+  select(organization) %>% 
+  unnest_tokens(bigram, organization, token = "ngrams", n = 2) %>% 
+  count(bigram, sort = TRUE)
+# nope! bigrams only get us a few with n = 2 and they are mostly generic terms 
 
-
-```{r get_countries, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
 academic_counts
-sum(academic_counts[,"n"]) 
-# larger than before because it's double-counting the institutions that are in multiple countries or have multiple domains
-
-# group together different country and domain values for the same institution
-group1 <- academic_counts[duplicated(academic_counts$organization), ] %>% rename(c(country2 = country, domains2 = domains))
-group2 <- group1[duplicated(group1$organization), ] %>% rename(c(country3 = country2, domains3 = domains2))
-group3 <- group2[duplicated(group2$organization), ] %>% rename(c(country4 = country3, domains4 = domains3))
-group4 <- group3[duplicated(group3$organization), ] %>% rename(c(country5 = country4, domains5 = domains4))
-
-# remove duplicates so each group has unique values
-group1 <- group1[!duplicated(group1$organization), ]
-group2 <- group2[!duplicated(group2$organization), ]
-group3 <- group3[!duplicated(group3$organization), ]
-group4 <- group4[!duplicated(group4$organization), ]
-
-# add back in the multiple countries/domains, but as additional columns
-# now there is only one row for each institution
-academic_counts <- academic_counts[!duplicated(academic_counts$organization), ] %>% 
-  left_join(group1) %>%
-  left_join(group2) %>%
-  left_join(group3) %>%
-  left_join(group4)
-
-# add NAs for when multiple country listings are the same (if the duplicated institution is from multiple domains)
-# or when multiple domain listings are the same (if the duplicated institution is from multiple countries)
-academic_counts <- academic_counts %>%
-  mutate_all(str_replace_na) %>%
-  dt_mutate(country2 = if_else(country == country2, "NA", country2)) %>%
-  dt_mutate(country3 = if_else(country == country3, "NA", country3)) %>%
-  dt_mutate(domains2 = if_else(domains == domains2, "NA", domains2)) %>%
-  dt_mutate(domains3 = if_else(domains == domains3, "NA", domains3)) %>%
-  dt_mutate(domains4 = if_else(domains == domains4, "NA", domains4)) %>%
-  dt_mutate(domains5 = if_else(domains == domains5, "NA", domains5))
-
-# collapse into single columns for country/domains
-# we want to avoid having multiple countries for an institution, since they'd be double-counted in the following analyses
-# for the 21 institutions represented that are in multiple countries, the primary country is manually coded
-academic_counts <- academic_counts %>%
-  dt_mutate(country = if_else(condition = institution %chin% c("universidad simón bolivar", 
-                                                                "suleyman demirel university", 
-                                                                "universidad de córdoba", 
-                                                                "aga khan university", 
-                                                                "southeast university", 
-                                                                "universidad de los andes", 
-                                                                "korea university"), true = country2, false = country)) %>%
-  dt_mutate(domains_combined = str_c(domains, domains2, domains3, domains4, domains5, sep = ", ")) %>%
-  transmute(institution = institution, n = n, country = country, domains = domains_combined)
-
-# remove remaining NAs
-academic_counts <- academic_counts %>% 
-  dt_mutate(domains = str_replace_all(domains, ", NA", "")) %>%
-  dt_mutate(n = as.numeric(n)) # for some reason n got changed to chr type
 ```
-
-
-
 
 ```{r, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
 # connect to postgresql to get data (in rivanna)
@@ -931,18 +885,25 @@ country_user_percentages <- academic_counts %>%
   arrange(-n)
 ```
 
+NOTE: RMD stops working here - small updates needed to work this out 
+
 ```{r, top_ten, fig.width=12, echo=FALSE, include=FALSE}
-academic_counts_sorted_top10 <- academic_counts %>% 
-  drop_na(country) %>% 
-  slice_max(n, n = 10) %>% 
+
+academic_counts_sorted <- academic_counts %>% 
+  filter(country != "NA") %>% 
   arrange(n) %>%
-  dt_mutate(organization = factor(organization, levels = organization))
+  dt_mutate(organization = factor(organization, levels = organization)); academic_counts_sorted
+
+academic_counts_sorted_top10 <- academic_counts %>% 
+  #slice_max(test, n = 10) %>% # slice_max not working 
+  filter(n > 495) %>% 
+  arrange(n) %>%
+  dt_mutate(organization = factor(organization, levels = organization)); academic_counts_sorted_top10
 
 academic_counts_sorted_top20 <- academic_counts %>% 
-  drop_na(country) %>% 
-  slice_max(n, n = 20) %>% 
+  filter(n > 350) %>% 
   arrange(n) %>%
-  dt_mutate(organization = factor(organization, levels = organization))
+  dt_mutate(organization = factor(organization, levels = organization)); academic_counts_sorted_top20
 
 ggplot(data = academic_counts_sorted_top10) + 
   geom_col(mapping = aes(organization, n, fill = n)) + 
@@ -961,7 +922,7 @@ Generally, we found that users based in the United States are most prominently r
 #country_frequency_institutions <- academic_counts %>% group_by(country) %>% count(wt = n(), sort = TRUE)
 
 country_frequency_users <- academic_counts %>% 
-  drop_na(country) %>% 
+  filter(country != "NA") %>% 
   mutate(country = tolower(country)) %>% 
   dt_mutate(country = str_replace_all(country, "korea, republic of", "south korea")) %>%
   dt_mutate(country = str_replace_all(country, "russian federation", "russia")) %>%
@@ -977,8 +938,8 @@ continent <- c("united states" = "north america",
                "canada" = "north america",
                "germany" = "europe",
                "india" = "asia",
-               "japan" = "asia",
                "brazil" = "south america",
+               "japan" = "asia",
                "south korea" = "asia",
                "switzerland" = "europe",
                "australia" = "australia",
@@ -1019,7 +980,7 @@ ggplot(country_users_sorted[(.N-20):.N, ], aes(color = continent)) +
                      values=c("#232D4B", "#99BDAD",  "#E57200", "#0E879C", "#D9E12B")) 
 ```
 ```{r country_percentage_table, message = FALSE,  warning = FALSE, echo=FALSE}
-datatable(country_user_percentages)
+datatable(country_user_percentages %>% filter(country != "NA"))
 ```
 
 ### Top OSS Universities Around the World
@@ -1028,25 +989,24 @@ This figure shows which specific academic institutions had the greatest number o
 
 ```{r, by_country, fig.height = 9, fig.width=12, warning = FALSE,  echo=FALSE, message=FALSE}
 # rename top universities to make labels shorter
-top_universities <- select(academic_counts_sorted, organization) %>%
-  add_column(shorter = c("Peking University",
-                         "Tsinghua University",
-                         "University of Waterloo",
-                         "Harvard University",
-                         "UC San Diego",
+top_universities <- select(academic_counts_sorted_top20, organization) %>%
+  add_column(shorter = c("Northeastern University",
                          "Duke University",
+                         "University of Pennsylvania",
                          "Shanghai Jiao Tong Univ.",
                          "Zhejiang University",
+                         "Tsinghua University",
                          "Georgia Tech",
-                         "University of Texas",
+                         "Harvard University",
                          "Columbia University",
                          "University of Illinois",
+                         "University of Texas",
                          "University of Michigan",
                          "New York University",
-                         "Carnegie Mellon University",
-                         "University of Washington",
                          "Cornell University",
                          "Univ. of Southern California",
+                         "University of Washington",
+                         "Carnegie Mellon University",
                          "Stanford University",
                          "MIT",
                          "UC Berkeley")) %>%
@@ -1091,24 +1051,24 @@ Here we focus specifically on the US. The figure below details which US universi
 us_academic_counts <- academic_counts_sorted %>% filter(country == "United States")
 
 top_us_universities <- select(us_academic_counts[(.N-20):.N, ], organization) %>%
-  add_column(shorter = c("Arizona State University",
-                         "UC Los Angeles",
+  add_column(shorter = c("UC Colorado Boulder",
                          "Purdue University",
                          "University of Wisconsin",
-                         "University of Pennsylvania",
-                         "Harvard University",
                          "UC San Diego",
+                         "Northeastern University",
                          "Duke University",
+                         "University of Pennsylvania",
                          "Georgia Tech",
-                         "University of Texas",
+                         "Harvard University",
                          "Columbia University",
                          "University of Illinois",
+                         "University of Texas",
                          "University of Michigan",
                          "New York University",
-                         "Carnegie Mellon University",
-                         "University of Washington",
                          "Cornell University",
                          "Univ. of Southern California",
+                         "University of Washington",
+                         "Carnegie Mellon University",
                          "Stanford University",
                          "MIT",
                          "UC Berkeley")) %>%
@@ -1119,24 +1079,24 @@ top_us_universities <- select(us_academic_counts[(.N-20):.N, ], organization) %>
 Type <- c("university of california, berkeley" = "Public",
           "massachusetts institute of technology" = "Private",
           "stanford university" = "Private",
+          "carnegie mellon university" = "Private",
+          "university of washington" = "Public",
           "university of southern california" = "Private",
           "cornell university" = "Private",
-          "university of washington" = "Public",
-          "carnegie mellon university" = "Private",
           "new york university" = "Private",
           "university of michigan - ann arbor" = "Public",
+          "university of texas at austin" = "Public",
           "university of illinois at urbana-champaign" = "Public",
           "columbia university" = "Private",
-          "university of texas at austin" = "Public",
-          "georgia institute of technology" = "Public",
-          "duke university" = "Private",
-          "university of california, san diego" = "Public",
           "harvard university" = "Private",
+          "georgia institute of technology" = "Public",
           "university of pennsylvania" = "Private",
+          "duke university" = "Private",
+          "northeastern university" = "Private", 
+          "university of california, san diego" = "Public",
           "university of wisconsin - madison" = "Public",
           "purdue university" = "Public",
-          "university of california, los angeles" = "Public",
-          "arizona state university" = "Public") %>% rev()
+          "university of colorado at boulder" = "Public") %>% rev()
 
 ggplot(top_us_universities, aes(color = Type)) +
   geom_point(aes(x = shorter, y = n), size = 4) +
@@ -1169,62 +1129,6 @@ There are limitations to the methods we used to categorize users into the academ
 Additionally, some compromises had to be made concerning university systems, or universities with multiple campuses. In general, for simplicity, we only categorized users into the flapship institution/campus for that system. For example, any user whose self-reported affiliation includes "University of Michigan" was grouped into "University of Michigan - Ann Arbor", even if they were actually affiliated with the Flint campus of the university. However, there are a few exceptions: the campuses of the University of California system and the University of Illinois system were treated as separate, as were the member institutions of the University of London.
 
 Other concerns include users reporting affiliations with more than one institution and users reporting their affiliations in different languages. 
-
-
-
-
-
-```{r}
-
-# goals: (1) match academic users with abbreviations and (2) match users with regex univ/college strings
-## now lets pull in our ipeds data and clean it so we can grab all the abbreviations 
-setwd("/sfs/qumulo/qhome/kb7hp/oss-data")
-ipeds_hd2018 <- read.csv("ipeds_hd2018.csv", encoding = "UTF-8", na.strings=c("","NA"))
-
-## define a helper function for transforming the empty rows to NA 
-empty_as_na <- function(x){
-    if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
-    ifelse(as.character(x)!="", x, NA)
-}
-
-# pull out all the abbreviations from IPEDS 
-ipeds <- ipeds_hd2018 %>% 
-  select(INSTNM, IALIAS) %>% 
-  rename(institution = INSTNM, alias = IALIAS) %>% 
-  mutate(institution = as.character(institution),
-         alias = as.character(alias)) %>% 
-  separate_rows(alias, sep = "\\|" , convert = FALSE) %>% 
-  mutate(alias = str_trim(alias, side = "both")) %>% 
-  dplyr::mutate_each(funs(empty_as_na)) %>% 
-  drop_na(alias) 
-
-
-# first, lets bind matched_academic with users_gh
-ipeds_recoding <- users_gh %>% 
-  full_join(matched_academic, by = "login") %>% 
-  mutate(is_academic = replace_na(is_academic, 0)) %>% 
-  select(login, email, company, is_academic, everything())
-
-# 
-ipeds_recoding %>% 
-  dt_mutate(new_col = ifelse(test = str_detect(string = company, 
-                             pattern = ipeds$alias),
-                             yes = ipeds$institution, no = "remove-me")) %>% 
-  filter(new_col != "remove-me") %>% 
-  select(login, company, new_col)
-
-ipeds <- ipeds %>% 
-  filter(institution != "University of Puerto Rico-Mayaguez" & institution != "Northwestern College-Chicago Campus" & institution != "Northwestern College-Southwestern Campus")
-
-# from the ipeds table, pull out the abbreviations 
-alias_list <- paste(c("\\b(?i)(zqx", na.omit(ipeds$alias), "zqx)\\b"), collapse = "|")
-
-```
-
-
-
-
-
 
 
 
