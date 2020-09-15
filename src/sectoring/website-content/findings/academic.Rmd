@@ -849,7 +849,10 @@ academic_counts %>%
   count(bigram, sort = TRUE)
 # nope! bigrams only get us a few with n = 2 and they are mostly generic terms 
 
-academic_counts
+total_with_cc <- academic_counts %>% filter(country != "NA")
+sum(total_with_cc[,"n"])
+
+academic_counts 
 ```
 
 ```{r, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
