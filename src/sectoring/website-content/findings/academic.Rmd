@@ -856,16 +856,29 @@ academic_counts
 ```
 
 ```{r, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
+
+# full_join to all_gh_users & collapsed_countries
+academic_to_database <- all_gh_users %>% 
+  filter(is_academic == 1) %>% 
+  select(login, company, institution, email, is_academic) %>% 
+  full_join(collapsed_countries %>% 
+              select(institution, country), by = "institution") %>% 
+  mutate(country = ifelse(test = str_detect(string = country, 
+         pattern = "\\b(NA)\\b"), yes = NA, no = country)) %>%   
+  select(login, company, institution, email, country, is_academic)
+
+# write this to the database 
 # connect to postgresql to get data (in rivanna)
-#conn <- dbConnect(drv = PostgreSQL(), 
-# dbname = "sdad", 
-# host = "10.250.124.195", 
-# port = 5432, 
-# user = Sys.getenv("db_userid"), 
-# password = Sys.getenv("db_pwd"))
-#dbWriteTable(conn, c("gh", "sna_ctr_academic"), final_table)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+dbWriteTable(conn, c("gh", "sna_ctr_academic"), academic_to_database, row.names = FALSE)
 # disconnect from postgresql database 
-#dbDisconnect(conn)
+dbDisconnect(conn)
+
 ```
 
 ```{r stats, message = FALSE, results=FALSE, warning = FALSE, echo=FALSE}
