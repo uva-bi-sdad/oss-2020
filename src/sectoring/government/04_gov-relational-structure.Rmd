@@ -1,0 +1,89 @@
+---
+title: "04_gov-relational-structure"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+us_gov_azindex <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_azindex_clean")
+
+# query the users_gh data (table of all github users) 
+us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+# query the users_gh data (table of all github users) 
+us_gov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+```
+
+```{r}
+branch_order <- c("executive office of the president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
+                  "independent agency", "independent board, commission, committee", "quasi-official governmental institution", "none")
+agency_order <- c("white house", "u.s. house of representatives", "u.s. senate", "supreme court of the u.s.",
+                  "u.s. department of agriculture", "u.s. department of commerce", 
+                  "u.s. department of defense", "u.s. department of education", "u.s. department of energy",
+                  "u.s. department of health and human services", "u.s. department of homeland security",
+                  "u.s. department of housing and urban development", "u.s. department of justice",
+                  "u.s. department of labor", "u.s. department of state", "u.s. department of the interior",
+                  "u.s. department of the treasury", "u.s. department of transportation", "u.s. department of veterans affairs")
+#subagency_order <- c()
+
+us_gov_azindex %>% 
+  rename(original = agency) %>% wrangle_gov() %>% rename(agency_o = original, unique_institution = institution) %>% 
+  rename(original = gov_branch) %>% wrangle_gov() %>% 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(legislative)\\b"), 
+                                 yes = "u.s. legislative branch", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(judicial)\\b"), 
+                                 yes = "u.s. judicial branch", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(quasi-official)\\b"), 
+                                 yes = "quasi-official governmental institution", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(none)\\b"), 
+                                 yes = "independent agency", no = institution)) %>%
+  rename(branch_o = original, branch = institution) %>% 
+  rename(original = gov_agency) %>% wrangle_gov() %>% rename(gov_agency_o = original, agency = institution) %>% 
+  rename(original = child_agency) %>% wrangle_gov() %>% rename(child_agency_o = original, subagency = institution) %>% 
+  #mutate(subagency = replace_na(subagency, "none")) %>% 
+  select(branch,  agency, subagency, unique_institution, everything()) %>% 
+  distinct(branch,  agency, subagency, unique_institution, website, other_website) %>%
+  #arrange(match(branch, branch_order), match(agency, agency_order), agency, subagency) 
+  arrange(website) %>% select(website, unique_institution, everything())
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
