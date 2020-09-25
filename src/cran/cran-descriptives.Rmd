@@ -1,0 +1,181 @@
+---
+title: "CRAN"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+# load packages 
+for (pkg in c("tidyverse",  "RPostgreSQL", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195",
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+cran_data <- dbGetQuery(conn, "SELECT * FROM cran.cran_maintainers")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+```{r}
+cran_data
+
+
+
+mtr_emails_clpsd <- cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(maintainer, email) %>% 
+  summarise(emails = paste(email, collapse = ", ")) %>% 
+  arrange(maintainer) %>% 
+  select(maintainer, emails)
+
+mtr_pkgs_clpsd <- cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(maintainer, email) %>% 
+  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
+  arrange(maintainer) %>% 
+  select(maintainer, pkgs)
+
+mtr_pkgs_clpsd %>% 
+  group_by(maintainer) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  arrange(-n)
+
+
+cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(email, maintainer)
+
+
+
+    
+cran_data %>% group_by(email) %>% count() %>% arrange(-n)
+```
+
+###
+```{r}
+fix_emails <- function(data_frame){
+         data_frame %>% 
+         mutate(email = trimws(email),
+         email = tolower(email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(acoppola@college.harvard.edu)\\b"), yes = "acoppola@alumni.harvard.edu", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(aim@stats.uwo.ca)\\b"), yes = "aimcleod@uwo.ca", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(ajesusmp@cibio.up.pt)\\b"), yes = "ajesusmp@ugr.es", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(alberto.arcagni@unimib.it)\\b"), yes = "alberto.arcagni@uniroma1.it", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(alexander.duerre@udo.edu)\\b"), yes = "alexander.duerre@tu-dortmund.de", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(andrew.parnell@ucd.ie)\\b"), yes = "andrew.parnell@mu.ie", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(andy.teucher@gov.bc.ca)\\b"), yes = "andy.teucher@gmail.com", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(arnima@hafro.is)\\b"), yes = "arni.magnusson@ices.dk", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(h.wickham@gmail.com)\\b"), yes = "hadley@rstudio.com", no = email),
+         email = ifelse(test = str_detect(string = email, pattern = "\\b(?i)(myrmecocystus\\+r@gmail.com|sckott@protonmail.com)\\b"), 
+                        yes = "myrmecocystus@gmail.com", no = email)
+         
+         
+         )
+         }
+
+email_count <- cran_data %>% 
+    mutate(email = trimws(email),
+           email = tolower(email)) %>% 
+    fix_emails() %>% 
+    group_by(email) %>% 
+    count() %>% arrange(-n)
+
+cran_data %>%
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         maintainer = tolower(maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(Gabor Csardi)\\b"), yes = "gábor csárdi", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(Jing Xu)\\b"), yes = "xu jing", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(a. c. del re)\\b"), yes = "ac del re", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(artem kelvtsov)\\b"), yes = "artem klevtsov", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(adam h. sparks)\\b"), yes = "adam sparks", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(a.i. mcleod|a. i. mcleod|a.i. mcleod|ian mcleod|ian mcleod)\\b"), 
+                             yes = "adam sparks", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(a. j. muñoz-pajares)\\b"), yes = "a.j. muñoz-pajares", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(alejandro saavedra nieves)\\b"), 
+                             yes = "alejandro saavedra-nieves", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(alessandro.barbiero)\\b"), yes = "alessandro barbiero", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(andrew t. karl)\\b"), yes = "andrew karl", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(alejandro jimenez rico)\\b"), yes = "alejandro jiménez rico", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(ali santacruz)\\b"), yes = "alí santacruz", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(andrew g chapple)\\b"), yes = "andrew chapple", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(andrew m. raim)\\b"), yes = "andrew raim", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(andrew b. collier)\\b"), yes = "andrew collier", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(andrew j barbour)\\b"), yes = "andrew j. barbour", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(kellie j. archer)\\b"), yes = "kellie archer", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(j. a. torres-matallana)\\b"), yes = "j.a. torres-matallana", no = maintainer),
+         maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(aurelie siberchicot)\\b"), yes = "aurélie siberchicot", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(alireza s. mahani)\\b"), yes = "alireza mahani", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(james joseph balamuta)\\b"), yes = "james balamuta", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(karl w broman)\\b"), yes = "karl broman", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, 
+                                            pattern = "\\b(?i)(mohamed el fodil ihaddaden ihaddaden)\\b"), yes = "mohamed el fodil ihaddaden", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(os keyes)\\b"), yes = "oliver keyes", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(greg jefferis)\\b"), yes = "gregory jefferis", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(michael d. sumner)\\b"), yes = "michael sumner", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(michael p. fay)\\b"), yes = "michael fay", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(przemyslaw biecek)\\b"), yes = "przemysław biecek", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(rich fitzjohn)\\b"), yes = "richard g. fitzjohn", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(richie cotton)\\b"), yes = "richard cotton", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(rob j hyndman)\\b"), yes = "rob hyndman", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(paul r. rosenbaum)\\b"), yes = "paul rosenbaum", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(shannon t. holloway)\\b"), yes = "shannon holloway", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(thomas j. leeper)\\b"), yes = "thomas leeper", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(gert.janssenswillen@uhasselt.be)\\b"), 
+                          yes = "gert janssenswillen", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(gregory r. warnes)\\b"), yes = "gregory warnes", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(james m. curran)\\b"), yes = "james curran", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(gergely daroczi)\\b"), yes = "gergely daróczi", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(ian e. fellows)\\b"), yes = "ian fellows", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(kent russell)\\b"), yes = "kenton russell", no = maintainer),
+      
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(b n mandal)\\b"), yes = "baidya nath mandal", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(marcelo s. perlin)\\b"), yes = "marcelo perlin", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(john c nash)\\b"), yes = "john c. nash", no = maintainer),
+      maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(jason p. sinnwell)\\b"), yes = "jason sinnwell", no = maintainer),
+         ) %>%
+  fix_emails() %>% 
+  group_by(maintainer, email) %>% 
+  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
+  select(maintainer, email, pkgs) %>% 
+  full_join(email_count, by = "email") %>% 
+  select(maintainer, email, n, pkgs) %>% 
+  arrange(email, -n) %>% filter(n > 25) #& n > 7)
+# Artem Kelvtsov, 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
