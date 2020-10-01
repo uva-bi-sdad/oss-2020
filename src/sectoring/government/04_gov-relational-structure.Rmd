@@ -11,10 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
-              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+              "RPostgreSQL", "cowplot", "maditr", "janitor")) {library(pkg, character.only = TRUE)}
 
-# load local functions 
-source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
 
 # connect to postgresql to get our data
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -27,18 +26,15 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the users_gh data (table of all github users) 
 us_gov_azindex <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_azindex_clean")
 
-# query the users_gh data (table of all github users) 
-us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
-
-# query the users_gh data (table of all github users) 
-us_gov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
-
 # disconnect from postgresql database 
 dbDisconnect(conn)
 
 ```
 
 ```{r}
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
 branch_order <- c("executive office of the president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
                   "independent agency", "independent board, commission, committee", "quasi-official governmental institution", "none")
 agency_order <- c("white house", "u.s. house of representatives", "u.s. senate", "supreme court of the u.s.",
@@ -50,9 +46,13 @@ agency_order <- c("white house", "u.s. house of representatives", "u.s. senate",
                   "u.s. department of the treasury", "u.s. department of transportation", "u.s. department of veterans affairs")
 #subagency_order <- c()
 
-us_gov_azindex %>% 
-  rename(original = agency) %>% wrangle_gov() %>% rename(agency_o = original, unique_institution = institution) %>% 
-  rename(original = gov_branch) %>% wrangle_gov() %>% 
+us_gov_azindex_dedup <- us_gov_azindex %>% 
+  # clean agency
+  rename(original = agency) %>% 
+  wrangle_gov(original) %>% 
+  rename(agency_o = original, unique_institution = institution) %>% 
+  # clean branch 
+  rename(original = gov_branch) %>% wrangle_gov(original) %>% 
   dt_mutate(institution = ifelse(test = str_detect(string = institution, 
                                  pattern = "\\b(?i)(legislative)\\b"), 
                                  yes = "u.s. legislative branch", no = institution)) %>%
@@ -66,18 +66,142 @@ us_gov_azindex %>%
                                  pattern = "\\b(?i)(none)\\b"), 
                                  yes = "independent agency", no = institution)) %>%
   rename(branch_o = original, branch = institution) %>% 
-  rename(original = gov_agency) %>% wrangle_gov() %>% rename(gov_agency_o = original, agency = institution) %>% 
-  rename(original = child_agency) %>% wrangle_gov() %>% rename(child_agency_o = original, subagency = institution) %>% 
+  # clean gov_agency
+  rename(original = gov_agency) %>% 
+  wrangle_gov(original) %>% 
+  rename(gov_agency_o = original, agency = institution) %>% 
+  # clean child_agency
+  rename(original = child_agency) %>% 
+  wrangle_gov(original) %>% 
+  rename(child_agency_o = original, subagency = institution) %>% 
   #mutate(subagency = replace_na(subagency, "none")) %>% 
-  select(branch,  agency, subagency, unique_institution, everything()) %>% 
-  distinct(branch,  agency, subagency, unique_institution, website, other_website) %>%
-  #arrange(match(branch, branch_order), match(agency, agency_order), agency, subagency) 
-  arrange(website) %>% select(website, unique_institution, everything())
+  select(branch, agency, subagency, unique_institution, everything()) %>% 
+  distinct(branch, agency, subagency, unique_institution, website, other_website) %>%
+  arrange(match(branch, branch_order), match(agency, agency_order), agency, subagency)
+
+us_gov_azindex_dedup <- us_gov_azindex_dedup %>%
+  filter(branch != agency | branch != subagency | branch != unique_institution |
+         agency != subagency | agency != unique_institution | subagency != unique_institution) 
+
+
+us_gov_azindex_dedup <- us_gov_azindex_dedup %>% 
+  # no cases of branch matching agency, subagency or institution
+  # four cases of agency == unique_institution
+  filter(agency != unique_institution | is.na(agency)) 
+
+us_gov_azindex_dedup <- us_gov_azindex_dedup %>% 
+  # three cases of subagency == unique_institution
+  filter(subagency != unique_institution | is.na(subagency)) 
+us_gov_azindex_dedup
 ```
 
+```{r}
+# variations of this code snip were used to deduplicate by recoding variability in the original institutions 
+us_gov_azindex_dedup %>% 
+  #filter(agency == "u.s. agency for global media") %>% 
+  get_dupes(website, branch, agency) %>% 
+  select(website, unique_institution, everything())
+```
 
+### Creating the relational hierarchy 
 
+I am cutting gov level by gov level rather than doing this all column by column. Its more code but (1) I want to validate what I see in each step and (2) I want all of the organizations standardized for use outside of this context. 
 
+```{r}
+# let's start with the white house council 
+wh_br_ag <- us_gov_azindex_dedup %>% 
+  filter(agency == "white house") %>% 
+  select(branch, agency) %>% 
+  rename(from=branch, to=agency) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# then white house to depts 
+wh_ag_inst <- us_gov_azindex_dedup %>% 
+  filter(agency == "white house") %>% 
+  select(agency, unique_institution) %>% 
+  rename(from=agency, to=unique_institution) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# then to the 15 executive departmnents 
+executive_depts <- c("u.s. department of agriculture", "u.s. department of commerce", "u.s. department of defense",
+                     "u.s. department of education", "u.s. department of energy", "u.s. department of health and human services",
+                     "u.s. department of homeland security", "u.s. department of housing and urban development", "u.s. department of justice",
+                     "u.s. department of labor", "u.s. department of the interior", "u.s. department of state",
+                     "u.s. department of the treasury", "u.s. department of transportation", "u.s. department of veterans affairs")
+exec_depts <- us_gov_azindex_dedup %>% 
+  filter(branch == "u.s. executive branch" & agency %in% executive_depts) %>% 
+  select(branch, agency) %>% 
+  rename(from=branch, to=agency) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# then connect the exec depts to their exec subagencies 
+exec_depts_subag <- us_gov_azindex_dedup %>% 
+  filter(branch == "u.s. executive branch" & agency %in% executive_depts) %>% 
+  select(agency, subagency) %>% 
+  rename(from=agency, to=subagency) %>% 
+  drop_na(to) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# then the exec subagencies to unique institutions  
+exec_subag_inst <- us_gov_azindex_dedup %>% 
+  filter(branch == "u.s. executive branch" & agency %in% executive_depts) %>% 
+  select(subagency, unique_institution) %>% 
+  rename(from=subagency, to=unique_institution) %>% 
+  drop_na(from) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# then the exec depts to unique institutions without subagencies
+exec_ag_inst <- us_gov_azindex_dedup %>% 
+  filter(branch == "u.s. executive branch" & agency %in% executive_depts) %>% 
+  filter(is.na(subagency)) %>% 
+  select(agency, unique_institution) %>% 
+  rename(from=agency, to=unique_institution) %>% 
+  filter(is.na(from)) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+# do subagency-institution 
+# do agency-institution when subagency NA  
+ 
+
+wh_exec <- rbind(wh_br_ag, wh_ag_inst, exec_depts, exec_depts_subag, exec_subag_inst, exec_ag_inst)
+wh_exec
+
+wh_exec_g <- graph_from_data_frame(wh_exec, directed = FALSE)
+E(wh_exec_g)$width <- 1+E(wh_exec_g)$weight/5 
+plot(wh_exec_g, 
+     weights="weight",
+     layout=layout_with_lgl, 
+     vertex.color="skyblue", 
+     vertex.size=8, 
+     vertex.label=NA)
+```
+```{r}
+
+# Brandon ==== Just filtered out the self-loop duplicates across the columns. The graph above shows all the WH and Exec Branch ties
+# Next step is standardize all the institution names in exec_subag_inst and exec_ag_inst (starting with the natinonal institute of corrections)
+# Then to map the judicial and legislation branches and then add them back into the network 
+# Once the AZ index is cleaned, you need to add the scraped AZ data, the curated AZ data and the cleaned AZ data to standardizeR and share with Ledia
+
+us_gov_azindex_dedup %>% 
+  filter(!(branch %in% c("executive office of the president","u.s. executive branch")))
+
+us_gov_azindex_dedup %>% 
+  filter(branch %in% c("u.s. legislative branch","u.s. judicial branch")) %>% 
+  rename(from=branch, to=agency) %>% 
+  drop_na(to) %>% 
+  group_by(from, to) %>% 
+  count() %>% rename(weight = n)
+
+us_gov_azindex_dedup %>% 
+  filter(branch %in% c("u.s. legislative branch","u.s. judicial branch"))
+
+```
 
 
 

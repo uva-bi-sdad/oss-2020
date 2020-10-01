@@ -25,3 +25,6 @@ dbWriteTable(conn, name = c(schema = "us_gov_depts" , name = "us_gov_azindex_cle
 
 # disconnect from postgresql database
 dbDisconnect(conn)
+
+
+## GRANT SELECT ON TABLE us_gov_depts.us_gov_azindex_clean TO ncses_oss;

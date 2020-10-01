@@ -8,8 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r cars}
+rm(list = ls())
 # load packages 
-for (pkg in c("tidyverse",  "RPostgreSQL", "maditr")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse",  "RPostgreSQL", "maditr", "dlstats")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get our data
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -25,52 +26,24 @@ cran_data <- dbGetQuery(conn, "SELECT * FROM cran.cran_maintainers")
 # disconnect from postgresql
 dbDisconnect(conn)
 ```
+
 ```{r}
-cran_data
+
+cran_downloads <- cran_stats(c("A3","aaSEA","AATtools","ABACUS","abbyyR","abc","abc.data","ABC.RAP","abcADM","ABCanalysis"))
+cran_downloads
+write_rds(cran_downloads, "cran_download_data.rds")
 
 
+x %>% 
+  
+  group_by(package) %>% 
+  summarize(total = sum(downloads)) %>% 
+  arrange(-total)
 
-mtr_emails_clpsd <- cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(maintainer, email) %>% 
-  summarise(emails = paste(email, collapse = ", ")) %>% 
-  arrange(maintainer) %>% 
-  select(maintainer, emails)
+?cran_stats
 
-mtr_pkgs_clpsd <- cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(maintainer, email) %>% 
-  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
-  arrange(maintainer) %>% 
-  select(maintainer, pkgs)
-
-mtr_pkgs_clpsd %>% 
-  group_by(maintainer) %>% 
-  count() %>% 
-  filter(n > 1) %>% 
-  arrange(-n)
-
-
-cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(email, maintainer)
-
-
-
-    
-cran_data %>% group_by(email) %>% count() %>% arrange(-n)
 ```
 
-###
 ```{r}
 fix_emails <- function(data_frame){
          data_frame %>% 
@@ -89,7 +62,7 @@ fix_emails <- function(data_frame){
                         yes = "myrmecocystus@gmail.com", no = email)
          
          
-         )
+             )
          }
 
 email_count <- cran_data %>% 
@@ -99,7 +72,7 @@ email_count <- cran_data %>%
     group_by(email) %>% 
     count() %>% arrange(-n)
 
-cran_data %>%
+totals <- cran_data %>%
   mutate(maintainer = str_replace_all(maintainer, "\'", ""),
          maintainer = str_replace_all(maintainer, "\"", ""),
          maintainer = trimws(maintainer),
@@ -160,12 +133,83 @@ cran_data %>%
   select(maintainer, email, pkgs) %>% 
   full_join(email_count, by = "email") %>% 
   select(maintainer, email, n, pkgs) %>% 
-  arrange(email, -n) %>% filter(n > 25) #& n > 7)
+  arrange(-n) #%>% filter(n > 1) #) 25 & n > 7)
 # Artem Kelvtsov, 
 ```
+```{r}
+new_totals <- totals %>% 
+  rename(no_of_packages = n) %>% 
+  group_by(no_of_packages) %>% 
+  count() %>% 
+  rename(no_of_maintainers = n) 
+
+sum(new_totals %>% filter(no_of_packages > 4)) 
+
+ggplot(new_totals, aes(no_of_packages, no_of_maintainers)) +
+  geom_point() +
+  #geom_bar(stat="identity") +
+  theme_minimal() 
+
+
+new_totals %>% 
+  ggplot(data=new_totals) +
+  geom_bar(stat="identity", aes(x=no_of_packages, y=no_of_maintainers)) +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() 
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Number of GitHub Users") +
+  ggtitle("Total GitHub Users Classified by Economic Sector")
+
+```
+
+```{r}
+cran_data
 
 
 
+mtr_emails_clpsd <- cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(maintainer, email) %>% 
+  summarise(emails = paste(email, collapse = ", ")) %>% 
+  arrange(maintainer) %>% 
+  select(maintainer, emails)
+
+mtr_pkgs_clpsd <- cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(maintainer, email) %>% 
+  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
+  arrange(maintainer) %>% 
+  select(maintainer, pkgs)
+
+mtr_pkgs_clpsd %>% 
+  group_by(maintainer) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  arrange(-n)
+
+
+cran_data %>% 
+  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
+         maintainer = str_replace_all(maintainer, "\"", ""),
+         maintainer = trimws(maintainer),
+         email = trimws(email)) %>%
+  group_by(email, maintainer)
+
+
+
+    
+cran_data %>% group_by(email) %>% count() %>% arrange(-n)
+```
 
 
 

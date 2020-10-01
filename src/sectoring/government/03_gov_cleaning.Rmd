@@ -9,7 +9,7 @@ editor_options:
 # to add 9/14
 # province of british columbia
 # ufrn.edu.br = Colombian education dept 
-
+# Interpol, United Nations, etc can all have multiple countries attached to organization 
 ```
 
 ```{r setup, include=FALSE}
