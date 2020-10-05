@@ -1,0 +1,88 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# load local functions 
+#source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
+# PULL AZ-INDEX, GOV MANUAL AND LIST OF FFRDCS FROM POSTGRESQL 
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+usgov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
+
+# query the users_gh data (table of all github users) 
+usgov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+usgov_azindex <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_azindex.csv") %>% select(-X1)
+
+```
+
+```{r}
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardize_gov.R")
+
+branch_order <- c("executive office of the president", "u.s. executive branch", "u.s. legislative branch", 
+                  "u.s. judicial branch", "u.s. independent agency", "u.s. international organizations")
+
+usgov_manual_cleaned <- usgov_manual %>% 
+  filter(AgencyName != "The Executive Office of the President") %>% 
+  select(-EntityType, -IntroductoryHeader, -IntroductoryParagraph) %>% 
+  standardize_gov(Category) %>% 
+  rename(man_branch = institution) %>% 
+  standardize_gov(AgencyName) %>% 
+  rename(man_agency = institution) %>%
+  select(man_branch, man_agency, everything()) %>% 
+  arrange(match(man_branch, branch_order), man_agency) 
+
+```
+
+```{r}
+
+test_df <- usgov_manual_cleaned %>% 
+  select(man_branch, man_agency) %>% 
+  rename(institution = man_agency) %>% 
+  full_join(usgov_azindex, by = "institution")
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

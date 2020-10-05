@@ -60,7 +60,7 @@ institutions_hipolabs <- institutions_hipolabs %>%
   # remove duplicates
   distinct() %>%
   # add category for students
-  add_row(institution = "misc. student") %>%
+  add_row(institution = "misc. student", country = NA, domains = NA) %>%
   # add academic/research organizations present in users_gh but not in hipo labs data
   add_row(institution = "university of tokyo", country = "Japan", domains = "u-tokyo.ac.jp") %>%
   add_row(institution = "aalto university", country = "Finland", domains = "aalto.fi") %>%

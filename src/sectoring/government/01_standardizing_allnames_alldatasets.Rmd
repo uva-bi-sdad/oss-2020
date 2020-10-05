@@ -20,7 +20,7 @@ for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode",
               "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
 
 # load local functions 
-source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+#source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
 
 # PULL AZ-INDEX, GOV MANUAL AND LIST OF FFRDCS FROM POSTGRESQL 
 

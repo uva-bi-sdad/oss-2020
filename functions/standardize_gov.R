@@ -21,8 +21,14 @@ standardize_gov <- function(data_frame, institution){
                                                      pattern = "\\b(?i)(federal agency - executive|^executive department sub|executive branch: departments|executive department)\\b"),
                                    yes = "u.s. executive branch", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(executive branch: the president|the executive office of the president)\\b"),
+                                yes = "executive office of the president", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(quasi-official agencies)\\b"),
                                    yes = "u.s. quasi-official agencies", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(Executive Branch: Independent Agencies and Government Corporations)\\b"),
+                                yes = "u.s. independent agency", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(international organizations)\\b"),
                                    yes = "u.s. international organizations", no = institution)) %>%
@@ -52,6 +58,9 @@ standardize_gov <- function(data_frame, institution){
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(congress—u.s. senate|u.s. senate)\\b"),
                                    yes = "u.s. senate", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)((?<!library of )congress)\\b"),
+                                yes = "u.s. congress", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(agriculture department|usda|department of agriculture|u.s. department of agriculture|dept of ag|dept of ag.|dept. of ag.|u.s. dept of ag|us dept of ag|u.s. dept. of ag.|u.s. agriculture department)\\b"),
                                    yes = "u.s. department of agriculture", no = institution)) %>%
@@ -235,8 +244,11 @@ standardize_gov <- function(data_frame, institution){
 
     # offices
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                     pattern = "\\b(?i)(housing office|office of housing)\\b"),
+                                                     pattern = "\\b(?i)((?<!multifamily )housing office|office of housing)\\b"),
                                    yes = "u.s. office of housing", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(Multifamily Housing Office)\\b"),
+                                yes = "u.s. office of multifamily housing", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(compliance, office of|office of compliance)\\b"),
                                    yes = "u.s. office of compliance", no = institution)) %>%
@@ -309,9 +321,6 @@ standardize_gov <- function(data_frame, institution){
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(office of surface mining, reclamation and enforcement|office of surface mining reclamation and enforcement)\\b"),
                                    yes = "u.s. office of surface mining reclamation and enforcement", no = institution)) %>%
-    mutate(institution = ifelse(test = str_detect(string = institution,
-                                                     pattern = "\\b(?i)(office of science and technology)\\b"),
-                                   yes = "u.s. office of science and technology policy", no = institution)) %>%
 
     # courts
     mutate(institution = ifelse(test = str_detect(string = institution,
@@ -428,7 +437,7 @@ standardize_gov <- function(data_frame, institution){
                                                      pattern = "\\b(?i)(african development bank|african development foundation|nigeria trust fund|banque africaine de développement|banque africaine de dveloppement|banque africaine de developpement)\\b"),
                                    yes = "african development bank group", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                     pattern = "\\b(?i)(national institute of peace)\\b"),
+                                                     pattern = "\\b(?i)(national institute of peace|institute of peace)\\b"), #az-specific
                                    yes = "u.s. institute of peace", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(national institute of health|nih|national institutes of health)\\b"),
@@ -719,7 +728,7 @@ standardize_gov <- function(data_frame, institution){
                                                   pattern = "\\b(?i)(power administrations)\\b"),
                                 yes = "u.s. power administrations", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                  pattern = "\\b(?i)(science office|office of science)\\b"),
+                                                  pattern = "\\b(?i)(science office|office of science(?! and technology policy))\\b"),
                                 yes = "u.s. office of science", no = institution)) %>%
 
     mutate(institution = ifelse(test = str_detect(string = institution,
@@ -738,7 +747,7 @@ standardize_gov <- function(data_frame, institution){
                                                   pattern = "\\b(?i)(federal emergency management agency|FEMA)\\b"),
                                 yes = "u.s. federal emergency management agency", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                  pattern = "\\b(?i)(joint military intelligence college|national defense intelligence college)\\b"),
+                                                  pattern = "\\b(?i)(joint military intelligence college|national defense intelligence college|national intelligence university)\\b"),
                                 yes = "u.s. national intelligence university", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                   pattern = "\\b(?i)(joint program executive office for chemical and biological defense|JPEO-CBRND)\\b"),
@@ -1094,9 +1103,8 @@ standardize_gov <- function(data_frame, institution){
                                                   pattern = "\\b(?i)(veterans health administration)\\b"),
                                 yes = "u.s. veterans health administration", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-           pattern = "\\b(?i)(health resources administration|health services administration|hrsa|health resources and services administration)\\b"),
+    pattern = "\\b(?i)((?<!mental )health resources administration|(?<!mental )health services administration|hrsa|health resources and services administration)\\b"),
                                 yes = "u.s. health resources and services administration", no = institution)) %>%
-
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                   pattern = "\\b(?i)(architect of the capitol)\\b"),
                                 yes = "u.s. architect of the capitol", no = institution)) %>%
@@ -1143,13 +1151,255 @@ standardize_gov <- function(data_frame, institution){
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                   pattern = "\\b(?i)(migratory bird conservation commission)\\b"),
                                 yes = "u.s. migratory bird conservation commission", no = institution)) %>%
+    ##
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(legal services corporation)\\b"),
+                                yes = "u.s. legal services corporation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national constitution center)\\b"),
+                                yes = "u.s. national constitution center", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national gallery of art)\\b"),
+                                yes = "u.s. national gallery of art", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(state justice institute)\\b"),
+                                yes = "u.s. state justice institute", no = institution)) %>%
+    ##
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(advisory council on historic preservation)\\b"),
+                                yes = "u.s. advisory council on historic preservation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(citizens' stamp advisory committee)\\b"),
+                                yes = "u.s. citizens' stamp advisory committee", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(coordinating council on juvenile justice and delinquency prevention)\\b"),
+                                yes = "u.s. coordinating council on juvenile justice and delinquency prevention", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal financial institutions examination council)\\b"),
+                                yes = "u.s. federal financial institutions examination council", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal geographic data committee)\\b"),
+                                yes = "u.s. federal geographic data committee", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal laboratory consortium for technology transfer)\\b"),
+                                yes = "u.s. federal laboratory consortium for technology transfer", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal library and information center committee)\\b"),
+                                yes = "u.s. federal library and information center committee", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(interagency alternative dispute resolution working group)\\b"),
+                                yes = "u.s. interagency alternative dispute resolution working group", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(interagency committee for the management of noxious and exotic weeds)\\b"),
+                                yes = "u.s. interagency committee for the management of noxious and exotic weeds", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(interagency council on homelessness)\\b"),
+                                yes = "u.s. interagency council on homelessness", no = institution)) %>%
 
 
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(chief acquisition officers council)\\b"),
+                                yes = "u.s. chief acquisition officers council", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(chief financial officers council)\\b"),
+                                yes = "u.s. chief financial officers council", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(chief human capital officers council)\\b"),
+                                yes = "u.s. chief human capital officers council", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(chief information officers council)\\b"),
+                                yes = "u.s. chief information officers council", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(commission on civil rights)\\b"),
+                                yes = "u.s. commission on civil rights", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(consumer product safety commission)\\b"),
+                                yes = "u.s. consumer product safety commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(defense nuclear facilities safety board)\\b"),
+                                yes = "u.s. defense nuclear facilities safety board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(equal employment opportunity commission)\\b"),
+                                yes = "u.s. equal employment opportunity commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(farm credit administration)\\b"),
+                                yes = "u.s. farm credit administration", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal deposit insurance corporation)\\b"),
+                                yes = "u.s. federal deposit insurance corporation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal election commission)\\b"),
+                                yes = "u.s. federal election commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal labor relations authority)\\b"),
+                                yes = "u.s. federal labor relations authority", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal maritime commission)\\b"),
+                                yes = "u.s. federal maritime commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal mine safety and health review commission)\\b"),
+                                yes = "u.s. federal mine safety and health review commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal reserve system)\\b"),
+                                yes = "u.s. federal reserve system", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal retirement thrift investment board)\\b"),
+                                yes = "u.s. federal retirement thrift investment board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal trade commission|FTC)\\b"),
+                                yes = "u.s. federal trade commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(institute of museum and library services)\\b"),
+                                yes = "u.s. institute of museum and library services", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(merit systems protection board)\\b"),
+                                yes = "u.s. merit systems protection board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(institute of museum and library services)\\b"),
+                                yes = "u.s. institute of museum and library services", no = institution)) %>%
 
 
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national aeronautics and space administration)\\b"),
+                                yes = "u.s. national aeronautics and space administration", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national capital planning commission)\\b"),
+                                yes = "u.s. national capital planning commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national credit union administration)\\b"),
+                                yes = "u.s. national credit union administration", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national endowment for the arts)\\b"),
+                                yes = "u.s. national endowment for the arts", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national endowment for the humanities)\\b"),
+                                yes = "u.s. national endowment for the humanities", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national labor relations board)\\b"),
+                                yes = "u.s. national labor relations board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national mediation board)\\b"),
+                                yes = "u.s. national mediation board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national science foundation|BMI)\\b"),
+                                yes = "u.s. national science foundation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national transportation safety board)\\b"),
+                                yes = "u.s. national transportation safety board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(peace corps)\\b"),
+                                yes = "u.s. peace corps", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(pension benefit guaranty corporation)\\b"),
+                                yes = "u.s. pension benefit guaranty corporation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(postal regulatory commission)\\b"),
+                                yes = "u.s. postal regulatory commission", no = institution)) %>%
 
 
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(privacy and civil liberties oversight board)\\b"),
+                                yes = "u.s. privacy and civil liberties oversight board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(railroad retirement board)\\b"),
+                                yes = "u.s. railroad retirement board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(selective service system)\\b"),
+                                yes = "u.s. selective service system", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(small business administration)\\b"),
+                                yes = "u.s. small business administration", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(social security administration)\\b"),
+                                yes = "u.s. social security administration", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(surface transportation board)\\b"),
+                                yes = "u.s. surface transportation board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal interagency committee on education)\\b"),
+                                yes = "u.s. federal interagency committee on education", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(marine mammal commission)\\b"),
+                                yes = "u.s. marine mammal commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national council on disability)\\b"),
+                                yes = "u.s. national council on disability", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national park foundation)\\b"),
+                                yes = "u.s. national park foundation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(northern border regional commission)\\b"),
+                                yes = "u.s. northern border regional commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(nuclear waste technical review board)\\b"),
+                                yes = "u.s. nuclear waste technical review board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(social security advisory board)\\b"),
+                                yes = "u.s. social security advisory board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(indian arts and crafts board)\\b"),
+                                yes = "u.s. indian arts and crafts board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal financing bank)\\b"),
+                                yes = "u.s. federal financing bank", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(indoor air quality)\\b"),
+                                yes = "u.s. indoor air quality", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national pesticide information center)\\b"),
+                                yes = "u.s. national pesticide information center", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(wireless telecommunications bureau)\\b"),
+                                yes = "u.s. wireless telecommunications bureau", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(office of investor education and advocacy)\\b"),
+                                yes = "u.s. office of investor education and advocacy", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal executive boards)\\b"),
+                                yes = "u.s. federal executive boards", no = institution)) %>%
 
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(armed forces retirement home)\\b"),
+                                yes = "u.s. armed forces retirement home", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal accounting standards advisory board)\\b"),
+                                yes = "u.s. federal accounting standards advisory board", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(holocaust memorial museum)\\b"),
+                                yes = "u.s. holocaust memorial museum", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(joint board for the enrollment of actuaries)\\b"),
+                                yes = "u.s. joint board for the enrollment of actuaries", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(joint fire science program)\\b"),
+                                yes = "u.s. joint fire science program", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(meat and poultry hotline)\\b"),
+                                yes = "u.s. meat and poultry hotline", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national indian gaming commission)\\b"),
+                                yes = "u.s. national indian gaming commission", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national interagency fire center)\\b"),
+                                yes = "u.s. national interagency fire center", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(judicial panel on multidistrict litigation)\\b"),
+                                yes = "u.s. judicial panel on multidistrict litigation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(joint congressional committee on inaugural ceremonies)\\b"),
+                                yes = "u.s. joint congressional committee on inaugural ceremonies", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(farm credit system insurance corporation)\\b"),
+                                yes = "u.s. farm credit system insurance corporation", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(federal judicial center)\\b"),
+                                yes = "u.s. federal judicial center", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(national foundation on the arts and the humanities)\\b"),
+                                yes = "u.s. national foundation on the arts and the humanities", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(overseas private investment corporation)\\b"),
+                                yes = "u.s. overseas private investment corporation", no = institution)) %>%
 
 
     data_frame

@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+oss_topics <- dbGetQuery(conn, "SELECT * FROM gh.sna_topic_summary")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+```
+```{r}
+oss_topics %>% 
+  distinct(slug, topic_name) %>% 
+  arrange(topic_name)
+```
+
+```{r}
+oss_topics %>% distinct(slug) # 20,160
+oss_topics %>% distinct(login) # 31,957
+oss_topics %>% distinct(topic_name) # 23,645
+```
+
+```{r}
+topic_counts <- oss_topics %>% 
+  distinct(slug, topic_name) %>% 
+  count(topic_name) %>%
+  arrange(-n)
+
+write_csv(topic_counts, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/topic_counts.csv")
+```  
+
+```{r}
+oss_topics %>% 
+  distinct(slug, topic_name) %>% 
+  count(topic_name) %>%
+  arrange(-n) %>% 
+  slice_max(n, n = 20) %>%   
+  mutate(topic_name = fct_reorder(topic_name, n, .desc = TRUE)) %>%
+  ggplot(aes(topic_name, n)) +
+  geom_bar(stat="identity") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+ 
+  ggtitle("Most Prominent Topics in GHTorrent dataset")
+``` 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
