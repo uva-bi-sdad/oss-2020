@@ -15,8 +15,8 @@ usgov_to_graph <- function(df){
   branch_subagency <- df %>%
     filter(is.na(agency)) %>%
     drop_na(subagency) %>%
-    select(branch, unique_institution) %>%
-    rename(from = branch, to = unique_institution) %>%
+    select(branch, institution) %>%
+    rename(from = branch, to = institution) %>%
     group_by(from, to) %>%
     count() %>% rename(weight = n)
 
@@ -31,8 +31,8 @@ usgov_to_graph <- function(df){
   # branch to institution (when agency = NA)
   branch_institution <- df %>%
     filter(is.na(agency)) %>%
-    select(branch, unique_institution) %>%
-    rename(from = branch, to = unique_institution) %>%
+    select(branch, institution) %>%
+    rename(from = branch, to = institution) %>%
     group_by(from, to) %>%
     count() %>% rename(weight = n)
 
@@ -40,16 +40,16 @@ usgov_to_graph <- function(df){
   agency_institution <- df %>%
     drop_na(agency) %>%
     filter(is.na(subagency)) %>%
-    select(agency, unique_institution) %>%
-    rename(from = agency, to = unique_institution) %>%
+    select(agency, institution) %>%
+    rename(from = agency, to = institution) %>%
     group_by(from, to) %>%
     count() %>% rename(weight = n)
 
   # subagency to institution
   subagency_institution <- df %>%
     drop_na(subagency) %>%
-    select(subagency, unique_institution) %>%
-    rename(from = subagency, to = unique_institution) %>%
+    select(subagency, institution) %>%
+    rename(from = subagency, to = institution) %>%
     group_by(from, to) %>%
     count() %>% rename(weight = n)
 

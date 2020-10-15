@@ -21,14 +21,17 @@ standardize_gov <- function(data_frame, institution){
                                                      pattern = "\\b(?i)(federal agency - executive|^executive department sub|executive branch: departments|executive department)\\b"),
                                    yes = "u.s. executive branch", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                  pattern = "\\b(?i)(executive branch: the president|the executive office of the president)\\b"),
-                                yes = "executive office of the president", no = institution)) %>%
+                                                  pattern = "\\b(?i)(executive branch: the president|the executive office of the president|executive office of the president)\\b"),
+                                yes = "executive office of the u.s. president", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                     pattern = "\\b(?i)(quasi-official agencies)\\b"),
-                                   yes = "u.s. quasi-official agencies", no = institution)) %>%
+                                                     pattern = "\\b(?i)(quasi-official agencies|u.s. quasi-official agencies)\\b"),
+                                   yes = "u.s. quasi-official governmental institution", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                  pattern = "\\b(?i)(Executive Branch: Independent Agencies and Government Corporations)\\b"),
+                                                  pattern = "\\b(?i)(Executive Branch: Independent Agencies and Government Corporations|independent agency)\\b"),
                                 yes = "u.s. independent agency", no = institution)) %>%
+    mutate(institution = ifelse(test = str_detect(string = institution,
+                                                  pattern = "\\b(?i)(independent board, commission, committee)\\b"),
+                                yes = "u.s. independent board, commission, committee", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(international organizations)\\b"),
                                    yes = "u.s. international organizations", no = institution)) %>%
@@ -324,8 +327,8 @@ standardize_gov <- function(data_frame, institution){
 
     # courts
     mutate(institution = ifelse(test = str_detect(string = institution,
-    pattern = "\\b(?i)(supreme court of the u.s.|the supreme court|supreme court of the us|the supreme court of the u.s.|SCOTUS)\\b"),
-                                   yes = "u.s. supreme court", no = institution)) %>%
+    pattern = "\\b(?i)(supreme court of the u.s.|the supreme court|supreme court of the us|the supreme court of the u.s.|SCOTUS|u.s. supreme court)\\b"),
+                                   yes = "supreme court of the u.s.", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                      pattern = "\\b(?i)(court of appeals for veterans claims)\\b"),
                                    yes = "u.s. court of appeals for veterans claims", no = institution)) %>%
