@@ -33,8 +33,8 @@ dbDisconnect(conn)
 # load local functions 
 source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardize_gov.R")
 
-branch_order <- c("executive office of the president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
-                  "independent agency", "independent board, commission, committee", "quasi-official governmental institution", "none")
+branch_order <- c("executive office of the u.s. president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
+                  "u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution", "none")
 agency_order <- c("white house", "u.s. house of representatives", "u.s. senate", "supreme court of the u.s.",
                   "u.s. department of agriculture", "u.s. department of commerce", 
                   "u.s. department of defense", "u.s. department of education", "u.s. department of energy",
@@ -60,10 +60,10 @@ us_gov_azindex_dedup <- us_gov_azindex %>%
                                  yes = "u.s. judicial branch", no = institution)) %>%
   dt_mutate(institution = ifelse(test = str_detect(string = institution, 
                                  pattern = "\\b(?i)(quasi-official)\\b"), 
-                                 yes = "quasi-official governmental institution", no = institution)) %>%
+                                 yes = "u.s. quasi-official governmental institution", no = institution)) %>%
   dt_mutate(institution = ifelse(test = str_detect(string = institution, 
                                  pattern = "\\b(?i)(none)\\b"), 
-                                 yes = "independent agency", no = institution)) %>%
+                                 yes = "u.s. independent agency", no = institution)) %>%
   rename(branch_o = original, branch = institution) %>% 
   # clean gov_agency
   rename(original = gov_agency) %>% 
@@ -235,7 +235,7 @@ plot(all_branches_g,
 # from those with agency and subagency info:
 # connects branch to agency 
 ind_br_ag <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   drop_na(agency) %>% 
   select(branch, agency) %>% 
   rename(from = branch, to = agency) %>% 
@@ -244,7 +244,7 @@ ind_br_ag <- us_gov_azindex_dedup %>%
 
 # connects agency to subagency 
 ind_ag_subag <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   drop_na(agency, subagency) %>% 
   select(agency, subagency) %>% 
   rename(from = agency, to = subagency) %>% 
@@ -253,7 +253,7 @@ ind_ag_subag <- us_gov_azindex_dedup %>%
 
 # connects subagency to institution 
 ind_sub_inst <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   select(subagency, unique_institution) %>% 
   drop_na(subagency) %>% 
   rename(from = subagency, to = unique_institution) %>% 
@@ -263,7 +263,7 @@ ind_sub_inst <- us_gov_azindex_dedup %>%
 
 # for those with no agency info
 ind_br_inst <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   filter(is.na(agency)) %>% 
   select(branch, unique_institution) %>% 
   rename(from = branch, to = unique_institution) %>% 
@@ -290,7 +290,7 @@ plot(azindex_graph,
 ```{r}
 # connects agency to subagency 
 ind_ag_subag <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   drop_na(agency, subagency) %>% 
   select(agency, subagency) %>% 
   rename(from = agency, to = subagency) %>% 
@@ -299,7 +299,7 @@ ind_ag_subag <- us_gov_azindex_dedup %>%
 
 # connects subagency to institution 
 ind_sub_inst <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   select(subagency, unique_institution) %>% 
   drop_na(subagency) %>% 
   rename(from = subagency, to = unique_institution) %>% 
@@ -309,7 +309,7 @@ ind_sub_inst <- us_gov_azindex_dedup %>%
 
 # for those with no agency info
 ind_br_inst <- us_gov_azindex_dedup %>% 
-  filter(branch %in% c("independent agency", "independent board, commission, committee", "quasi-official governmental institution")) %>% 
+  filter(branch %in% c("u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution")) %>% 
   filter(is.na(agency)) %>% 
   select(branch, unique_institution) %>% 
   rename(from = branch, to = unique_institution) %>% 
@@ -416,7 +416,7 @@ us_gov_vertices <- us_gov_vertices %>%
 usgov_azindex <- us_gov_azindex_dedup %>% 
   rename(institution = unique_institution) 
 
-write_csv(usgov_azindex, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_azindex.csv", row.names = FALSE)
+write.csv(usgov_azindex, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_azindex.csv", row.names = FALSE)
 save(usgov_azindex, file = "/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_azindex.rda")
 
 ```
@@ -428,15 +428,15 @@ source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_edgelist.R")
 source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_nodelist.R")
 source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_graph.R")
 
-test_edgelist <- usgov_to_edgelist(us_gov_azindex_dedup)
+test_edgelist <- usgov_to_edgelist(usgov_azindex)
 test_nodelist <- usgov_to_nodelist(test_edgelist)
-test_graph <- usgov_to_graph(us_gov_azindex_dedup)
+test_graph <- usgov_to_graph(usgov_azindex)
 
 plot(usgov_network, 
      weights="weight",
      layout=layout_with_fr, 
      vertex.color="skyblue", 
-     vertex.size=8, 
+     vertex.size=4, 
      vertex.label=NA)
 
 ```
