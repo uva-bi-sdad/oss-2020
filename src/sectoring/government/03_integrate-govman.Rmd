@@ -30,7 +30,7 @@ usgov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
 # disconnect from postgresql database 
 dbDisconnect(conn)
 
-usgov_azindex <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_azindex.csv") %>% 
+usgov_azindex <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/usgov_azindex.csv") %>% 
   mutate(az_index = 1) 
 
 ```
@@ -143,6 +143,7 @@ usgov_azindex_cleaned %>%
 
 usgov_azindex_cleaned
 ```
+
 ```{r}
 # load local functions 
 source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_edgelist.R")
@@ -160,8 +161,8 @@ plot(test_graph,
      vertex.size=4, 
      vertex.label=NA)
 
-write.csv(usgov_azindex_merged, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_az_man.csv", row.names = FALSE)
-save(usgov_azindex_merged, file = "/sfs/qumulo/qhome/kb7hp/oss-2020/data/usgov_az_man.rda")
+write.csv(usgov_azindex_merged, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/usgov_az_man.csv", row.names = FALSE)
+
 ```
 
 

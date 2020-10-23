@@ -725,7 +725,7 @@ standardize_gov <- function(data_frame, institution){
                                                   pattern = "\\b(?i)(unified combatant commands)\\b"),
                                 yes = "u.s. unified combatant commands", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
-                                                  pattern = "\\b(?i)(national laboratories)\\b"),
+                                                  pattern = "\\b(?i)((?<!sandia )national laboratories)\\b"),
                                 yes = "u.s. national laboratories", no = institution)) %>%
     mutate(institution = ifelse(test = str_detect(string = institution,
                                                   pattern = "\\b(?i)(power administrations)\\b"),
