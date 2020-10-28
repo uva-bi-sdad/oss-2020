@@ -1,5 +1,4 @@
 
-
 library(RPostgreSQL)
 
 conn <- dbConnect(drv = PostgreSQL(),
