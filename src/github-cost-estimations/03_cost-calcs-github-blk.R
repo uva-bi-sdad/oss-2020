@@ -1,5 +1,8 @@
-
+rm(list = ls())
 library(RPostgreSQL)
+library(dplyr)
+library(data.table)
+library(tidyverse)
 
 conn <- dbConnect(drv = PostgreSQL(),
                   dbname = "sdad",
@@ -8,13 +11,119 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-login_info <- dbGetQuery(conn, "SELECT * FROM gh.cost_logins_w_sector_info;")
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.desc_repos_summary;")
-counts_by_login <- dbGetQuery(conn, "SELECT slug, login, commits, additions, deletions FROM gh.cost_by_login;")
-annual_counts_by_login <- dbGetQuery(conn, "SELECT * FROM gh.cost_commits_summary;")
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_repo_0919;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
+
+counts_by_repo <- as.data.table(counts_by_repo)
+
+#COST BASED ON Additions
+counts_by_repo[,adds_wo_gross := round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+counts_by_repo[,adds_w_gross := round(27797.24 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+
+#COST BASED ON Additions + Deletions
+counts_by_repo[,sum_wo_gross := round(22094.19 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+counts_by_repo[,sum_w_gross := round(27797.24 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+
+#COST BASED ON Additions - Deletions
+counts_by_repo[,net_wo_gross := round(22094.19 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+counts_by_repo[,net_w_gross := round(27797.24 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+
+counts_by_repo %>% count() # 7751144 repos
+counts_by_repo %>% distinct(slug) %>% count() # 7751144
+
+# check all the dimensions to make sure
+dim(counts_by_repo)
+length(na.omit(counts_by_repo$w_gross))
+dim(counts_by_repo[which(counts_by_repo$net_adds_dels >= 0),])
+
+counts_by_repo <- counts_by_repo %>%
+  arrange(-adds_wo_gross)
+
+write_csv(counts_by_repo, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/cost_by_repo_all.csv")
+
+counts_by_repo_top <- counts_by_repo %>%
+  top_n(adds_wo_gross, n = 100)
+
+write_csv(counts_by_repo_top, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/cost_by_repo_top.csv")
+
+# sum of the four cols
+adds_wo_gross <- sum(counts_by_repo$adds_wo_gross)
+adds_w_gross <- sum(counts_by_repo$adds_w_gross)
+sum_wo_gross <- sum(counts_by_repo$sum_wo_gross)
+sum_w_gross <- sum(na.omit(counts_by_repo$sum_w_gross))
+net_wo_gross <- sum(na.omit(counts_by_repo$net_wo_gross))
+net_w_gross <- sum(na.omit(counts_by_repo$net_w_gross))
+measure <- c("adds_wo_gross", "adds_w_gross", "sum_wo_gross", "sum_w_gross", "net_wo_gross", "net_w_gross")
+cost <- c(adds_wo_gross, adds_w_gross, sum_wo_gross, sum_w_gross, net_wo_gross, net_w_gross)
+df <- data.frame(measure = measure, cost = cost)
+
+write_csv(df, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/cost_by_repo_totals.csv")
+
+
+##################
+
+#rm(list = ls())
+rm(counts_by_repo_top)
+rm(conn)
+
+library(RPostgreSQL)
+library(dplyr)
+library(data.table)
+library(maditr)
+library(tidytable)
+
+conn <- dbConnect(drv = PostgreSQL(),
+                  dbname = "sdad",
+                  host = "10.250.124.195",
+                  port = 5432,
+                  user = Sys.getenv("db_userid"),
+                  password = Sys.getenv("db_pwd"))
+
+
+counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919;")
+
+# disconnect from postgresql database
+dbDisconnect(conn)
+
+counts_by_sector <- as.data.table(counts_by_sector)
+
+head(counts_by_sector %>% arrange(slug))
+dim(cost_by_login)
+table(counts_by_sector$sector)
+
+counts_by_sector <- counts_by_sector %>%
+  dt_mutate(sector_fraction = sector_additions / repo_additions * 100) %>%
+  dt_arrange(slug)
+
+check <- counts_by_sector %>%
+  select(slug, sector_additions, repo_additions, sector_fraction) %>%
+  filter(sector_additions > repo_additions) %>%
+  arrange(slug)
+
+counts_by_repo %>%
+  filter(slug == "0-Eclipse-0/-InBox-")
+
+
+
+  round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2) # where additions is total additions at the repo level
+
+
+
+
+#COST BASED ON Additions
+counts_by_sector[,wo_gross_adds := round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+counts_by_sector[,w_gross_adds := round(27797.24 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+
+#COST BASED ON Additions + Deletions
+counts_by_repo[,wo_gross_sum := round(22094.19 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+counts_by_repo[,w_gross_sum := round(27797.24 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+
+#COST BASED ON Additions - Deletions
+counts_by_repo[,wo_gross_net := round(22094.19 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+counts_by_repo[,w_gross_net := round(27797.24 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+
 
 
 
@@ -35,6 +144,16 @@ length(unique(db_tbls$slug))
 db_tbls_rm70 <- db_tbls[which(db_tbls$year != "1970"),]
 db_tbls_70 <- db_tbls[which(db_tbls$year == "1970"),]
 length(unique(db_tbls_70$slug))
+
+
+
+
+
+
+
+
+
+
 
 
 library(data.table)
