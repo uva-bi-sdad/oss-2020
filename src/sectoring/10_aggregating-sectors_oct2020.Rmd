@@ -33,7 +33,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the users_gh data from github data 
 github_users <- dbGetQuery(conn, "SELECT login, email, company FROM gh.ctrs_extra;")
 
-academic <- dbGetQuery(conn, "SELECT login, is_academic FROM gh.sna_ctr_academic;")
+academic <- dbGetQuery(conn, "SELECT login, institution, country, is_academic FROM gh.sna_ctr_academic;")
 government <- dbGetQuery(conn, "SELECT login, is_gov FROM gh.sna_ctr_gov;")
 nonprofit <- dbGetQuery(conn, "SELECT login, is_nonprofit FROM gh.sna_ctr_nonprofits;")
 
@@ -162,51 +162,365 @@ business <- combined_user_data %>%
 combined_user_data <- combined_user_data %>% 
   full_join(business, by = "login") %>% 
   mutate(is_business = replace_na(is_business, 0))
-```
 
-```{r}
-
-new_gov_string <- "\\b(?i)(university of)\\b"
-
-new_academic_string <- "\\b(?i)(frederick national laboratory for cancer research)\\b"
-
-combined_user_data %>% 
-  count(is_gov)
-  mutate(is_gov = ifelse(test = str_detect(string = is_gov, pattern = new_gov_string), yes = 1, no = is_gov)) %>% 
-  mutate(is_gov = ifelse(test = str_detect(string = is_gov, pattern = new_gov_string), yes = 1, no = is_gov))
-
-```
-
-```{r}
 classified_users <- combined_user_data %>% 
   rename(is_null = is_nullvalue) %>% 
   mutate(is_null = ifelse(is.na(company), 1, is_null)) %>% 
   mutate(sector = ifelse(test = str_detect(string = is_null, pattern = "1"), yes = "null/missing", no = "not classified"),
-         sector = ifelse(test = str_detect(string = is_nonprofit, pattern = "1"), yes = "non-profit", no = sector),
+         
          sector = ifelse(test = str_detect(string = is_household, pattern = "1"), yes = "household", no = sector),
          # this corrects for a bunch of false-positive government that should be academia 
          sector = ifelse(test = str_detect(string = is_gov, pattern = "1"), yes = "government", no = sector),
+         sector = ifelse(test = str_detect(string = is_nonprofit, pattern = "1"), yes = "non-profit", no = sector),
          sector = ifelse(test = str_detect(string = is_business, pattern = "1"), yes = "business", no = sector),
          sector = ifelse(test = str_detect(string = new_academic, pattern = "1"), yes = "academic", no = sector),
          sector = ifelse(test = str_detect(string = is_academic, pattern = "1"), yes = "academic", no = sector)) %>% 
-  select(login, email, company_original, company, sector, is_academic, is_business, is_gov, is_household, is_nonprofit, is_null)
+  select(login, email, company_original, company, sector, is_academic, is_business, is_gov, is_household, is_nonprofit, is_null) %>% 
+  distinct()
 
 classified_users %>% 
   count(sector)
 
-#check %>% 
-  #filter(sector == "government")
-#  filter(is_gov == 1 & sector != "government") %>% 
-#  filter(!grepl("university|berkeley|georgia tech|rochester institute of technology|california institute of technology", company))
-
-classified_users %>% 
-  filter(sector == "not classified") %>% 
-  count(company) %>% 
-  arrange(-n)
-# next create is_missing column 
-# add in international column 
-# join the github commit data 
 ```
+```{r}
+
+total_users <- classified_users %>% count()
+
+final_counts <- classified_users %>% 
+  group_by(sector) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  mutate(percentage = round(n / total_users$n, 3),
+         perc_wo_missing = round(n / 436534, 3),
+         perc_classified = round(n / 174613, 3)) %>% 
+  rename(totals = n); final_counts
+final_counts$perc_wo_missing[1] <- NA
+final_counts$perc_classified[1] <- NA
+final_counts$perc_classified[2] <- NA
+final_counts
+
+positions <- c("business", "academic","houshold","government", "non-profit")
+
+sum(final_counts$totals) - 1706873 
+sum(final_counts$totals) - 1706873 - 261921
+
+100 - 79.6
+100 - 12.2
+
+
+```
+
+```{r, fig.height = 7, fig.width=12}
+select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+                           totals = as.numeric(c("115105", "51980", "4093", "2687", "748")),
+                           percentages = as.numeric(c("65.9", "29.8", "2.3", "1.5", "0.04")))
+
+ggplot(data=select_counts, aes(x=sector, y=totals)) +
+  geom_bar(stat="identity", fill = "#232D4B") +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        plot.subtitle = element_text(size=15, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Total GitHub Users within Sector",
+       subtitle = "Using GHTorrent Data") +
+  ggtitle("GitHub Users Classified by Economic Sector")
+```
+
+```{r, fig.height = 7, fig.width=12}
+select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+                           totals = as.numeric(c("115105", "51980", "4093", "2687", "748")),
+                           percentages = as.numeric(c("65.9", "29.8", "2.3", "1.5", "0.04")))
+
+ggplot(data=select_counts, aes(x=sector, y=percentages)) +
+  geom_bar(stat="identity", fill = "#232D4B") +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        plot.subtitle = element_text(size=15, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Percentage of GitHub Users within Sector",
+       subtitle = "Using GHTorrent Data") +
+  ggtitle("GitHub Users Classified by Economic Sector")
+```
+
+```{r}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+desc_ctrs_summary <- dbGetQuery(conn, "SELECT * FROM gh.desc_ctrs_summary;")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+commits_user_data <- desc_ctrs_summary %>% 
+  left_join(classified_users, by = "login") %>% 
+  distinct()
+
+commits_user_data <- commits_user_data %>% 
+  mutate(sector = replace_na(sector, "null/missing"),
+         is_academic = replace_na(is_academic, 0),
+         is_business = replace_na(is_business, 0),
+         is_gov = replace_na(is_gov, 0),
+         is_household = replace_na(is_household, 0),
+         is_nonprofit = replace_na(is_nonprofit, 0),
+         is_null = replace_na(is_null, 0))
+
+commits_user_data %>% 
+  count(sector) %>% 
+  arrange(-n)
+
+total_users_commits <- commits_user_data %>% count()
+sum(total_users_commits$n) - 2872158 
+sum(total_users_commits$n) - 2872158 - 261921
+388455 / sum(total_users_commits$n)
+
+final_counts_commit_data <- commits_user_data %>% 
+  group_by(sector) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  mutate(percentage = round(n / total_users_commits$n, 3),
+         perc_wo_missing = round(n / 436534, 3),
+         perc_classified = round(n / 174613, 3)) %>% 
+  rename(totals = n); final_counts
+final_counts_commit_data$perc_wo_missing[1] <- NA
+final_counts_commit_data$perc_classified[1] <- NA
+final_counts_commit_data$perc_classified[2] <- NA
+final_counts_commit_data
+```
+```{r, fig.height = 7, fig.width=12}
+new_select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+                           totals = as.numeric(c("114044", "51343", "4037", "2665", "744")),
+                           percentages = as.numeric(c("65.3", "29.4", "2.3", "1.5", "0.04")))
+
+ggplot(data=new_select_counts, aes(x=sector, y=totals)) +
+  geom_bar(stat="identity", fill = "#232D4B") +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        plot.subtitle = element_text(size=15, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Total GitHub Users within Sector",
+       subtitle = "After Combining GHTorrent & GitHub Commit Data") +
+  ggtitle("GitHub Users Classified by Economic Sector")
+```
+```{r, fig.height = 7, fig.width=12}
+new_select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+                           totals = as.numeric(c("114044", "51343", "4037", "2665", "744")),
+                           percentages = as.numeric(c("65.3", "29.4", "2.3", "1.5", "0.04")))
+
+ggplot(data=new_select_counts, aes(x=sector, y=percentages)) +
+  geom_bar(stat="identity", fill = "#232D4B") +
+  scale_x_discrete(limits = positions) +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.45),
+        plot.subtitle = element_text(size=15, hjust = 0.45),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.title =element_text(size=18),
+        axis.title.x=element_blank()) +
+  labs(y = "Percentage of GitHub Users within Sector",
+       subtitle = "After Combining GHTorrent & GitHub Commit Data") +
+  ggtitle("GitHub Users Classified by Economic Sector")
+```
+
+```{r}
+academic_commit_data <- commits_user_data %>% 
+  left_join(academic %>% select(login, institution, country), by = "login") %>% 
+  filter(sector == "academic") 
+
+academic_commit_data %>% 
+  select(login, email, institution, company_original) %>% 
+  filter(is.na(institution))
+
+academic_counts_sorted_top20 <- academic_commit_data %>% 
+  drop_na(institution) %>% 
+  filter(institution != "misc. student") %>% 
+  count(institution) %>% 
+  top_n(n, n = 20) %>% 
+  arrange(n)
+academic_counts_sorted_top20
+```
+```{r, by_country, fig.height = 9, fig.width=12, warning = FALSE,  echo=FALSE, message=FALSE}
+
+# rename top universities to make labels shorter
+top_universities <- academic_counts_sorted_top20 %>%
+  add_column(shorter = c("Northeastern University",
+                         "Duke University",
+                         
+                         "Shanghai Jiao Tong Univ.",
+                         "Zhejiang University",
+                         "University of Pennsylvania",
+                         "Tsinghua University",
+                         "Georgia Tech",
+                         "Harvard University",
+                         "Columbia University",
+                          "University of Texas",
+                         "University of Illinois",
+                        
+                         "University of Michigan",
+                         "New York University",
+                         "Cornell University",
+                         "Univ. of Southern California",
+                         "University of Washington",
+                         "Carnegie Mellon University",
+                         "Stanford University",
+                         "MIT",
+                         "UC Berkeley")) %>%
+  add_column(country = c("United States",
+                         "United States",
+                         "China",
+                         "China",
+                         "United States",
+                         
+                         "China",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States",
+                         "United States")) %>%
+  #inner_join(academic_counts_sorted) %>%
+  arrange(n) %>%
+  dt_mutate(shorter = factor(shorter, levels = shorter))
+
+
+ggplot(top_universities, aes(color = country)) +
+  geom_point(aes(x = shorter, y = n), size = 4) +
+  geom_segment(data = top_universities, mapping = aes(x = shorter, xend = shorter, y = 0, yend = n), size = 1) +
+  scale_color_manual(labels = c("China", "United States"), 
+                     values = c("#0E879C", "#E57200")) +
+  labs(x = "University", y = "Number of Users", color = "Country", title = "Top-20 Universities by Number of Users") +
+  #theme_classic() +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.title = element_text(size=23, hjust = 0.5),
+        axis.title =element_text(size=18),
+        axis.title.y =element_blank(),
+        axis.text.x = element_text(size = 18),
+        axis.text.y = element_text(size = 16),
+        legend.title=element_text(size=18, hjust = 0.5, face="bold"),
+        legend.text=element_text(size=18),
+        legend.position = c(.9, .1),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.margin = margin(6, 6, 6, 6),
+        legend.background = element_rect(fill="white",
+                                  size=0.5, linetype="solid", 
+                                  colour ="black")) 
+```
+
+```{r}
+academic_counts <- academic_commit_data %>% 
+  drop_na(country) %>% 
+  filter(institution != "misc. student") %>% 
+  count(country) %>% 
+  arrange(-n)
+
+```
+
+```{r, countries_users, fig.height = 9, fig.width = 12, warning = FALSE, echo=FALSE}
+#country_frequency_institutions <- academic_counts %>% group_by(country) %>% count(wt = n(), sort = TRUE)
+
+country_frequency_users <- academic_counts %>% 
+  filter(country != "NA") %>% 
+  mutate(country = tolower(country)) %>% 
+  dt_mutate(country = str_replace_all(country, "korea, republic of", "south korea")) %>%
+  dt_mutate(country = str_replace_all(country, "russian federation", "russia")) %>%
+  group_by(country) %>% 
+  count(sort = TRUE, wt = n)
+country_users_sorted <- country_frequency_users %>%
+  arrange(n) %>%
+  dt_mutate(country = factor(country, levels = country))
+
+continent <- c("united states" = "north america",
+               "china" = "asia",
+               "united kingdom" = "europe",
+               "canada" = "north america",
+               "germany" = "europe",
+               "india" = "asia",
+               "brazil" = "south america",
+               "japan" = "asia",
+               "south korea" = "asia",
+               "switzerland" = "europe",
+               "australia" = "australia",
+               
+               "netherlands" = "europe",
+               "sweden" = "europe",
+               "france" = "europe",
+               "colombia" = "south america",
+               "spain" = "europe",
+               "singapore" = "asia",
+               "russia" = "europe",
+               "taiwan" = "asia",
+               "italy" = "europe",
+               "hong kong" = "asia") %>% rev()
+
+ggplot(country_users_sorted[(.N-20):.N, ], aes(color = continent)) +
+  geom_point(aes(x = country, y = n), size = 4) +
+  geom_segment(data = country_users_sorted[(.N-20):.N, ], mapping = aes(x = country, xend = country, y = 0, yend = n), size = 1) +
+  #scale_color_manual(values = c("asia" = "#E57200", "australia" = "#375758", "europe" = "#485C99", "north america" = "#12B2CE", "south america" = "#D7E029")) +
+  theme_minimal() +
+  labs(x = "Country", y = "Number of Users", title = "Top-20 Countries by Users in Academic Sector") +
+  theme(plot.title = element_text(size=23, hjust = 0.5),
+        axis.title =element_text(size=18),
+        axis.title.y =element_blank(),
+        axis.text = element_text(size = 18),
+        legend.title=element_text(size=18, hjust = 0.5, face="bold"),
+        legend.text=element_text(size=18),
+        legend.position = c(.9, .1),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.margin = margin(6, 6, 6, 6),
+        legend.background = element_rect(fill="white",
+                                  size=0.5, linetype="solid", 
+                                  colour ="black")) +
+  scale_y_log10() +
+  coord_flip() +
+  scale_color_manual(labels=c("asia",  "australia", "europe", "north america","south america"),
+                     values=c("#232D4B", "#99BDAD",  "#E57200", "#0E879C", "#D9E12B")) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # now that they are all classified, we will add in the country_code information and write this back to the database 
 
@@ -225,9 +539,7 @@ city_codes <- dbGetQuery(conn, "SELECT raw_login AS login, raw_city FROM gh.sna_
 
 # disconnect from postgresql database 
 dbDisconnect(conn)
-```
 
-```{r}
 geo_info <- country_codes %>% 
   left_join(city_codes, by = "login") %>% 
   rename(city_info = raw_city)
@@ -235,9 +547,12 @@ geo_info <- country_codes %>%
 classified_users <- classified_users %>% 
   left_join(geo_info, by = "login") %>% 
   rename(company_cleaned = company) %>% 
-  select(login, sector, city_info, cc_multiple, cc_di, cc_viz, raw_location, email, company_original, company_cleaned)
+  select(login, sector, city_info, cc_multiple, cc_di, cc_viz, raw_location, email, company_original, company_cleaned) %>% 
+  distinct()
 
+classified_users
 ```
+
 
 ```{r}
 # connect to postgresql to get our data
@@ -265,7 +580,7 @@ dbDisconnect(conn)
 
 ```{r}
 combined_user_data %>% 
-  filter(is_academic == 1 | new_academic == 1) %>% 
+  filter(is_academic == 1) %>% 
   count()
 
 combined_user_data %>% 

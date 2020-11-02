@@ -8,7 +8,9 @@ SELECT A.login, A.repos, A.commits, A.additions, A.deletions,
 	   B.raw_location, B.email, B.company_original, B.company_cleaned
 FROM gh.desc_ctrs_summary A
 LEFT JOIN gh.sna_ctr_sectors B
-ON A.login = B.login );
+ON A.login = B.login
+ORDER BY login
+);
 
 --get the counts
 WITH new_table AS (

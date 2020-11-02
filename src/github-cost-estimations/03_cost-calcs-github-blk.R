@@ -62,7 +62,8 @@ df <- data.frame(measure = measure, cost = cost)
 write_csv(df, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/cost_by_repo_totals.csv")
 
 
-##################
+##############################################################################################################################
+
 
 #rm(list = ls())
 rm(counts_by_repo_top)
@@ -87,20 +88,25 @@ counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919;")
 # disconnect from postgresql database
 dbDisconnect(conn)
 
-counts_by_sector <- as.data.table(counts_by_sector)
-
 head(counts_by_sector %>% arrange(slug))
 dim(cost_by_login)
 table(counts_by_sector$sector)
 
-counts_by_sector <- counts_by_sector %>%
-  dt_mutate(sector_fraction = sector_additions / repo_additions * 100) %>%
+repos_sectors_joined <- counts_by_sector %>%
+  dt_select(-repo_additions) %>%
+  left_join(counts_by_repo, by = "slug")
+
+repos_sectors_joined <- repos_sectors_joined %>%
+  dt_rename(repo_additions = additions) %>%
+  dt_mutate(sector_fraction = sector_additions / repo_additions * 100,
+            sector_cost_wo_gross = sector_fraction * adds_wo_gross,
+            sector_cost_w_gross = sector_fraction * adds_w_gross) %>%
   dt_arrange(slug)
 
-check <- counts_by_sector %>%
-  select(slug, sector_additions, repo_additions, sector_fraction) %>%
-  filter(sector_additions > repo_additions) %>%
-  arrange(slug)
+repos_sectors_joined %>%
+  dt_select(slug, sector_additions, repo_additions, sector_fraction) %>%
+  dt_filter(sector_additions > repo_additions) %>%
+  dt_arrange(slug)
 
 counts_by_repo %>%
   filter(slug == "0-Eclipse-0/-InBox-")
