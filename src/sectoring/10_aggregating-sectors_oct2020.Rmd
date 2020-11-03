@@ -362,7 +362,6 @@ academic_counts_sorted_top20
 top_universities <- academic_counts_sorted_top20 %>%
   add_column(shorter = c("Northeastern University",
                          "Duke University",
-                         
                          "Shanghai Jiao Tong Univ.",
                          "Zhejiang University",
                          "University of Pennsylvania",
@@ -372,7 +371,6 @@ top_universities <- academic_counts_sorted_top20 %>%
                          "Columbia University",
                           "University of Texas",
                          "University of Illinois",
-                        
                          "University of Michigan",
                          "New York University",
                          "Cornell University",
@@ -387,7 +385,6 @@ top_universities <- academic_counts_sorted_top20 %>%
                          "China",
                          "China",
                          "United States",
-                         
                          "China",
                          "United States",
                          "United States",
@@ -439,7 +436,7 @@ academic_counts <- academic_commit_data %>%
   filter(institution != "misc. student") %>% 
   count(country) %>% 
   arrange(-n)
-
+academic_counts
 ```
 
 ```{r, countries_users, fig.height = 9, fig.width = 12, warning = FALSE, echo=FALSE}
@@ -498,7 +495,7 @@ ggplot(country_users_sorted[(.N-20):.N, ], aes(color = continent)) +
         legend.background = element_rect(fill="white",
                                   size=0.5, linetype="solid", 
                                   colour ="black")) +
-  scale_y_log10() +
+  scale_y_log10(breaks = c(100, 1000, 10000),  labels = c("100", "1000", "10000")) +
   coord_flip() +
   scale_color_manual(labels=c("asia",  "australia", "europe", "north america","south america"),
                      values=c("#232D4B", "#99BDAD",  "#E57200", "#0E879C", "#D9E12B")) 

@@ -2,6 +2,7 @@ rm(list = ls())
 library(RPostgreSQL)
 library(tidyverse)
 library(tidytable)
+library(data.table)
 
 conn <- dbConnect(drv = PostgreSQL(),
                   dbname = "sdad",
@@ -37,13 +38,14 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919_alt;")
+counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
 
 table(counts_by_sector$sector)
 
+# joints sector info and the cost estimates at repo level
 repos_sectors_joined <- counts_by_sector %>%
   dt_rename(sector_commits = commits,
             sector_additions = additions,
@@ -52,6 +54,7 @@ repos_sectors_joined <- counts_by_sector %>%
             sector_net = net_adds_dels) %>%
   left_join(counts_by_repo, by = "slug")
 
+# calculates the cost for sectors additions
 repos_sectors_joined <- repos_sectors_joined %>%
   dt_rename(repo_additions = additions,
             repo_deletions = deletions) %>%
@@ -59,17 +62,38 @@ repos_sectors_joined <- repos_sectors_joined %>%
             sector_cost_wo_gross = sector_fraction * adds_wo_gross,
             sector_cost_w_gross = sector_fraction * adds_w_gross) %>%
   dt_arrange(slug, sector, sector_fraction)
+repos_sectors_joined$sector_cost_wo_gross[is.nan(repos_sectors_joined$sector_cost_wo_gross)] <- 0
+repos_sectors_joined$sector_cost_w_gross[is.nan(repos_sectors_joined$sector_cost_w_gross)] <- 0
+
+costs_by_sector <- repos_sectors_joined %>%
+  group_by(sector) %>%
+  summarize(sector_adds_wo_gross = sum(sector_cost_wo_gross),
+            sector_adds_w_gross = sum(sector_cost_w_gross))
+costs_by_sector
+
+sum(counts_by_repo$adds_wo_gross)
+sum(counts_by_repo$adds_w_gross)
+sum(costs_by_sector$sector_adds_wo_gross)
+sum(costs_by_sector$sector_adds_w_gross)
+
+
+
 
 check <- repos_sectors_joined %>%
-  slice_head.(n = 100)
-
-repos_sectors_joined  %>%
-  slice_head.(n = 100) %>%
   group_by(sector) %>%
-  summarize(cost_by_sector = sum(sector_cost_w_gross))
+  summarize(totals = sum(sector_additions)) %>%
+  arrange(-totals) %>%
+  mutate(total_additions = sum(repos_sectors_joined$sector_additions),
+         fraction = (totals / total_additions) * 100)
+check
 
+double_check <- check %>% filter(country != "missing")
+sum(double_check$fraction)
 
+sum(repos_geo_joined$geo_additions)
+sum(repos_geo_joined$repo_additions)
 
+repos_geo_joined
 
 
 
