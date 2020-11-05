@@ -55,6 +55,10 @@ repos_geo_joined <- cost_academic_geo %>%
             geo_net = net_adds_dels) %>%
   left_join(counts_by_repo, by = "slug")
 
+check <- repos_geo_joined %>%
+  slice_head.(100)
+
+
 # calculates the cost for sectors additions
 repos_geo_joined <- repos_geo_joined %>%
   dt_rename(repo_additions = additions,
@@ -62,12 +66,12 @@ repos_geo_joined <- repos_geo_joined %>%
   dt_mutate(geo_fraction = round(geo_additions / repo_additions, 3),
             geo_cost_wo_gross = geo_fraction * adds_wo_gross,
             geo_cost_w_gross = geo_fraction * adds_w_gross) %>%
-  dt_arrange(slug, country, geo_fraction)
+  dt_arrange(slug, inst_country, geo_fraction)
 repos_geo_joined$geo_cost_wo_gross[is.nan(repos_geo_joined$geo_cost_wo_gross)] <- 0
 repos_geo_joined$geo_cost_w_gross[is.nan(repos_geo_joined$geo_cost_w_gross)] <- 0
 
 costs_by_country <- repos_geo_joined %>%
-  group_by(country) %>%
+  group_by(sector, inst_country) %>%
   summarize(geo_adds_wo_gross = sum(geo_cost_wo_gross),
             geo_adds_w_gross = sum(geo_cost_w_gross)) %>%
   arrange(-geo_adds_wo_gross); costs_by_country
