@@ -1,9 +1,7 @@
---this code creates the year by year (yxy) edgelist from the github data from start (2008) until the end of 2019
-
-CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_yxy AS (
+-- 2008-2018
+CREATE MATERIALIZED VIEW gh.sna_ctr_edgelist_0818 AS (
 SELECT ctr1,
        ctr2,
-       YEAR,
        COUNT(*) AS repo_wts
 FROM
   (SELECT A.slug,
@@ -12,7 +10,7 @@ FROM
           B.login AS ctr2,
           A.commits
    FROM
-     (SELECT slug,    --START OF THE JOIN
+     (SELECT slug,
              YEAR,
              login,
              COUNT(*) AS commits
@@ -40,13 +38,9 @@ FROM
          WHERE login IS NOT NULL) A
       GROUP BY slug,
                YEAR,
-               login) B ON A.slug = B.slug   -- END OF THE JOIN
+               login) B ON A.slug = B.slug
    AND A.year = B.year
-   WHERE A.login <= B.login) A  --- corrected code for self-loops
-GROUP BY YEAR,
-         ctr1,
+   WHERE A.login <= B.login AND B.YEAR > 2007 AND B.YEAR < 2019) A
+GROUP BY ctr1,
          ctr2
 );
-
-CREATE INDEX sna_ctr_edgelist_ctr1_idx ON gh.sna_ctr_edgelist (ctr1);
-CREATE INDEX sna_ctr_edgelist_ctr2_idx ON gh.sna_ctr_edgelist (ctr2);
