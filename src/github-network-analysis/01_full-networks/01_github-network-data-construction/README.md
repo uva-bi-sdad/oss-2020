@@ -5,15 +5,15 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
 
 GitHub file structure
 
-├── `01_full-ctr-network-construction-dev.Rmd`
-    ├── This details the network construction development process. This is redundant with the SQL files.
-├── 02_sna_ctr_edgelist_xyx.sql 
-    ├── This creates the edgelist for collaboration in a year-by-year fashion. 
-├── 03_sna_ctr_nodelist_xyx.sql 
-    ├── This pulls out all of the distinct nodes from the edgelist and creates a nodelist. 
-├── 04_sna_ctr_edgelist_08.sql 
-├── 03_sna_ctr_edgelist_08.sql
-├── median property value 
+    ├── 01_full-ctr-network-construction-dev.Rmd
+        ├── This details the network construction development process. This is redundant with the SQL files.
+    ├── 02_sna_ctr_edgelist_xyx.sql 
+        ├── This creates the edgelist for collaboration in a year-by-year fashion. 
+    ├── 03_sna_ctr_nodelist_xyx.sql 
+        ├── This pulls out all of the distinct nodes from the edgelist and creates a nodelist. 
+    ├── 04_sna_ctr_edgelist_08.sql 
+    ├── 03_sna_ctr_edgelist_08.sql
+    ├── median property value 
 
     
 PostgreSQL database structure 
