@@ -8,17 +8,17 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
     01_full-github-network
     ├── 01_github-network-data-construction
         ├── 01_full-ctr-network-construction-dev.Rmd
-            ├── This details the network construction development process (redundant with the SQL files).
+            - This details the network construction development process (redundant with the SQL files).
         ├── GitHub year-by-year networks 
             ├── sna_ctr_edgelist_xyx.sql 
-                ├── This creates the edgelist for collaboration in a year-by-year fashion. 
+                - This creates the edgelist for collaboration in a year-by-year fashion. 
             ├── sna_ctr_nodelist_xyx.sql 
-                ├── This pulls out all of the distinct nodes from the edgelist and creates a nodelist. 
+                - This pulls out all of the distinct nodes from the edgelist and creates a nodelist. 
         ├── GitHub cumulative networks 
             ├── sna_ctr_edgelist_08.sql : sna_ctr_edgelist_0819.sql
-                ├── These files write edgelists for cumulative activity from 2008-2019.
+                - These files write edgelists for cumulative activity from 2008-2019.
             ├── sna_ctr_nodelist_full.sql
-                ├── This pulls out all of the distinct nodes from the 2008-2019 edgelist and creates a nodelist.
+                - This pulls out all of the distinct nodes from the 2008-2019 edgelist and creates a nodelist.
     ├── 02_full-ctr-analysis
     ├── 03_full-repo-analysis
     
