@@ -3,17 +3,6 @@ title: "New Repos Created Over Time (GitHub, 2008-2018)"
 output: html_document
 ---
 
-```{sql}
-
-CREATE MATERIALIZED VIEW gh.desc_repos_info AS (
-SELECT slug, spdx, created
-FROM gh.repos
-WHERE status = 'DONE'
-ORDER BY slug ASC
-);
-
-```
-
 ```{r, include=FALSE}
 rm(list = ls())
 
