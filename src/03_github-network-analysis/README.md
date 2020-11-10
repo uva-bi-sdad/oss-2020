@@ -5,17 +5,17 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
 
 ### TO-DO: 
 
-1. Finish running full network analyses over time 
-    a. Convert code to function in `R` and run `slurm` 
-2. Re-run international network analyses 
-    a. Match users to country code through academic institutions  
-    b. Match users to countries based on email 
-    c. Match users to countries based on cities 
-    d. Re-run international networks based on these updates
-    e. Convert code to function in `R` and run `slurm` 
-3. Run repo networks using the `slurm` procedure
-4. Run academic academic networks using the `slurm` procedure 
-5. Run company networks using the `slurm` procedure
+- Finish running full network analyses over time 
+  - Convert code to function in `R` and run `slurm` 
+- Re-run international network analyses 
+  - Match users to country code through academic institutions  
+  - Match users to countries based on email 
+  - Match users to countries based on cities 
+  - Re-run international networks based on these updates
+  - Convert code to function in `R` and run `slurm` 
+- Run repo networks using the `slurm` procedure
+- Run academic academic networks using the `slurm` procedure 
+- Run company networks using the `slurm` procedure
 
 ### GitHub file structure: 
 

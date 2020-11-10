@@ -5,26 +5,26 @@ This folder is the more mature version of the OSS Data Science for Public Good 2
 
 ### TO-DO: 
 
-1. Consolidate documentation 
-    a. Go back to DSPG spreadsheet and document additional datasources
-    b. Go back to OSS planning sheet and merge data information 
-2. Supplement geo user data  
-    a. Match users to country code through academic institutions  
-    b. Match users to countries based on email 
-    c. Match users to countries based on cities 
-    d. Re-run international networks based on these updates 
-3. Finish within government sectoring
-    a. Finalize standardizeR functions 
-    b. Conduct user matching to government institutions 
-    c. Fix false positions from Crystal's initial gov sectoring 
-4. Match contributors to companies 
-    a. Match on Forbes data 
-    b. Match on US companies dataset 
-    c. Match on [Lazer et al.'s government strucuture data](http://gov-structure.kimalbrecht.com/) 
-    d. Match on [US Spending database](https://files.usaspending.gov/database_download/) 
-5. Improve nonprofit sector
-    a. Fix false negatives from Crystal's initial gov sectoring 
-    b. Match based on [IRS nonprofit dataset](https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf)
+- Consolidate documentation 
+  - Go back to DSPG spreadsheet and document additional datasources
+  - Go back to OSS planning sheet and merge data information 
+- Supplement geo user data  
+  - Match users to country code through academic institutions  
+  - Match users to countries based on email 
+  - Match users to countries based on cities 
+  - Re-run international networks based on these updates 
+- Finish within government sectoring
+  - Finalize standardizeR functions 
+  - Conduct user matching to government institutions 
+  - Fix false positions from Crystal's initial gov sectoring 
+- Match contributors to companies 
+  - Match on Forbes data 
+  - Match on US companies dataset 
+  - Match on [Lazer et al.'s government strucuture data](http://gov-structure.kimalbrecht.com/) 
+  - Match on [US Spending database](https://files.usaspending.gov/database_download/) 
+- Improve nonprofit sector
+  - Fix false negatives from Crystal's initial gov sectoring 
+  - Match based on [IRS nonprofit dataset](https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf)
 
 ### GitHub file structure: 
 
