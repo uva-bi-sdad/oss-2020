@@ -2,10 +2,7 @@
 
 Update: 11/10/2020
 
-This repository contains the 2020 analyses of GitHub data conducted by [a team at the University of Virginia's Biocomplexity Institute](https://github.com/uva-bi-sdad/OSS-Research-Website). 
-
-SDAD Team: Gizem Korkmaz, José Bayoán Santiago Calderón, Brandon Kramer, Aaron Schroder, and Sallie Keller
-NCSES Team: Carol Robbins and Ledia Gucci 
+This repository contains the 2020 analyses of GitHub data conducted by [a team at the University of Virginia's Biocomplexity Institute](https://github.com/uva-bi-sdad/OSS-Research-Website). This team includes Gizem Korkmaz, José Bayoán Santiago Calderón, Brandon Kramer, Aaron Schroder, and Sallie Keller in UVA's Social and Decision Analytics Division and Carol Robbins and Ledia Gucci at the US National Center for Science and Engineering Statistics. 
 
 The structure for this repo is outlined below, but this repo also links to several sibling repos: [GHOSS.jl](https://github.com/uva-bi-sdad/GHOSS.jl), [CRAN](https://github.com/uva-bi-sdad/CRAN), [standardizeR](https://github.com/brandonleekramer/standardizeR), and [DSPG/oss-2020](https://github.com/DSPG-Young-Scholars-Program/dspg20oss).
 
