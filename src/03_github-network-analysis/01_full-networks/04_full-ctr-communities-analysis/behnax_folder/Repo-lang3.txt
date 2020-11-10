@@ -1,0 +1,100 @@
+noproject Fake entry to indicate a previously existing but currently absent repo None None None
+ruote-kit RESTful wrapper for ruote workflow engine ruby 108686 2015-11-05 01:15:59
+ruote-kit RESTful wrapper for ruote workflow engine javascript 45415 2015-11-05 01:15:59
+ruote-kit RESTful wrapper for ruote workflow engine ruby 108686 2016-03-05 12:23:34
+ruote-kit RESTful wrapper for ruote workflow engine javascript 45415 2016-03-05 12:23:34
+ruote-kit RESTful wrapper for ruote workflow engine ruby 108686 2016-10-11 14:11:32
+ruote-kit RESTful wrapper for ruote workflow engine javascript 45415 2016-10-11 14:11:32
+ruote-kit RESTish wrapper for ruote workflow engine ruby 110925 2015-10-27 09:43:21
+ruote-kit RESTish wrapper for ruote workflow engine javascript 2196 2015-10-27 09:43:21
+ruote-kit RESTish wrapper for ruote workflow engine ruby 110925 2016-02-24 07:33:16
+ruote-kit RESTish wrapper for ruote workflow engine javascript 2196 2016-02-24 07:33:16
+ruote-kit RESTish wrapper for ruote workflow engine ruby 110925 2016-10-11 14:11:27
+ruote-kit RESTish wrapper for ruote workflow engine javascript 2196 2016-10-11 14:11:27
+basemap  c++ 4398590 2015-10-29 14:50:46
+basemap  c 732941 2015-10-29 14:50:46
+basemap  python 500272 2015-10-29 14:50:46
+basemap  shell 336359 2015-10-29 14:50:46
+basemap  ruby 124452 2015-10-29 14:50:46
+basemap  php 79087 2015-10-29 14:50:46
+basemap  cmake 42712 2015-10-29 14:50:46
+basemap  makefile 796 2015-10-29 14:50:46
+basemap  batchfile 470 2015-10-29 14:50:46
+basemap  c++ 4392807 2016-02-27 10:44:13
+basemap  python 401376 2016-02-27 10:44:13
+basemap  shell 336359 2016-02-27 10:44:13
+basemap  ruby 124452 2016-02-27 10:44:13
+basemap  c 120158 2016-02-27 10:44:13
+basemap  php 79087 2016-02-27 10:44:13
+basemap  cmake 42712 2016-02-27 10:44:13
+basemap  makefile 796 2016-02-27 10:44:13
+basemap  batchfile 470 2016-02-27 10:44:13
+basemap  c++ 4392807 2016-10-11 14:11:27
+basemap  makefile 2182317 2016-10-11 14:11:27
+basemap  python 405625 2016-10-11 14:11:27
+basemap  shell 336273 2016-10-11 14:11:27
+basemap  ruby 124452 2016-10-11 14:11:27
+basemap  c 120158 2016-10-11 14:11:27
+basemap  php 79087 2016-10-11 14:11:27
+basemap  cmake 42712 2016-10-11 14:11:27
+basemap  m4 23773 2016-10-11 14:11:27
+basemap  batchfile 470 2016-10-11 14:11:27
+basemap  None None None
+cocos2d-x Port of cocos2d-iphone in C++ c 24018256 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ c++ 7745754 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ objective-c 1059036 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ python 169419 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ javascript 134628 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ java 114091 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ ruby 100803 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ shell 34439 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ lua 21312 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ perl 9341 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ visual basic 2912 2015-10-22 17:36:58
+cocos2d-x Port of cocos2d-iphone in C++ c 24018256 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ c++ 7745754 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ objective-c 1059036 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ python 169419 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ javascript 134628 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ java 114091 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ ruby 100803 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ shell 34439 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ lua 21312 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ perl 9341 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ visual basic 2912 2016-02-16 23:56:14
+cocos2d-x Port of cocos2d-iphone in C++ c 24018256 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ c++ 7745754 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ objective-c 1059036 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ python 169419 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ javascript 134628 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ java 114091 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ ruby 100803 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ shell 34439 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ lua 21312 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ perl 9341 2016-10-11 14:20:27
+cocos2d-x Port of cocos2d-iphone in C++ visual basic 2912 2016-10-11 14:20:27
+cocos2d-x cocos2d-x for C++ c++ 29853038 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ lua 3456106 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ javascript 3356313 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ c 1147818 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ objective-c++ 508405 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ objective-c 467663 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ java 347870 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ cmake 276952 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ makefile 88390 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ glsl 74237 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ python 48851 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ shell 7576 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ html 7005 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ batchfile 120 2015-10-18 08:40:42
+cocos2d-x cocos2d-x for C++ c++ 29696029 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ javascript 3720484 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ lua 3485290 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ c 1149345 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ objective-c++ 523421 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ objective-c 477720 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ java 363968 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ cmake 280201 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ makefile 90595 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ glsl 78253 2016-02-11 05:16:59
+cocos2d-x cocos2d-x for C++ python 49908 2016-02-11 05:16:59

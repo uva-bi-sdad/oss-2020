@@ -1,0 +1,181 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# load local functions 
+#source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
+# us gov manual data (cleaned)
+
+usgov_az_man <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/usgov_az_man.csv") 
+
+# PULL AZ-INDEX, GOV MANUAL AND LIST OF FFRDCS FROM POSTGRESQL 
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+usgov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+usgov_ffrdcs %>% 
+  select(FFRDC_Name, Sub_Agency) %>% 
+  drop_na(Sub_Agency)
+```
+
+```{r}
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/git/oss-2020/functions/standardize_gov.R")
+
+# we only care about ffrdc_name, agency and subagency 
+# all the other sub_agency cols are emppty 
+usgov_ffrdcs_cleaned <- usgov_ffrdcs %>% 
+  standardize_gov(Agency) %>% 
+  rename(agency = institution) %>% 
+  standardize_gov(Sub_Agency) %>% 
+  rename(subagency = institution) %>% 
+  standardize_gov(Admin_Name) %>%
+  rename(ff_website = Agency_URL,
+         ff_other_website = Sub_Agency_URL,
+         admin = institution,
+         admin_website = Admin_URL) %>%
+  standardize_gov(FFRDC_Name) %>% 
+  select(agency, subagency, institution, ff_website, 
+         ff_other_website, admin, admin_website) %>% 
+  mutate(ffrdcs = 1) %>% 
+  select(-subagency) 
+# removing one duplicate row 
+usgov_ffrdcs_cleaned <- unique(usgov_ffrdcs_cleaned)
+```
+
+```{r}
+  # starting with 485
+joined_dfs <- usgov_az_man %>% 
+  # joining increases to 510
+  full_join(usgov_ffrdcs_cleaned, by = c("institution", "agency")) 
+
+joined_dfs %>% filter(ffrdcs == 1)
+```
+
+
+```{r}
+joined_dfs %>% 
+  janitor::get_dupes(institution) %>%
+  #distinct(institution, .keep_all= TRUE) %>% 
+  select(institution, ffrdcs, everything())
+# we get six dupes that we can manually clean
+
+# manual cleaning of duplicates 
+joined_dfs <- joined_dfs %>% 
+  # fixes dup u.s. defense intelligence agency
+  mutate(check = ifelse(test = str_detect(string = agency, pattern = "\\b(?i)(u.s. defense intelligence agency)\\b"), yes = 1, no = 0)) %>% 
+  mutate(check = replace_na(check, 0)) %>% filter(check != 1) %>% 
+  # fixes dup african development bank 
+  mutate(check = ifelse(test = str_detect(string = gm_email, pattern = "\\b(?i)(afdb@afdb.org)\\b"), yes = 1, no = 0)) %>%
+  mutate(check = replace_na(check, 0)) %>% filter(check != 1) %>% 
+  #merges data from frederick national laboratory for cancer research dups 
+  mutate(branch = ifelse(test = str_detect(string = institution, 
+                                          pattern = "\\b(?i)(frederick national laboratory for cancer research)\\b"), 
+                        yes = "u.s. executive branch", no = branch)) %>%
+  mutate(subagency = ifelse(test = str_detect(string = institution, 
+                                          pattern = "\\b(?i)(frederick national laboratory for cancer research)\\b"), 
+                        yes = "u.s. national laboratories", no = subagency)) %>%
+  mutate(website = ifelse(test = str_detect(string = institution, 
+                                          pattern = "\\b(?i)(frederick national laboratory for cancer research)\\b"), 
+                        yes = "https://frederick.cancer.gov/", no = website)) %>%
+  mutate(az_index = ifelse(test = str_detect(string = institution, 
+                                          pattern = "\\b(?i)(frederick national laboratory for cancer research)\\b"), 
+                        yes = 1, no = az_index)) %>%
+  mutate(check = ifelse(test = str_detect(string = website, pattern = "\\b(?i)(frederick)\\b"), yes = 1, no = 0)) %>%
+  mutate(check = replace_na(check, 0)) %>% filter(check != 1) %>% 
+  mutate(az_index = replace_na(az_index, 0)) %>% 
+  mutate(gov_man = replace_na(gov_man, 0))
+  #janitor::get_dupes(institution) %>%
+  #select(institution, ffrdcs, everything())
+joined_dfs
+```
+
+```{r}
+# final cleaning and merging step 
+ffrdcs_cleaned <- joined_dfs %>% 
+  mutate(ffrdcs = replace_na(ffrdcs, 0)) %>% 
+  select(branch, agency, subagency, admin, institution, az_index, gov_man, ffrdcs, contains("website"), contains("email"), contains("phone"))
+ffrdcs_cleaned %>% filter(ffrdcs == 1)
+# still very messy website info but that can be cleaned in the last step 
+```
+```{r}
+# save the data 
+write.csv(ffrdcs_cleaned, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/azindex_govman_ffrdcs.csv", row.names = FALSE)
+
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/git/oss-2020/functions/usgov_to_edgelist.R")
+source("/sfs/qumulo/qhome/kb7hp/git/oss-2020/functions/usgov_to_nodelist.R")
+source("/sfs/qumulo/qhome/kb7hp/git/oss-2020/functions/usgov_to_graph.R")
+
+test_edgelist <- usgov_to_edgelist(ffrdcs_cleaned)
+
+# the original usgov_to_edgelist function didn't catch admins 
+
+subagency_admin <- ffrdcs_cleaned %>%
+    drop_na(subagency, admin) %>%
+    select(subagency, admin) %>%
+    rename(from = subagency, to = admin) %>%
+    group_by(from, to) %>%
+    count() %>% rename(weight = n)
+
+admin_institution <- ffrdcs_cleaned %>%
+    drop_na(admin) %>%
+    select(admin, institution) %>%
+    rename(from = admin, to = institution) %>%
+    group_by(from, to) %>%
+    count() %>% rename(weight = n)
+
+test_edgelist <- rbind(test_edgelist, subagency_admin, admin_institution)
+test_nodelist <- usgov_to_nodelist(test_edgelist)
+test_graph <- graph_from_data_frame(test_edgelist)
+
+plot(test_graph, 
+     weights="weight",
+     layout=layout_with_fr, 
+     vertex.color="skyblue", 
+     vertex.size=4, 
+     vertex.label=NA)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

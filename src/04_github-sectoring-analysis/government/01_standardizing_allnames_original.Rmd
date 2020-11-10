@@ -1,0 +1,684 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+## Curating Government Datasources for OSS Sectoring and Intra-Sector Accounting 
+
+### Step 1: Ingest all datasources curated by NCSES
+### Step 2: Match all datasources by agency and join other features 
+### Step 3: Create nested dictionary of all aliases, abbreviations and acronyms to replicate matching in other data
+### Step 4: Create relational hierarchy of federal, state, and local government agencies 
+### Step 5: Create visualizations of these outcomes 
+
+```{r loading nodelist data}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# load local functions 
+#source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
+# PULL AZ-INDEX, GOV MANUAL AND LIST OF FFRDCS FROM POSTGRESQL 
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+us_gov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
+
+# query the users_gh data (table of all github users) 
+us_gov_azindex <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_azindex_clean")
+
+# query the users_gh data (table of all github users) 
+us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+# PULL IN CROWDSOURCED AND FFS AGENCIES DATA FROM RIVANNA 
+
+ffs_agencies_list <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/ffs_agencies_list.csv")
+ffs_agencies_timeline <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/ffs_agencies_timeline.csv")
+crowdsourced_gov_github <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/crowdsourced_gov_github.csv") %>% 
+  rename(name = Name, subtier = `Sub-tier`,
+         department = `Department/Independent Agency`)
+
+# PULL IN EMAIL INFORMATION FOR US FEDERAL AND FOREIGN ENTITIES FROM RIVANNA 
+
+# goverment email domains
+#https://home.dotgov.gov/data/ (All .gov domains)
+#The official public list of .gov domains is updated about every two weeks:
+#List of .gov domains - includes all federal, state, interstate, local, and tribal .gov and .fed.us domains.
+email_domain_gov <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/email_domain_federal_full.csv") %>%
+  #read_csv("/sfs/qumulo/qhome/zz3hs/oss-data/email_domain_federal_full.csv") %>%
+  rename("domain_name" = "Domain Name",
+          "domain_type" ="Domain Type") %>%
+  select(-"Security Contact Email", 
+         -"City", -"State") %>%
+  mutate(domain_name = tolower(domain_name), gov = T)
+
+#email domain country
+#https://www.sitepoint.com/complete-list-country-code-top-level-domains/
+email_domain_cc <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/data/email_domain_by_country.csv")
+#remove dot in the email domain
+email_domain_cc$email_domain <- str_replace_all(email_domain_cc$domain, fixed("."), "")
+# add in country_code
+email_domain_cc$country_code <- countrycode(email_domain_cc$country_name, origin = 'country.name', destination = 'iso2c')
+# fix Ascension Island, Czechoslovakia, East Germany, European Union, Netherlands Antilles, SFR Yugoslavia, FR Yugoslavia
+```
+
+```{r}
+# The goal of this portion is to extract all the unique federal agency/dept names
+# from these various datasets, take the variations and standardize them 
+
+az_agency <- distinct(us_gov_azindex, agency) %>% rename(institution = agency)
+az_agency$dataset <- "az_agency"
+az_branch <- distinct(us_gov_azindex, gov_branch) %>% rename(institution = gov_branch)
+az_branch$dataset <- "az_branch"
+az_agency2 <- distinct(us_gov_azindex, gov_agency) %>% rename(institution = gov_agency)
+az_agency2$dataset <- "az_agency2"
+az_child <- distinct(us_gov_azindex, child_agency) %>% rename(institution = child_agency)
+az_child$dataset <- "az_child"
+full_az_list <- rbind(az_agency, az_branch, az_agency2, az_child)
+full_az_list <- full_az_list %>% 
+  mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(Supreme Court of the United States)\\b"), 
+                                 yes = "the supreme court of the u.s.", no = institution))
+rm(az_agency, az_branch, az_agency2, az_child)
+
+ffrdc_names <- distinct(us_gov_ffrdcs, FFRDC_Name) %>% drop_na(FFRDC_Name) %>% rename(institution = FFRDC_Name)
+ffrdc_names$dataset <- "ffrdc_names" #42
+ffrdc_agencies <- distinct(us_gov_ffrdcs, Agency) %>% drop_na(Agency) %>% rename(institution = Agency)
+ffrdc_agencies$dataset <- "ffrdc_agencies" #11
+ffrdc_agencies2 <- distinct(us_gov_ffrdcs, Agency2) %>% drop_na(Agency2) %>% rename(institution = Agency2)
+ffrdc_agencies2$dataset <- "ffrdc_agencies2" #1
+ffrdc_subagencies <- distinct(us_gov_ffrdcs, Sub_Agency) %>% drop_na(Sub_Agency) %>% rename(institution = Sub_Agency)
+ffrdc_subagencies$dataset <- "ffrdc_subagencies" #12
+all_ffrdcs <- rbind(ffrdc_names, ffrdc_agencies, ffrdc_agencies2, ffrdc_subagencies)
+all_ffrdcs <- all_ffrdcs %>% 
+  mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(United States Courts)\\b"), 
+                                 yes = "administrative office of the u.s. courts", no = institution))
+rm(ffrdc_names, ffrdc_agencies, ffrdc_agencies2, ffrdc_subagencies)
+
+usman_cat <- distinct(us_gov_manual, Category)  %>% rename(institution = Category)
+usman_cat$dataset <- "usman_cat"
+usman_agency <- distinct(us_gov_manual, AgencyName)  %>% rename(institution = AgencyName)
+usman_agency$dataset <- "usman_agency"
+
+ffs_agencies <- distinct(ffs_agencies_list, Agency) %>% rename(institution = Agency)
+ffs_agencies$dataset <- "ffs"
+
+crowdsourced_names <- distinct(crowdsourced_gov_github, name) %>% rename(institution = name)
+crowdsourced_names$dataset <- "crowdsourced_names"
+crowdsourced_subtiers <- distinct(crowdsourced_gov_github, subtier) %>% rename(institution = subtier)
+crowdsourced_subtiers$dataset <- "crowdsourced_subtiers"
+crowdsourced_depts <- distinct(crowdsourced_gov_github, department) %>% rename(institution = department)
+crowdsourced_depts$dataset <- "crowdsourced_depts"
+all_crowdsourced <- rbind(crowdsourced_names, crowdsourced_subtiers, crowdsourced_depts)
+rm(crowdsourced_names, crowdsourced_subtiers, crowdsourced_depts)
+
+fed_email_list <- email_domain_gov %>% 
+  filter(domain_type != "City" & domain_type != "County" & 
+         domain_type != "State" & domain_type != "Native Sovereign Nation" &
+         domain_type != "Interstate Agency" & domain_type != "Independent Intrastate Agency") %>% 
+  distinct(Agency) %>% 
+  add_row(Agency = "Federal Agency - Executive") %>%   
+  add_row(Agency = "Federal Agency - Judicial") %>% 
+  add_row(Agency = "Federal Agency - Legislative") %>% 
+  rename(institution = Agency) %>% 
+  mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(U.S. Courts)\\b"), 
+                                 yes = "administrative office of the u.s. courts", no = institution))
+fed_email_list$dataset <- "fed_email_list"
+# bind them all together 
+all_lists <- rbind(full_az_list, all_ffrdcs, usman_cat, usman_agency, ffs_agencies, all_crowdsourced, fed_email_list)
+```
+
+```{r}
+# bind them all together 
+all_lists <- rbind(full_az_list, all_ffrdcs, usman_cat, usman_agency, ffs_agencies, all_crowdsourced, fed_email_list)
+all_lists <- all_lists %>% 
+  ## this code will be implemented below
+  separate(institution, ("institution"), "\\(", extra = "drop") %>% 
+  mutate(institution = tolower(institution),
+         institution = trimws(institution)) %>% 
+  dt_mutate(institution = str_replace_all(institution, "\\b(united states)\\b", "u.s.")) %>%
+  # specific to the us gov manual and a-z index
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(judicial branch|federal agency - judicial)\\b"), 
+                                 yes = "u.s. judicial branch", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(legislative branch|the legislative branch|federal agency - legislative)\\b"), 
+                                 yes = "u.s. legislative branch", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(federal agency - executive|^executive department sub|executive branch: departments|executive department)\\b"), 
+                                 yes = "u.s. executive branch", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(quasi-official agencies)\\b"), 
+                                 yes = "u.s. quasi-official agencies", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(international organizations)\\b"), 
+                                 yes = "u.s. international organizations", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^export bank|export-import bank of the u.s.)\\b"), 
+                                 yes = "export/import bank of the u.s.", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^geological survey)\\b"), 
+                                 yes = "u.s. geological survey", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^fossil energy)\\b"), 
+                                 yes = "u.s. fossil energy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^forest service)\\b"), 
+                                 yes = "u.s. forest service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^senate)\\b"), 
+                                 yes = "u.s. senate", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^mint)\\b"), 
+                                 yes = "u.s. mint", no = institution)) %>%
+  
+  # high level departments (non-defense)
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(congress—u.s. house of representatives|house of representatives)\\b"), 
+                                 yes = "u.s. house of representatives", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(congress—u.s. senate|u.s. senate)\\b"), 
+                                 yes = "u.s. senate", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(agriculture department|usda|department of agriculture|u.s. department of agriculture|dept of ag|dept of ag.|dept. of ag.|u.s. dept of ag|us dept of ag|u.s. dept. of ag.|u.s. agriculture department)\\b"), 
+                                 yes = "u.s. department of agriculture", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of commerce|^commerce department)\\b"), 
+                                 yes = "u.s. department of commerce", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of education|doed)\\b"), 
+                                 yes = "u.s. department of education", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of energy|doe|energy department)\\b"), 
+                                 yes = "u.s. department of energy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+  pattern = "\\b(?i)(department of health and human services|hhs|u.s. department of health & human services|health and human services department)\\b"), 
+                                 yes = "u.s. department of health and human services", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of homeland security|dhs|homeland security department)\\b"), 
+                                 yes = "u.s. department of homeland security", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of housing and urban development|hud|housing and urban development, department of)\\b"), 
+                                 yes = "u.s. department of housing and urban development", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of justice|doj|justice department)\\b"), 
+                                 yes = "u.s. department of justice", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of labor|dol|labor department)\\b"), 
+                                 yes = "u.s. department of labor", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of state|state department)\\b"), 
+                                 yes = "u.s. department of state", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of the interior|interior department)\\b"), 
+                                 yes = "u.s. department of the interior", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of the treasury|treasury department)\\b"), 
+                                 yes = "u.s. department of the treasury", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(us department of veterans affairs|department of veterans affairs|veterans affairs department)\\b"), 
+                                 yes = "u.s. department of veterans affairs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of transportation|transportation department)\\b"), 
+                                 yes = "u.s. department of transportation", no = institution)) %>%
+  # us intelligence and defense
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+  pattern = "\\b(?i)(defense department|us dod|u.s. dod|u.s. d.o.d.|dept of defense|department of defense|education department)\\b"), 
+                                 yes = "u.s. department of defense", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(CIA)\\b"), 
+                                 yes = "central intelligence agency", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(defense finance and accounting service|dfas)\\b"), 
+                                 yes = "defense finance and accounting service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(debt and claims management center)\\b"), 
+                                 yes = "defense finance and accounting service debt and claims management center", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(air force|department of the air force|us air force)\\b"), 
+                                 yes = "u.s. air force", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(air force research laboratory|air force research labs)\\b"), 
+                                 yes = "u.s. air force research laboratory", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(air force reserve|us air force reserve command)\\b"), 
+                                 yes = "u.s. air force reserve command", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of the army|us army|army|u.s. army)\\b"), 
+                                 yes = "u.s. department of the army", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(army corps of engineers|corps of engineers)\\b"), 
+                                 yes = "u.s. army corps of engineers", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(department of the navy|us navy|navy|u.s. navy)\\b"), 
+                                 yes = "u.s. department of the navy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(cyber and infrastructure security agency|cisa)\\b"), 
+                                 yes = "cybersecurity and infrastructure security agency", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(director of national intelligence, office of|director of national intelligence)\\b"), 
+                                 yes = "office of director of national intelligence", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(coast guard)\\b"), 
+                                 yes = "u.s. coast guard", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(health affairs, assistant secretary of defense for)\\b"), 
+                                 yes = "assistant secretary of defense for health affairs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(marine corps|marines|the marines)\\b"), 
+                                 yes = "u.s. marine corps", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(u.s. military academy, west point|west point military academy|west point)\\b"), 
+                                 yes = "u.s. military academy, west point", no = institution)) %>%
+  # bureaus 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(economics and statistics service|economics, statistics, and cooperative service)\\b"), 
+                                 yes = "economic research service", no = institution)) %>% # ers
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(environmental management|environmental management, office of)\\b"), 
+                                 yes = "office of environmental management", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(engraving and printing, bureau of)\\b"), 
+                                 yes = "bureau of engraving and printing", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(economic analysis, bureau of)\\b"), # bea
+                                 yes = "bureau of economic analysis", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(fiscal service, bureau of the)\\b"), 
+                                 yes = "bureau of the fiscal service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(industry and security, bureau of)\\b"), 
+                                 yes = "bureau of industry and security", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(justice statistics, bureau of)\\b"), 
+                                 yes = "bureau of justice statistics", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(labor statistics, bureau of)\\b"), # bls
+                                 yes = "bureau of labor statistics", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(land management, bureau of)\\b"), # blm
+                                 yes = "bureau of land management", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(reclamation, bureau of)\\b"), 
+                                 yes = "bureau of reclamation", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(safety and environmental enforcement, bureau of)\\b"), 
+                                 yes = "bureau of safety and environmental enforcement", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(transportation statistics, bureau of)\\b"), 
+                                 yes = "bureau of transportation statistics", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+            pattern = "\\b(?i)(ca-cst code reuse library|ca/cst/systems integration & innovation division|consular affairs, bureau of)\\b"), 
+                                 yes = "bureau of consular affairs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(bureau of ocean energy management, regulation, & enforcement|ocean energy management, bureau of)\\b"), 
+                                 yes = "bureau of ocean energy management", no = institution)) %>% # boem
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(alcohol, tobacco, firearms and explosives bureau|alcohol, tobacco, and firearms division|alcohol, tobacco, firearms and explosives bureau|bureau of alcohol, tobacco, and firearms)\\b"), # ATF = acronym
+                                 yes = "bureau of alcohol, tobacco, firearms and explosives", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(international labor affairs, bureau of)\\b"), # ATF = acronym
+                                 yes = "bureau of international labor affairs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(bureau of the census|census bureau|us census bureau)\\b"), 
+                                 yes = "u.s. census bureau", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(bureau of bureau of indian affairs|indian affairs)\\b"), 
+                                 yes = "bureau of indian affairs", no = institution)) %>%
+  # offices 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(compliance, office of)\\b"), 
+                                 yes = "office of compliance", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(comptroller of the currency, office of)\\b"), 
+                                 yes = "office of comptroller of the currency", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(disability employment policy, office of)\\b"), 
+                                 yes = "office of disability employment policy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(elementary and secondary education, office of)\\b"), 
+                                 yes = "office of elementary and secondary education", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(government ethics, office of)\\b"), 
+                                 yes = "office of government ethics", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(justice programs, office of)\\b"), 
+                                 yes = "office of justice programs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(juvenile justice and delinquency prevention, office of)\\b"), 
+                                 yes = "office of juvenile justice and delinquency prevention", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(manufactured housing programs, office of)\\b"), 
+                                 yes = "office of manufactured housing programs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(minority health, office of)\\b"), 
+                                 yes = "office of minority health", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(natural resources revenue, office of)\\b"), 
+                                 yes = "office of natural resources revenue", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(nuclear energy, office of)\\b"), 
+                                 yes = "office of nuclear energy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(pardon attorney, office of)\\b"), 
+                                 yes = "office of pardon attorney", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(postsecondary education, office of)\\b"), 
+                                 yes = "office of postsecondary education", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(refugee resettlement, office of)\\b"), 
+                                 yes = "office of refugee resettlement", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(science and technology policy, office of)\\b"), 
+                                 yes = "office of science and technology policy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(servicemember affairs, office of)\\b"), 
+                                 yes = "office of servicemember affairs", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(special counsel, office of)\\b"), 
+                                 yes = "office of special counsel", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(special education and rehabilitative services, office of)\\b"), 
+                                 yes = "office of special education and rehabilitative services", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(surface mining, reclamation and enforcement, office of)\\b"), 
+                                 yes = "office of surface mining, reclamation and enforcement", no = institution)) %>% 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(child support enforcement, office of)\\b"), 
+                                 yes = "office of child support enforcement", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(career, technical, and adult education, office of)\\b"), 
+                                 yes = "office of career, technical, and adult education", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(scientific and technical information, office of)\\b"), 
+                                 yes = "office of scientific and technical information", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(violence against women, office on)\\b"), 
+                                 yes = "office on violence against women", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(office of surface mining, reclamation and enforcement)\\b"), 
+                                 yes = "office of surface mining reclamation and enforcement", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(office of science and technology)\\b"), 
+                                 yes = "office of science and technology policy", no = institution)) %>%
+  # courts 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(supreme court of the u.s.|the supreme court|supreme court of the us)\\b"), 
+                                 yes = "the supreme court of the u.s.", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(court of appeals for veterans claims)\\b"), 
+                                 yes = "u.s. court of appeals for veterans claims", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(court of appeals for the armed forces)\\b"), 
+                                 yes = "u.s. court of appeals for the armed forces", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(court of appeals for the federal circuit)\\b"), 
+                                 yes = "u.s. court of appeals for the federal circuit", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(court of federal claims)\\b"), 
+                                 yes = "u.s. court of federal claims", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(court of international trade)\\b"), 
+                                 yes = "u.s. court of international trade", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(bankruptcy courts)\\b"), 
+                                 yes = "u.s. bankruptcy courts", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(judicial circuit courts of appeal)\\b"), 
+                                 yes = "u.s. judicial circuit courts of appeal", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(circuit courts of appeal)\\b"), 
+                                 yes = "u.s. circuit courts of appeal", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(federal court interpreters)\\b"), 
+                                 yes = "u.s. federal court interpreters", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(lower courts)\\b"), 
+                                 yes = "u.s. lower courts", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(special courts)\\b"), 
+                                 yes = "u.s. special courts", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(tax court)\\b"), 
+                                 yes = "u.s. tax court", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+  pattern = "\\b(?i)(court services and offender supervision|court services and offender supervision agency for the district of columbia)\\b"), 
+                                 yes = "court services and offender supervision agency", no = institution)) %>%
+  # other organizations 
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(administration for children and families|acf)\\b"), 
+                                 yes = "administration for children and families", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(advanced distributed learning|adl|adl-aicc)\\b"), # collaboration
+                                 yes = "advanced distributed learning", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, # contains a collaboration
+                                 pattern = "\\b(?i)(agency for healthcare research and quality|ahrq|agency for health care policy and research)\\b"), 
+                                 yes = "agency for healthcare research and quality", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(agency for international development|usaid)\\b"), 
+                                 yes = "agency for international development", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(agricultural marketing service|ams)\\b"), 
+                                 yes = "agricultural marketing service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(food and agriculture, national institute of|nifa|national institute of food and agriculture|cooperative state research, education, and extension service|national institute of food and agriculture (nifa))\\b"), 
+                                 yes = "national institute of food and agriculture", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(advanced research projects agency-energy|energy transformation acceleration fund|arpa-e)\\b"), 
+                                 yes = "advanced research projects agency-energy", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(agriculture research service|usda ars)\\b"), # ARS = acronym
+                                 yes = "agricultural research service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(ames laboratory|ames lab|doe ames laboratory|the ames lab)\\b"), 
+                                 yes = "ames laboratory", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(ames research center)\\b"), 
+                                 yes = "nasa ames research center", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(tax and trade bureau|bureau of alcohol and tobacco tax and trade)\\b"), # TTB = acronym
+                                 yes = "alcohol and tobacco tax and trade bureau", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(alcohol, drug abuse, and mental health administration|samhsa)\\b"), # samhsa = acronym
+                                 yes = "substance abuse and mental health services administration", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(national railroad passenger corporation|amtrak)\\b"), 
+                                 yes = "amtrak", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(animal and plant health inspection service|aphis)\\b"), 
+                                 yes = "animal and plant health inspection service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(archives, national archives and records administration|nara)\\b"), 
+                                 yes = "national archives and records administration", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(arctic llc)\\b"), 
+                                 yes = "arctic landscape conservation cooperative", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(arctic research commission)\\b"), 
+                                 yes = "u.s. arctic research commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(argonne national laboratory|argonne national lab|argonne national labs)\\b"), 
+                                 yes = "argonne national laboratory", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(african development bank|african development foundation|nigeria trust fund|banque africaine de développement|banque africaine de dveloppement|banque africaine de developpement)\\b"), 
+                                 yes = "african development bank group", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(arthritis, musculoskeletal and skin diseases, national institute of|niams)\\b"), 
+                                 yes = "national institute of arthritis, musculoskeletal and skin diseases", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(national institute of peace)\\b"), 
+                                 yes = "u.s. institute of peace", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(national institute of health|nih)\\b"), 
+                                 yes = "national institutes of health", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(food and agriculture, national institute of|nifa)\\b"), 
+                                 yes = "national institute of food and agriculture", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(national cancer institute|nci|us nci)\\b"), 
+                                 yes = "national cancer institute", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(barry goldwater scholarship and excellence in education foundation|barry goldwater scholarship|barry goldwater foundation|barry goldwater program)\\b"), 
+                                 yes = "barry m. goldwater scholarship and excellence in education program", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+  pattern = "\\b(?i)(cdc public health informatics lab|center for disease control|center for disease control and prevention)\\b"), 
+                                 yes = "centers for disease control and prevention", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(centers for medicare & medicaid services)\\b"), 
+                                 yes = "centers for medicare and medicaid services", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(civil rights division, department of justice|u.s. dept of justice, civil rights division)\\b"), 
+                                 yes = "u.s. department of justice, civil rights division", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(civil rights, department of health and human services office for)\\b"), 
+                                 yes = "u.s. department of health and human services, office for civil rights", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(civil rights, department of education office of)\\b"), 
+                                 yes = "u.s. department of education, office for civil rights", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(corporation for national & community service)\\b"), 
+                                 yes = "corporation for national and community service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(business usa)\\b"), 
+                                 yes = "business usa", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(sandia national laboratory)\\b"), 
+                                 yes = "sandia national laboratories", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(council of inspectors general on integrity and efficiency)\\b"), 
+                                 yes = "council of the inspectors general on integrity and efficiency", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(global media, agency for)\\b"), 
+                                 yes = "agency for global media", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(grain inspection, packers, and stockyards administration)\\b"), 
+                                 yes = "grain inspection, packers and stockyards administration", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(health resources administration|health services administration|hrsa)\\b"), 
+                                 yes = "health resources and services administration", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(japan-u.s. friendship commission|japan-us friendship commission)\\b"), 
+                                 yes = "japan-u.s. friendship commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(john f. kennedy center for performing arts)\\b"), 
+                                 yes = "john f. kennedy center for the performing arts", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(medical payment advisory commission|medpac)\\b"), 
+                                 yes = "medicare payment advisory commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(medicaid and chip payment and access commission|macpac)\\b"), 
+                                 yes = "medicaid and chip payment and access commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(occupational safety & health review commission)\\b"), 
+                                 yes = "occupational safety and health review commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(rural business and cooperative programs)\\b"), 
+                                 yes = "rural business-cooperative service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(u.s. abilityone|u.s. abilityone commission|abilityone|abilityone commission)\\b"), 
+                                 yes = "u.s. abilityone commission", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(us-cert|us computer emergency readiness team|computer emergency readiness team)\\b"), 
+                                 yes = "u.s. computer emergency readiness team", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^weather service|^national weather service)\\b"), 
+                                 yes = "u.s. national weather service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^secret service$)\\b"), 
+                                 yes = "u.s. secret service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(^postal service|us postal service)\\b"), 
+                                 yes = "u.s. postal service", no = institution)) %>%
+  dt_mutate(institution = ifelse(test = str_detect(string = institution, 
+                                 pattern = "\\b(?i)(housing office)\\b"), 
+                                 yes = "office of housing", no = institution)) %>%
+  
+  
+  filter(institution != "agriculture library" & institution != "institute of peace" & institution != "defense agencies" & 
+         institution != "defense programs") %>% 
+  ## code implemented from above this 
+  arrange(institution) %>% 
+  distinct(institution, .keep_all = TRUE); all_lists
+
+all_lists %>% 
+  filter(dataset != "crowdsourced_names" & #) %>% filter(
+  grepl("office", institution))
+ 
+# next steps 
+# recode all of the crowdsourced data to match institutions 
+
+#all_lists %>% filter(dataset == "az_agency")
+
+all_lists %>% 
+  filter(dataset == "az_agency" )  #) %>% filter(
+  grepl("division", institution))
+  
+# human development services??, office of inspector general??, mint 
+
+```
+
+
+
+
+```{r gov_branches}
+gov_branches <- us_gov_azindex %>% 
+  group_by(gov_branch) %>% 
+  count() %>% 
+  arrange(-n); gov_branches
+
+us_gov_azindex %>% 
+  select(gov_branch, gov_agency, agency) %>% 
+  arrange(gov_branch) %>% 
+  group_by(gov_branch) 
+```
+
+```{r gov_agencies}
+gov_agencies <- us_gov_azindex %>% 
+  drop_na(gov_agency) %>% 
+  group_by(gov_agency) %>% 
+  count() %>% 
+  arrange(-n); gov_agencies
+```
+
+```{r child_agencies}
+child_agencies <- us_gov_azindex %>%
+  drop_na(child_agency) %>% 
+  group_by(child_agency) %>% 
+  count() %>% 
+  arrange(-n); child_agencies
+```
+
+```{r}
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+dbDisconnect(conn)
+```
+
+
+
+
+
+

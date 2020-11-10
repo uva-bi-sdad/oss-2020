@@ -1,0 +1,88 @@
+---
+title: "Non-Profit & Non-Governmental Cleaning"
+author: "Morgan Klutzke"
+date: "06/11/2020"
+output: html_document
+---
+
+```{r packages}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "R.utils", "data.table", "maditr",
+              "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi", "gridExtra")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data from github data 
+users_gh <- dbGetQuery(conn, "SELECT login, email, company FROM gh.ctrs_extra")
+
+charities_list <- dbGetQuery(conn, "SELECT * FROM forbes.charities2019_top100")
+
+nonprofit_govadmins <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.nonprofit_govadmins")
+
+ngo_list <- dbGetQuery(conn, "SELECT * FROM united_nations.ngo_list")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+charities_list <- charities_list %>% filter(name != "PATH")
+charities_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(charities_list$name)), na.omit(tolower(charities_list$alt_names)), "zxz)\\b"), collapse = "|")
+ngo_list <- ngo_list %>% filter(organization != "Collective")
+ngo_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(ngo_list$organization)), 
+                                     #na.omit(tolower(ngo_list$acronym)), 
+                                     "zxz)\\b"), collapse = "|")
+govadmins_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(nonprofit_govadmins$nonprofit_organization)), 
+                                           na.omit(tolower(nonprofit_govadmins$alt_names)),
+                                           na.omit(tolower(nonprofit_govadmins$associated_centers)), "zxz)\\b"), collapse = "|")
+# add "the mitre"
+
+former_academic_list <- "\\b(?i)(broad institute|broadinstitute|cern|CERN|European Organization for Nuclear Research|wellcome trust sanger institute|wellcome trust|wellcome)\\b"
+
+nonprofits <- users_gh %>% 
+  as.data.table() %>% 
+  dt_mutate(company = str_to_lower(company)) %>%
+  dt_mutate(company = str_replace_all(company, "@", "")) %>%
+  dt_mutate(dataset = ifelse(test = str_detect(string = company, 
+            pattern = charities_vector), yes = "charities", no = NA)) %>%
+  dt_mutate(dataset = ifelse(test = str_detect(string = company, 
+            pattern = ngo_vector), yes = "ngos", no = dataset)) %>%
+  dt_mutate(dataset = ifelse(test = str_detect(string = company, 
+           pattern = govadmins_vector), yes = "admins", no = dataset)) %>%
+  dt_mutate(dataset = ifelse(test = str_detect(string = company, 
+           pattern = former_academic_list), yes = "custom", no = dataset)) %>%
+  drop_na(dataset) %>% 
+  select(login, company, dataset) %>% 
+  mutate(is_nonprofit = TRUE)
+  
+# still some false positives 
+# still want to do some bigrams of the lists i have 
+nonprofits %>% 
+  count(is_nonprofit)
+```
+
+```{r}
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+ dbname = "sdad", 
+ host = "10.250.124.195", 
+ port = 5432, 
+ user = Sys.getenv("db_userid"), 
+ password = Sys.getenv("db_pwd"))
+
+dbWriteTable(conn, c("gh", "sna_ctr_nonprofits"), nonprofits, row.names = FALSE)
+
+dbDisconnect(conn)
+```
+
+
+
+

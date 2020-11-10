@@ -1,0 +1,211 @@
+---
+title: "Create Edgelists"
+output: html_document
+---
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", 
+              "igraph", "netrankr", "centiserve", "expm", "intergraph",
+              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+academic_edgelist <- dbGetQuery(conn, "SELECT institution1, institution2, repo_wts
+                                       FROM gh.sna_academic_institution_edgelist_0819")
+
+
+analysis_year <- "2008-19"
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+# convert edgelist to network 
+academic_edgelist <- academic_edgelist %>% 
+  #select(country1, country2, repo_wts) %>% 
+  rename(from = institution1, to = institution2, weight = repo_wts) %>% 
+  group_by(from, to) %>% 
+  summarize(weight = sum(weight)) %>% 
+  arrange(-weight)
+  
+academic_network <- simplify(graph.data.frame(academic_edgelist, directed = FALSE), 
+                         remove.loops = FALSE, 
+                         edge.attr.comb = igraph_opt("edge.attr.comb"))
+is_weighted(academic_network)
+
+```
+
+```{r global network stats}
+# loading the network (if the instance crashes while doing network_stats)
+net_stats_start <- data.frame(event="net_stats_start", time=now("EST"))
+network_stats <- data.frame(year=analysis_year)                                         
+
+# node and edge counts  
+network_stats$node_count <- gorder(academic_network)  
+network_stats$edge_count <- gsize(academic_network)
+network_stats$commits <- sum(academic_edgelist$weight)
+network_stats$mean_deg <- mean(degree(academic_network, mode = "all"))
+network_stats$mean_btw <- mean(round(sna::betweenness(intergraph::asNetwork(academic_network), cmode="undirected"), 4))
+
+# isolates, dyads and triads 
+network_stats$isolates <- sum(igraph::degree(simplify(academic_network))==0)
+oss_triads <- igraph::triad.census(academic_network)
+network_stats$triads_003 <- oss_triads[1] 
+network_stats$triads_102 <- oss_triads[3]
+network_stats$triads_201 <- oss_triads[11]
+network_stats$triads_300 <- oss_triads[16]
+net_counts <- data.frame(event="net_counts", time=now("EST"))
+time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
+
+# density and transitivity
+network_stats$diameter <- diameter(academic_network,directed=FALSE, 
+                                   unconnected=if (network_stats$isolates == 0) {FALSE} else {TRUE}, weights=NA)
+network_stats$mean_distance <- mean_distance(academic_network, directed = FALSE, 
+                                   unconnected = if (network_stats$isolates == 0) {FALSE} else {TRUE})
+network_stats$density <- edge_density(academic_network, loops=TRUE) 
+network_stats$transitivity <- transitivity(academic_network, weights = TRUE, type = "undirected")
+net_globals <- data.frame(event="net_globals", time=now("EST"))
+time_log <- rbind(time_log, net_globals); rm(net_globals)
+
+# community detection (using louvain method)
+louvain <- cluster_louvain(academic_network)
+network_stats$louvain <- modularity(louvain)
+network_stats$louvain_scaled <- modularity(louvain) / gorder(academic_network)
+network_stats$louvain_logged <- modularity(louvain) / log(gorder(academic_network))
+
+# community detection (using fast & greedy method)
+fstgrdy <- fastgreedy.community(academic_network)
+network_stats$fstgrdy <- modularity(fstgrdy)
+network_stats$fstgrdy_scaled <- modularity(fstgrdy) / gorder(academic_network)
+network_stats$fstgrdy_logged <- modularity(fstgrdy) / log(gorder(academic_network))
+
+# added later 
+network_stats$centr_deg <- round(centr_degree(academic_network)$centralization, 3)
+network_stats$centr_clo <- round(centr_clo(academic_network, mode = "all")$centralization, 3)
+network_stats$centr_btw <- round(centr_betw(academic_network, directed = FALSE)$centralization, 3)
+network_stats$centr_eigen <- round(centr_eigen(academic_network, directed = FALSE)$centralization, 3)
+#network_stats$centr_scores <- cbind(year, centr_deg, centr_clo, centr_btw, centr_eigen)
+
+# decomposition statistics 
+decomposition_stats <- table(sapply(decompose.graph(academic_network), vcount))
+
+net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
+time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
+
+# now, we need to construct a nodelist 
+nodelist <- data.frame(id = c(1:(igraph::vcount(academic_network))), login = igraph::V(academic_network)$name)
+
+# degree, weighted degree, k core and modularity 
+node_stats_start <- data.frame(event="node_stats_start", time=now("EST"))
+time_log <- rbind(time_log, node_stats_start); rm(node_stats_start)
+nodelist$deg_cent <- igraph::degree(academic_network, mode = "all")
+nodelist$wtd_deg_cent <- strength(academic_network)
+nodelist$btw_cent <- round(sna::betweenness(intergraph::asNetwork(academic_network), cmode="undirected"), 4)
+nodelist$close_cent <- closeness(academic_network, mode = "all") 
+nodelist$eigen_cent <- eigen_centrality(academic_network)$vector
+#nodelist$alpha_cent <- alpha_centrality(academic_network)
+#nodelist$power_cent <- power_centrality(academic_network)
+nodelist$load_cent <- sna::loadcent(get.adjacency(academic_network,sparse=F))
+nodelist$info_cent <- sna::infocent(get.adjacency(academic_network,sparse=F))
+nodelist$stress_cent <- sna::stresscent(get.adjacency(academic_network,sparse=F))
+nodelist$subgraph_cent <- subgraph_centrality(academic_network)
+nodelist$page_rank <- page_rank(academic_network)$vector
+nodelist$auth_score <- authority.score(academic_network)$vector
+nodelist$hub_score <- hub.score(academic_network)$vector
+nodelist$local_trans <- transitivity(academic_network, type = "local")
+nodelist$eccentricity <- eccentricity(academic_network)
+nodelist$k_core <- coreness(academic_network)
+components <- components(academic_network)
+nodelist$component <- components$membership
+nodelist$louvain_comm <- louvain$membership
+nodelist$fstgrdy_comm <- fstgrdy$membership
+nodelist$gilschmidt <- sna::gilschmidt(get.adjacency(academic_network,sparse=F))
+nodelist$hyper_even <- netrankr::hyperbolic_index(academic_network,type = "even")
+nodelist$hyper_odd <- netrankr::hyperbolic_index(academic_network,type = "odd")
+#nodelist$bottleneck <- centiserve::bottleneck(academic_network)
+nodelist$close_latora <- centiserve::closeness.latora(academic_network)
+nodelist$close_res <- centiserve::closeness.residual(academic_network)
+nodelist$comm_bet <- centiserve::communibet(academic_network)
+nodelist$diff_deg <- centiserve::diffusion.degree(academic_network)     
+nodelist$entropy <- 1/centiserve::entropy(academic_network)
+nodelist$geokpath <- centiserve::geokpath(academic_network)
+nodelist$laplacian <- centiserve::laplacian(academic_network)
+nodelist$leverage <- centiserve::leverage(academic_network)             
+nodelist$lin_cent <- centiserve::lincent(academic_network)
+nodelist$lobby <- centiserve::lobby(academic_network)
+nodelist$markov_cent <- centiserve::markovcent(academic_network)           
+nodelist$mnc <- centiserve::mnc(academic_network)
+nodelist$dmnc <- centiserve::dmnc(academic_network) 
+nodelist$epc <- centiserve::epc(academic_network) 
+nodelist$radiality <- centiserve::radiality(academic_network)            
+nodelist$topocoefficient <- 1/centiserve::topocoefficient(academic_network) 
+
+node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
+time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
+
+#setwd("~/oss-data/intl-ctry-nets-cum")
+#saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))  
+#saveRDS(decomposition_stats, str_c("decomposition_stats_",analysis_year,".rds")) 
+#saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))  
+#saveRDS(time_log, str_c("timelog_",analysis_year,".rds"))
+```
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+intl_stats <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
+                                FROM gh.sna_intl_ctry_nodelist_full")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+```
+
+```{r}
+# rename columns and merge data for gephi files 
+nodelist_merged <- nodelist %>% 
+  select(-id) %>%  
+  rename(institution = login) %>% 
+  #inner_join(intl_stats, by = "country") %>% 
+  rename(id = country)
+ctry_edgelist <- ctry_edgelist %>% 
+  rename(source = from, target = to)
+
+# export files to gephi 
+setwd("~/oss-data/intl-ctry-nets-cum/edgelists")
+write_csv(nodelist_merged, str_c("intl_ctry_nodelist_gephi_",analysis_year,".csv"))
+write_csv(ctry_edgelist, str_c("intl_ctry_edgelist_gephi_",analysis_year,".csv"))
+
+```
+
+
+
+
+
+
+
+
+

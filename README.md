@@ -2,11 +2,16 @@
 
 Update: 11/10/2020
 
-This repository contains the 2020 analyses of GitHub data conducted by researchers at the University of Virginia's Biocomplexity Institute. The structure of the repo is posted below. Here are links to our OSS sibling repos: [GHOSS.jl](https://github.com/uva-bi-sdad/GHOSS.jl), [CRAN](https://github.com/uva-bi-sdad/CRAN), [standardizeR](https://github.com/brandonleekramer/standardizeR), and [DSPG/oss-2020](https://github.com/DSPG-Young-Scholars-Program/dspg20oss)
+This repository contains the 2020 analyses of GitHub data conducted by [a team at the University of Virginia's Biocomplexity Institute](https://github.com/uva-bi-sdad/OSS-Research-Website). 
+
+SDAD Team: Gizem Korkmaz, José Bayoán Santiago Calderón, Brandon Kramer, Aaron Schroder, and Sallie Keller
+NCSES Team: Carol Robbins and Ledia Gucci 
+
+The structure for this repo is outlined below, but this repo also links to several sibling repos: [GHOSS.jl](https://github.com/uva-bi-sdad/GHOSS.jl), [CRAN](https://github.com/uva-bi-sdad/CRAN), [standardizeR](https://github.com/brandonleekramer/standardizeR), and [DSPG/oss-2020](https://github.com/DSPG-Young-Scholars-Program/dspg20oss).
 
     ├── data 
         ├── GHTorrent
-        ├── GitHub commit data [see GHOSS.jl](https://github.com/uva-bi-sdad/GHOSS.jl)
+        ├── GitHub commit data
         ├── Cost estimations data 
         ├── Sectoring data 
             ├── Academic datasets
@@ -14,7 +19,7 @@ This repository contains the 2020 analyses of GitHub data conducted by researche
             ├── Non-Profit datasets
         ├── CRAN Maintainers data
     ├── functions
-        ├── [standardizeR](https://github.com/brandonleekramer/standardizeR)
+        ├── standardizeR
     ├── src
         ├── 01_github-summary-analysis
         ├── 02_github-cost-estimations
@@ -27,41 +32,46 @@ Overall, the `src` file contains analyses that pertain to:
 
 **Summary Tables for GitHub activity:**
 
-    ├── GitHub activity for all repos 
-    ├── GitHub activity for all contributors
-    ├── GitHub activity for all owners
-    ├── Top licenses on GitHub 
+    ├── 01_github-summary-analysis
+        ├── GitHub activity for all repos 
+        ├── GitHub activity for all contributors
+        ├── GitHub activity for all owners
+        ├── Top licenses on GitHub 
 
 **Cost Estimates for GitHub activity:**
 
-    ├── Cost estimates for all GitHub activity 
-    ├── Cost estimates for GitHub activity by year
-    ├── Cost estimates for GitHub activity by country
-    ├── Cost estimates for GitHub activity by sector
+    ├── 02_github-cost-estimations
+        ├── Cost estimates for all GitHub activity 
+        ├── Cost estimates for GitHub activity by year
+        ├── Cost estimates for GitHub activity by country
+        ├── Cost estimates for GitHub activity by sector
 
 **Network analysis of GitHub collaboration**
 
-    ├── Network analysis of full GitHub network 
-    ├── Network analysis of international collaboration on GitHub
-    ├── Network analysis of academic collaboration on GitHub
-    ├── Network analysis of business collaboration on GitHub
+    ├── 03_github-network-analysis
+        ├── Network analysis of full GitHub network 
+        ├── Network analysis of international collaboration on GitHub
+        ├── Network analysis of academic collaboration on GitHub
+        ├── Network analysis of business collaboration on GitHub
 
 **Sectoring analysis of GitHub users**
 
-    ├── Academic 
-    ├── Business
-    ├── Government
-    ├── Household
-    ├── Non-Profit
-    ├── Full sectoring approach
-    ├── [dspg20oss](https://github.com/DSPG-Young-Scholars-Program/dspg20oss) 
+    ├── 04_sectoring-analysis
+        ├── Full sectoring approach
+        ├── Academic 
+        ├── Business
+        ├── Government
+        ├── Household
+        ├── Non-Profit
 
 **CRAN Maintainer Survey:** 
 
-    ├── [CRAN Maintainer data](https://github.com/uva-bi-sdad/CRAN) 
-    ├── CRAN wrangling and descriptives 
+    ├── 05_cran-maintainer-survey
+        ├── CRAN Maintainer data tool
+        ├── CRAN wrangling and descriptives 
     
 **GitHub data sources and wrangling files:** 
 
-    ├── Data wrangling files
-    ├── Code for posting data to PostgreSQL 
+    ├── 06_data-wrangling 
+        ├── Data wrangling files
+        ├── Code for posting data to PostgreSQL 

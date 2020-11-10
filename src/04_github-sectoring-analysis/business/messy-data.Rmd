@@ -1,0 +1,93 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "stringr", "stringi",  "dplyr", "leaflet", "leaflet.extras", "tools", "statebins")) {library(pkg, character.only = TRUE)}
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+# query the users_gh data from github data 
+users_gh <- dbGetQuery(conn, "SELECT login, email, company
+                              FROM gh.ctrs_extra")
+#institutions_hipolabs <- dbGetQuery(conn, "SELECT institution, country, domains FROM hipolabs.universities")
+# disconnect from postgresql database 
+dbDisconnect(conn)
+users_gh <- users_gh %>% 
+  drop_na(company)
+users_gh_clean <- users_gh%>% 
+  dt_mutate(company = str_to_lower(company)) %>%
+  # remove @ from start of names 
+  dt_mutate(company = str_replace_all(company, "@", " "))%>% 
+  # remove uninformative words "inc." and "the"
+  dt_mutate(company = str_replace_all(company, "\\b(, inc\\.|, inc| inc\\.| inc|\\.$)\\b", ""))%>%
+  dt_mutate(company = str_replace_all(company, "\\b(the )\\b", ""))
+ucsd <- users_gh_clean%>%
+  dt_mutate(is_UCSD = str_detect(string = company, 
+                                                    pattern = "\\b(?i)(ucsd|san diego)\\b"))%>%
+  filter(is_UCSD)
+# ucsd_unique <- ucsd%>%
+#   group_by(company)%>%
+#   summarize(N=n())%>%
+#   arrange(desc(N))
+ucsd <- ucsd %>%
+  filter(company %in% c("uc san diego", "university of california, san diego
+", "ucsd", "university of california san diego", "university of california - san diego",
+"university of san diego", "department of computer science, uc san diego",
+                        "san diego supercomputer center",
+                        "scripps institution of oceanography, ucsd", "guardiome ucsd-ccal",
+                        "caida, uc san diego"))
+ucsd_unique <- ucsd[!duplicated(ucsd$company), ]
+ucsd_unique <- ucsd_unique%>%
+  rename(institution = company)%>%
+  dplyr::select(-is_UCSD)
+#print table
+ucsd_unique %>% select(-email)
+```
+
+````{r}
+users_gh %>% 
+  filter(grepl("microsoft", company)) %>% 
+  rename(institution = company) %>% 
+  select(login, institution) %>% 
+  filter(login %in% c("edwardkoval", "colombod", "fitzgeraldsteele", 
+                      "bethz", "chuanboz", "patrickhpan", "Survivedabuse",
+                      "dadheech115", "MsHpcPack", "pateli18"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

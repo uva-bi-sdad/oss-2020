@@ -1,0 +1,180 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r loading nodelist data, warning = FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", 
+              "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+
+# load local functions 
+#source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardization-functions.R")
+
+# PULL AZ-INDEX, GOV MANUAL AND LIST OF FFRDCS FROM POSTGRESQL 
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the users_gh data (table of all github users) 
+usgov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+
+usgov_azindex <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/usgov_azindex.csv") %>% 
+  mutate(az_index = 1) 
+
+```
+
+```{r}
+# first step is to clean and reduce the features 
+# pulling out all of the website, addresses and phone number info
+usgov_tmp <- usgov_manual %>% 
+  separate(Addresses, c(NA, "gm_website", NA, "gm_address", NA, "gm_phone"), sep = "\n") %>% 
+  select(Category, AgencyName, gm_website, gm_address, gm_phone) %>% 
+  mutate(gm_website = str_replace_all(gm_website, "\t", "")) %>% 
+  mutate(gm_address = str_replace_all(gm_address, "\t", "")) %>% 
+  mutate(gm_phone = str_replace_all(gm_phone, "\t", "")) %>% 
+  filter(!grepl("@", gm_website)) %>% 
+  mutate(gm_email = NA)
+
+# and the emails 
+usgov_manual <- usgov_manual %>% 
+  separate(Addresses, c(NA, "gm_email", NA, "gm_website", NA, "gm_address", NA, "gm_phone"), sep = "\n") %>% 
+  select(Category, AgencyName, gm_email, gm_website, gm_address, gm_phone) %>% 
+  mutate(gm_email = str_replace_all(gm_email, "\t", "")) %>%
+  mutate(gm_website = str_replace_all(gm_website, "\t", "")) %>% 
+  mutate(gm_address = str_replace_all(gm_address, "\t", "")) %>% 
+  mutate(gm_phone = str_replace_all(gm_phone, "\t", "")) %>% 
+  filter(grepl("@", gm_email)) %>% 
+  bind_rows(usgov_tmp)
+
+# now standardize all the names 
+
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/standardize_gov.R")
+
+# custom order by branch 
+branch_order <- c("executive office of the u.s. president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
+                  "u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution", 
+                  "u.s. international organizations")
+
+usgov_manual_cleaned <- usgov_manual %>% 
+  filter(AgencyName != "The Executive Office of the President") %>% 
+  standardize_gov(Category) %>% 
+  rename(man_branch = institution) %>% 
+  standardize_gov(AgencyName) %>% 
+  rename(man_agency = institution) %>%
+  select(man_branch, man_agency, everything()) %>% 
+  arrange(match(man_branch, branch_order), man_agency) 
+usgov_manual_cleaned 
+```
+
+```{r}
+branch_order <- c("executive office of the u.s. president", "u.s. executive branch", "u.s. legislative branch", "u.s. judicial branch", 
+                  "u.s. independent agency", "u.s. independent board, commission, committee", "u.s. quasi-official governmental institution", 
+                  "u.s. international organizations")
+agency_order <- c("white house", "u.s. congress", "u.s. house of representatives", "u.s. senate", "supreme court of the u.s.",
+                  "u.s. department of agriculture", "u.s. department of commerce", 
+                  "u.s. department of defense", "u.s. department of education", "u.s. department of energy",
+                  "u.s. department of health and human services", "u.s. department of homeland security",
+                  "u.s. department of housing and urban development", "u.s. department of justice",
+                  "u.s. department of labor", "u.s. department of state", "u.s. department of the interior",
+                  "u.s. department of the treasury", "u.s. department of transportation", "u.s. department of veterans affairs")
+
+
+usgov_azindex_merged <- usgov_manual_cleaned %>% 
+  select(man_branch, man_agency, gm_email, gm_website, gm_address, gm_phone) %>% 
+  rename(institution = man_agency) %>%  
+  mutate(gov_man = 1) %>% 
+  full_join(usgov_azindex, by = "institution") %>% 
+  mutate(branch = replace_na(branch, "NA")) %>% 
+  mutate(branch = str_replace_all(branch, "NA", man_branch)) %>% 
+  arrange(match(branch, branch_order), match(agency, agency_order), institution) %>% 
+  select(branch, agency, institution, everything(), -gov_man, gov_man) %>% 
+  mutate(gov_man = replace_na(gov_man, 0),
+         az_index = replace_na(az_index, 0)) %>% 
+  select(branch, subagency, agency, institution, everything(), -man_branch)
+
+usgov_azindex_merged 
+```
+```{r}
+# manual cleaning 
+
+usgov_azindex_cleaned <- usgov_azindex_merged %>% 
+  # renaming president and vice president information 
+  mutate(institution = str_replace_all(institution, "the president", "office of the president")) %>%
+  mutate(institution = str_replace_all(institution, "the vice president", "office of the vice president")) %>% 
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "office of the president"), yes = "white house", no = agency)) %>%
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "office of the vice president"), yes = "white house", no = agency)) %>%
+  # collapsing website information 
+  mutate(websites = paste(website, other_website, gm_website, sep="; ")) %>% 
+  mutate(websites = str_replace_all(websites, "NA; |; NA|NA", "")) %>%
+  mutate(websites = str_replace_all(websites, "NA", "")) %>%
+  # adding u.s. national foundation on the arts and the humanities into agency for NEH and NEA 
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "u.s. national endowment for the arts"), 
+                         yes = "u.s. national foundation on the arts and the humanities", no = agency)) %>%
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "u.s. national endowment for the humanities"), 
+                         yes = "u.s. national foundation on the arts and the humanities", no = agency)) %>%
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "u.s. institute of museum and library services"), 
+                         yes = "u.s. national foundation on the arts and the humanities", no = agency)) %>%
+  # also removing congress because its just redundant with what we have 
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "u.s. senate"), 
+                         yes = "u.s. congress", no = agency)) %>%
+  mutate(agency = ifelse(test = str_detect(string = institution, pattern = "u.s. house of representatives"), 
+                         yes = "u.s. congress", no = agency)) %>%
+  select(branch, agency, subagency, institution, -website, -other_website, -gm_website, -az_index, az_index, -gov_man, gov_man) %>% 
+  arrange(match(branch, branch_order), match(agency, agency_order), subagency, institution)
+
+# this look at all the new information to determine if there is missing agency/subagency information 
+usgov_azindex_cleaned %>% 
+  filter(is.na(agency) & gov_man == 1 & az_index == 0) %>% 
+  select(branch, agency, subagency, institution, gov_man, az_index) 
+# this shows that we added 13 new institutions in a way that largely make sense now 
+
+usgov_azindex_cleaned
+```
+
+```{r}
+# load local functions 
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_edgelist.R")
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_nodelist.R")
+source("/sfs/qumulo/qhome/kb7hp/oss-2020/functions/usgov_to_graph.R")
+
+test_edgelist <- usgov_to_edgelist(usgov_azindex_merged)
+test_nodelist <- usgov_to_nodelist(test_edgelist)
+test_graph <- usgov_to_graph(usgov_azindex_merged)
+
+plot(test_graph, 
+     weights="weight",
+     layout=layout_with_fr, 
+     vertex.color="skyblue", 
+     vertex.size=4, 
+     vertex.label=NA)
+
+write.csv(usgov_azindex_merged, "/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/usgov_az_man.csv", row.names = FALSE)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

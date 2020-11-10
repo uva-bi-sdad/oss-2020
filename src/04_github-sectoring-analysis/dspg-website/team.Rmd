@@ -1,0 +1,47 @@
+---
+#title: "Open Source Software 2020 Summer Project"
+output: html_document
+---
+
+```{css, echo=FALSE}
+/* this chunnk of code centers all of the headings */
+h1, h2, h3 {
+  text-align: center;
+}
+```
+
+### UVA Data Science for the Public Good 
+
+[The Data Science for the Public Good (DSPG) Young Scholars program](https://biocomplexity.virginia.edu/social-decision-analytics/dspg-program) is a summer immersive program held at the [Biocomplexity Institute’s Social and Decision Analytics division (SDAD)](https://biocomplexity.virginia.edu/social-decision-analytics). In its seventh year, the program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today. DSPG young scholars conduct research at the intersection of statistics, computation, and the social sciences to determine how information generated within every community can be leveraged to improve quality of life and inform public policy. For more information on program highlights, how to apply, and our annual symposium, please visit the official [Biocomplexity DSPG website]((https://biocomplexity.virginia.edu/social-decision-analytics/dspg-program)).
+
+### Open Source Software 2020 DSPG Team Members 
+
+<center>
+![](/daniel.jpg) ![](/morgan.jpg) ![](/crystal.jpeg) 
+</center>
+
+##### [Daniel Bullock](https://github.com/DanNBullock) (Indiana University, Computational Neuroanatomy), [Morgan Klutzke](https://github.com/mklutzke) (Indiana University, Psychology and Cognitive Science), and [Crystal Zang](https://github.com/czang97) (University of Pittsburgh, Biostatistics) {style=text-align:center}
+###
+
+### UVA SDAD Team Members 
+
+<center>
+![](/gizem.jpg) ![](/brandon.jpg) ![](/bayoan.jpg)
+
+![](/aaron.jpg) ![](/sallie.jpg) 
+</center>
+
+##### [Gizem Korkmaz](https://biocomplexity.virginia.edu/gizem-korkmaz) (Research Associate Professor), [Brandon Kramer](https://biocomplexity.virginia.edu/brandon-kramer) (Postdoctoral Research Associate), [José Bayoán Santiago Calderón](https://biocomplexity.virginia.edu/j-bayoan-santiago-calderon) (Postdoctoral Research Associate), [Aaron Schroeder](https://biocomplexity.virginia.edu/aaron-schroeder) (Research Associate Professor), and [Sallie Keller](https://biocomplexity.virginia.edu/sallie-keller) (Division Director and Distinguished Professor) {style=text-align:center}
+
+### Project Sponsors/Stakeholders 
+
+<center>
+![](/carol.png) ![](/ncses.png) ![](/ledia.png)
+</center>
+
+##### [Carol Robbins](https://www.nsf.gov/staff/staff_bio.jsp?lan=crobbins&from_org=) (NCSES, Senior Analyst) and [Ledia Guci](https://www.nsf.gov/staff/staff_bio.jsp?lan=lguci&from_org=) (NCSES, Science Resource Analyst) {style=text-align:center}
+##### [National Science Foundation's National Center for Science and Engineering Statistics](https://www.nsf.gov/statistics/) {style=text-align:center}
+
+### Acknowledgements  
+
+In addition to our appreciation to Carol Robbins and Ledia Guci for their continued support of work on OSS, we also want to thank Eric Von Hippel (MIT), Dan Sichel (Wellesley College), Audrey Kindlon (NCSES), and Karen White (NCSES) for joining us to talk about innovation in the household sector. 

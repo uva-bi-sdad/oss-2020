@@ -1,0 +1,114 @@
+---
+title: "Academic Extras"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This was used previously but now is scrapped 
+
+
+```{r}
+
+# goals: (1) match academic users with abbreviations and (2) match users with regex univ/college strings
+## now lets pull in our ipeds data and clean it so we can grab all the abbreviations 
+setwd("/sfs/qumulo/qhome/kb7hp/oss-data")
+ipeds_hd2018 <- read.csv("ipeds_hd2018.csv", encoding = "UTF-8", na.strings=c("","NA"))
+
+## define a helper function for transforming the empty rows to NA 
+empty_as_na <- function(x){
+    if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
+    ifelse(as.character(x)!="", x, NA)
+}
+
+# pull out all the abbreviations from IPEDS 
+ipeds <- ipeds_hd2018 %>% 
+  select(INSTNM, IALIAS) %>% 
+  rename(institution = INSTNM, alias = IALIAS) %>% 
+  mutate(institution = as.character(institution),
+         alias = as.character(alias)) %>% 
+  separate_rows(alias, sep = "\\|" , convert = FALSE) %>% 
+  mutate(alias = str_trim(alias, side = "both")) %>% 
+  dplyr::mutate_each(funs(empty_as_na)) %>% 
+  drop_na(alias) 
+
+
+# first, lets bind matched_academic with users_gh
+ipeds_recoding <- users_gh %>% 
+  full_join(matched_academic, by = "login") %>% 
+  mutate(is_academic = replace_na(is_academic, 0)) %>% 
+  select(login, email, company, is_academic, everything())
+
+# 
+ipeds_recoding %>% 
+  dt_mutate(new_col = ifelse(test = str_detect(string = company, 
+                             pattern = ipeds$alias),
+                             yes = ipeds$institution, no = "remove-me")) %>% 
+  filter(new_col != "remove-me") %>% 
+  select(login, company, new_col)
+
+ipeds <- ipeds %>% 
+  filter(institution != "University of Puerto Rico-Mayaguez" & institution != "Northwestern College-Chicago Campus" & institution != "Northwestern College-Southwestern Campus")
+
+# from the ipeds table, pull out the abbreviations 
+alias_list <- paste(c("\\b(?i)(zqx", na.omit(ipeds$alias), "zqx)\\b"), collapse = "|")
+
+```
+
+```{r get_countries, eval = FALSE, message = FALSE, results = FALSE, warning = FALSE, echo=FALSE}
+academic_counts
+sum(academic_counts[,"n"]) 
+# larger than before because it's double-counting the institutions that are in multiple countries or have multiple domains
+
+# group together different country and domain values for the same institution
+group1 <- academic_counts[duplicated(academic_counts$organization), ] %>% rename(c(country2 = country, domains2 = domains))
+group2 <- group1[duplicated(group1$organization), ] %>% rename(c(country3 = country2, domains3 = domains2))
+group3 <- group2[duplicated(group2$organization), ] %>% rename(c(country4 = country3, domains4 = domains3))
+group4 <- group3[duplicated(group3$organization), ] %>% rename(c(country5 = country4, domains5 = domains4))
+
+# remove duplicates so each group has unique values
+group1 <- group1[!duplicated(group1$organization), ]
+group2 <- group2[!duplicated(group2$organization), ]
+group3 <- group3[!duplicated(group3$organization), ]
+group4 <- group4[!duplicated(group4$organization), ]
+
+# add back in the multiple countries/domains, but as additional columns
+# now there is only one row for each institution
+#academic_counts <- academic_counts[!duplicated(academic_counts$organization), ] %>% 
+  left_join(group1) %>%
+  left_join(group2) %>%
+  left_join(group3) %>%
+  left_join(group4)
+
+# add NAs for when multiple country listings are the same (if the duplicated institution is from multiple domains)
+# or when multiple domain listings are the same (if the duplicated institution is from multiple countries)
+#academic_counts <- academic_counts %>%
+  mutate_all(str_replace_na) %>%
+  dt_mutate(country2 = if_else(country == country2, "NA", country2)) %>%
+  dt_mutate(country3 = if_else(country == country3, "NA", country3)) %>%
+  dt_mutate(domains2 = if_else(domains == domains2, "NA", domains2)) %>%
+  dt_mutate(domains3 = if_else(domains == domains3, "NA", domains3)) %>%
+  dt_mutate(domains4 = if_else(domains == domains4, "NA", domains4)) %>%
+  dt_mutate(domains5 = if_else(domains == domains5, "NA", domains5))
+
+# collapse into single columns for country/domains
+# we want to avoid having multiple countries for an institution, since they'd be double-counted in the following analyses
+# for the 21 institutions represented that are in multiple countries, the primary country is manually coded
+#academic_counts <- academic_counts %>%
+  dt_mutate(country = if_else(condition = institution %chin% c("universidad simón bolivar", 
+                                                                "suleyman demirel university", 
+                                                                "universidad de córdoba", 
+                                                                "aga khan university", 
+                                                                "southeast university", 
+                                                                "universidad de los andes", 
+                                                                "korea university"), true = country2, false = country)) %>%
+  dt_mutate(domains_combined = str_c(domains, domains2, domains3, domains4, domains5, sep = ", ")) %>%
+  transmute(institution = institution, n = n, country = country, domains = domains_combined)
+
+# remove remaining NAs
+#academic_counts <- academic_counts %>% 
+  dt_mutate(domains = str_replace_all(domains, ", NA", "")) %>%
+  dt_mutate(n = as.numeric(n)) # for some reason n got changed to chr type
+```
