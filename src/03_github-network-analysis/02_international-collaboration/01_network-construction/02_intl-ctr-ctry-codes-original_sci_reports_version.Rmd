@@ -9,10 +9,10 @@ This file outlines the process by which we reduced the OSS international data in
 
 ```{r loading nodelist data}
 rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr"))
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "data.table", "tidytable", "countrycode",
-              "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get our data
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -23,8 +23,8 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # query the users_gh data (table of all github users) 
-oss_data <- dbGetQuery(conn, "SELECT login, country_code, location, city, long, lat, email, company FROM gh.ctrs_extra")
-academic_data <- dbGetQuery(conn, "SELECT login, institution, country, is_academic FROM gh.sna_ctr_academic;")
+oss_data <- dbGetQuery(conn, "SELECT login, country_code, location 
+                              FROM github.users_gh")
 
 # disconnect from postgresql database 
 dbDisconnect(conn)
@@ -49,7 +49,7 @@ ag	<- "\\b(?i)(Antigua|Barbuda)\\b"
 ar	<- "\\b(?i)(Argentina|Buenos Aires|La plata)\\b"
 am	<- "\\b(?i)(Armenia)\\b"
 aw	<- "\\b(?i)(Aruba)\\b"
-au	<- "\\b(?i)(Australia|Melbourne(?!, FL)|Sydney(?!, Nova)|Wollongong|Brisbane|Canberra)\\b"
+au	<- "\\b(?i)(Australia|Melbourne(?!, )FL|Sydney(?!, Nova)|Wollongong|Brisbane|Canberra)\\b"
 at  <- "\\b(?i)(Austria|Vienna(?!, V))\\b"
 az	<- "\\b(?i)(Azerbaijan)\\b"
 bh	<- "\\b(?i)(Bahrain)\\b"
@@ -74,13 +74,13 @@ bf	<- "\\b(?i)(Burkina Faso)\\b"
 bi	<- "\\b(?i)(Burundi)\\b"
 kh	<- "\\b(?i)(Cambodia)\\b"
 cm	<- "\\b(?i)(Cameroon)\\b"
-ca  <- "\\b(?i)(Canada|Ontario(?!, CA)|Quebec|nova scotia|new brunswick(?![, N|,NJ| NJ])|manitoba|british columbia|, BC|prince edward island|saskatchewan|alberta|newfoundland|toronto|Vancouver(?![ WA| Washington| WA, USA|, WA, USA])|, ON|Winnipeg|, B.C.|,ON|(?<!Melbourne, )Victoria(?![ Australia|, Australia])|Burnaby|Fredericton|Montreal|Qubec)\\b"
+ca  <- "\\b(?i)(Canada|Ontario(?!, CA)|Quebec|nova scotia|new brunswick(?!, N)|manitoba|british columbia|, BC|prince edward island|saskatchewan|alberta|newfoundland|toronto|Vancouver(?!\\, W)|, ON|Winnipeg|, B.C.|,ON|Victoria|Burnaby|Fredericton|Montreal|Qubec)\\b"
 cv	<- "\\b(?i)(Cape Verde)\\b"
 ky	<- "\\b(?i)(Cayman Islands)\\b"
 cf	<- "\\b(?i)(Central African Republic)\\b"
 td	<- "\\b(?i)(Chad)\\b"
 cl	<- "\\b(?i)(Chile)\\b"
-cn  <- "\\b(?i)(China|Beijing|GuangZhou|Shanghai|Tianjin|Shenzhen|Chengdu|Dongguan|Chongqing|Guangdong|ZhuHaiChina|Zhu haiChina|Zhengzhou|ZheJiang|HangZhou|zh-cn|(?<![Zurich|Lausanne]), CH|, CHN|Xiamen|Wuhan|beijingchina|Changsha|Hunan|ChengduChina|chinabeijing|ChinaShenzhen|^guang|^Hangz|Harbin Institute|Hefei|Hunan|^jiang|^Nanjing|^ShenZhen|GuangzhouChina|GuangZhouChina|NanjingChina|ShenzhenChina|XiamenChina|shenzhenChina|BeijingHaidian|wuhanChina)\\b"
+cn  <- "\\b(?i)(China|Beijing|GuangZhou|Shanghai|Tianjin|Shenzhen|Chengdu|Dongguan|Chongqing|Guangdong|ZhuHaiChina|Zhu haiChina|Zhengzhou|ZheJiang|HangZhou|zh-cn|(?<![Zurich|Lausanne]), CH|, CHN|Xiamen|Wuhan|beijingchina|Changsha|Hunan|ChengduChina|chinabeijing|ChinaShenzhen|^guang|^Hangz|Harbin Institute|Hefei|Hunan|^jiang|^Nanjing|^ShenZhen)\\b"
 cx	<- "\\b(?i)(Christmas Island)\\b"
 cc	<- "\\b(?i)(Cocos Islands)\\b"
 co	<- "\\b(?i)(Colombia|Bogataa|Medellin)\\b"
@@ -152,7 +152,7 @@ kz	<- "\\b(?i)(Kazakhstan)\\b"
 ke	<- "\\b(?i)(Kenya|Nairobi)\\b"
 ki	<- "\\b(?i)(Kiribati)\\b"
 kp	<- "\\b(?i)(North Korea|Pyongyang)\\b"
-kr	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo|Seongnam-si, Gyeonggi-do, Korea|Rep. of Korea|republic of korea)\\b"
+kr	<- "\\b(?i)(South Korea|Seoul|Seuol|Daejeon|pangyo)\\b"
 xk  <- "\\b(?i)(Kosovo|Kosova|^Prishtina|^Prishtine|^Pristina)\\b"
 kw	<- "\\b(?i)(Kuwait)\\b"
 kg	<- "\\b(?i)(Kyrgyzstan)\\b"
@@ -191,7 +191,7 @@ mm	<- "\\b(?i)(Myanmar)\\b"
 na	<- "\\b(?i)(Namibia)\\b"
 nr	<- "\\b(?i)(Nauru)\\b"
 np	<- "\\b(?i)(Nepal)\\b"
-nl <- "\\b(?i)(Netherlands|(?<!rue d')Amsterdam|Holland(?!, [MO])|Zwolle|Willemstad|Curacao|Curaao|Utrecht|Breda|Eindhoven|Groningen)\\b"
+nl <- "\\b(?i)(Netherlands|Amsterdam|Holland(?!, [MO])|Zwolle|Willemstad|Curacao|Curaao|Utrecht|Breda|Eindhoven|Groningen)\\b"
 nc	<- "\\b(?i)(New Caledonia)\\b"
 nz	<- "\\b(?i)(New Zealand|Auckland|NZ|NZL)\\b"
 ni	<- "\\b(?i)(Nicaragua)\\b"
@@ -212,16 +212,16 @@ pe	<- "\\b(?i)(Peru|Arequipa)\\b"
 ph	<- "\\b(?i)(Philippines)\\b"
 pn	<- "\\b(?i)(Pitcairn)\\b"
 pl <- "\\b(?i)(Poland|Warsaw|Wrocaw)\\b"
-pt <- "\\b(?i)(Portugal|Lisboa|Lisbon|Azores|Porto(?! [Alegre|Velho])|Faro)\\b"
+pt <- "\\b(?i)(Portugal|Lisboa|Lisbon|Azores|Porto(?! Alegre)|Faro)\\b"
 pr	<- "\\b(?i)(Puerto Rico)\\b"
 qa	<- "\\b(?i)(Qatar)\\b"
 re	<- "\\b(?i)(Réunion)\\b"
 ro <- "\\b(?i)(Romania|Bucharest)\\b"
-ru <- "\\b(?i)(Russia|Russian|Moscow(?!, I)|Yekaterinburg|St Petersburg(?![, F| FL| florida])|St. Petersburg(?![, F| FL| florida])|St-Petersburg(?!, F)|RU, )\\b"
+ru <- "\\b(?i)(Russia|Russian|Moscow(?!, I)|Yekaterinburg|Petersburg(?!, F)|St-Petersburg(?!, F)|RU, )\\b"
 rw	<- "\\b(?i)(Rwanda)\\b"
 bl	<- "\\b(?i)(Saint Barthélemy)\\b"
 sh	<- "\\b(?i)(Saint Helena)\\b"
-kn	<- "\\b(?i)(Saint Kitts|Nevis|Basseterre, St. Kitts)\\b"
+kn	<- "\\b(?i)(Saint Kitts|Nevis)\\b"
 lc	<- "\\b(?i)(Saint Lucia)\\b"
 mf	<- "\\b(?i)(Saint Martin)\\b"
 pm	<- "\\b(?i)(Saint Pierre|Miquelon)\\b"
@@ -243,7 +243,7 @@ so	<- "\\b(?i)(Somalia)\\b"
 za	<- "\\b(?i)(South Africa|Cape Town|Johannesburg)\\b"
 gs	<- "\\b(?i)(South Georgia|South Sandwich Islands|South Sandwich|Sandwich Islands)\\b"
 ss	<- "\\b(?i)(South Sudan)\\b"
-es <- "\\b(?i)(Spain|Madrid|Barcelona, Spain|Granada|Sevilla|Mallorca|Ibiza|Bilbao|Espana|Espaa|Zaragoza|Catalunya|Basque|Valencia(?!, [C|Ven])|Catalonia|Galicia)\\b"
+es <- "\\b(?i)(Spain|Madrid|Barcelona|Granada|Sevilla|Mallorca|Ibiza|Bilbao|Espana|Espaa|Zaragoza|Catalunya|Basque|Valencia(?!, [C|Ven])|Catalonia|Galicia)\\b"
 lk	<- "\\b(?i)(Sri Lanka|Srilanka)\\b"
 sd	<- "\\b(?i)(Sudan)\\b"
 sr	<- "\\b(?i)(Suriname)\\b"
@@ -269,13 +269,13 @@ tv	<- "\\b(?i)(Tuvalu)\\b"
 ug	<- "\\b(?i)(Uganda)\\b"
 ua	<- "\\b(?i)(Ukraine|Ukrane|Kyiv|Kiev|Zaporozhye|Dnepr|Dnipro)\\b"
 ae	<- "\\b(?i)(United Arab|Emirates|UAE|Abu Dhabi)\\b"
-gb <- "\\b(?i)(UK|UK,|United Kingdom|united-kingdom|London(?![, Ontario|, ON|Ontario| Canada|, Canada|, CA])|(?<!New )England|Wales|U.K.|Aberdeen|Cardiff(?!, CA)|Scotland|Edinburgh|Glasglow|Brighton(?!, [M|C]))\\b"
-us	<- "\\b(?i)(?:Ala(?:(?:bam|sk)a)|American Samoa|Arizona|Arkansas|(?<!Baja )California|Colorado|Connecticut|Delaware|District of Columbia|Florida|(?<!Tbilisi, )Georgia(?!, tbilisi)|Guam|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Miss(?:(?:issipp|our)i)|Montana|Nebraska|Nevada|New (?:Hampshire|Jersey|Mexico|York)|North (?:(?:Carolin|Dakot)a)|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South (?:(?:Carolin|Dakot)a)|Tennessee|Texas|Utah|Vermont|Virgin(?:ia| Island(s?))|Washington|West Virginia|Wisconsin|Wyoming|United States|A[KLRSZ]|(?<![Ontario |Ontario, |Toronto |Toronto, |ON, |ON |Vancouver |Vancouver, |Vancouver,])C[AOT]|, DC|(?<![Berlin, |Hamburg, |Munich, |Dresden, |Frankfurt, ])DE|FL|G[AU]|HI|(?<![Jakarta, |Bandung, |Yogyakarta, ])I[AL]|(?<!Pune), IN|, ID|K[SY]|, LA|M[DEINOST]|(?<!Imperatriz-)MA|N[CDEHJMVY]|O[HK]|, OR|PA|RI|(?<!Blumenau, )S[CD](?![ - Brasil| - Brazil|, Brazil|, Brasil| Brazil| Brasil| - BR])|T[NX](?!, India)|UT|V[AIT]|W[AIVY](?!, Australia)|NYC|DC|D.C.|US|USA|Seattle|San Francisco|Chicago|Philly|Philadelphia|Los Angeles|Portland|Houston|Phoenix|San Antonio|San Diego|Oakland|Boston|Bay Area|Berkeley|Stanford|Harvard|Dallas|Silicon|San Jose(?!, Costa Rica)|USC|Twin Cities|NYU|Yale|, Mass| Mass|newyork|new_york|U.S.|Atlanta|Austin|Albany|Manhattan|Brooklyn|Bronx|Cal|Cape Cod|Cleveland|Denver|Detroit|East Bay|Pittsburgh|Salt Lake|St. Louis|Honolulu|Miami|Minneapolis|Palo Alto|^san fran|socal|^SF|Merica$|Greater Nashville Area)\\b"
+gb <- "\\b(?i)(UK|UK,|United Kingdom|united-kingdom|London|(?<!New )England|Wales|U.K.|Aberdeen|Cardiff(?!, CA)|Scotland|Edinburgh|Glasglow|Brighton(?!, [M|C]))\\b"
+us	<- "\\b(?i)(?:Ala(?:(?:bam|sk)a)|American Samoa|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Guam|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Miss(?:(?:issipp|our)i)|Montana|Nebraska|Nevada|New (?:Hampshire|Jersey|Mexico|York)|North (?:(?:Carolin|Dakot)a)|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South (?:(?:Carolin|Dakot)a)|Tennessee|Texas|Utah|Vermont|Virgin(?:ia| Island(s?))|Washington|West Virginia|Wisconsin|Wyoming|United States|A[KLRSZ]|C[AOT]|, DC|(?<!Berlin|Hamburg), DE|FL|G[AU]|HI|I[AL]|, IN|, ID|K[SY]|, LA|M[ADEINOST]|N[CDEHJMVY]|O[HK]|, OR|PA|RI|S[CD]|T[NX]|UT|V[AIT]|W[AIVY]|NYC|DC|D.C.|US|USA|Seattle|San Francisco|Chicago|Philly|Philadelphia|Los Angeles|Portland|Houston|Phoenix|San Antonio|San Diego|Oakland|Boston|Bay Area|Berkeley|Stanford|Harvard|Dallas|Silicon|San Jose|USC|Twin Cities|NYU|Yale|, Mass| Mass|newyork|new_york|U.S.|Atlanta|Austin|Albany|Manhattan|Brooklyn|Bronx|Cal|Cape Cod|Cleveland|Denver|Detroit|East Bay|Pittsburgh|Salt Lake|St. Louis|Honolulu|Miami|Minneapolis|Palo Alto|^san fran|socal)\\b"
 uy	<- "\\b(?i)(Uruguay)\\b"
 uz	<- "\\b(?i)(Uzbekistan)\\b"
 vu	<- "\\b(?i)(Vanuatu)\\b"
 ve	<- "\\b(?i)(Venezuela)\\b"
-vn	<- "\\b(?i)(Viet Nam|Vietnam|Vit Nam)\\b"
+vn	<- "\\b(?i)(Viet Nam|Vietnam)\\b"
 vg	<- "\\b(?i)(Virgin Islands, British|British Virgin Islands)\\b"
 vi	<- "\\b(?i)(Virgin Islands, U.S.|Virgin Islands, US| US Virgin Islands)\\b"
 wf	<- "\\b(?i)(Wallis and Futuna)\\b"
@@ -284,16 +284,9 @@ ye	<- "\\b(?i)(Yemen)\\b"
 zm	<- "\\b(?i)(Zambia)\\b"
 zw	<- "\\b(?i)(Zimbabwe)\\b"
 asia <- "\\b(?i)(Asia)\\b"
-africa <- "\\b(?i)((?<!South )Africa|Northern Africa|North Africa|West Africa|East Africa)\\b"
-europe <- "\\b(?i)(^Europe|Central Europe|Eastern Europe|EU|Europa|European|Scandinavia)\\b"
+africa <- "\\b(?i)((?<!South )Africa|West Africa)\\b"
+europe <- "\\b(?i)(Europe|Central Europe|Eastern Europe|EU|Europa|European|Scandinavia)\\b"
 americas <- "\\b(?i)(South America|Latin America|North America)\\b"
-middle_east <- "EMEA|Middle East|eurasia"
-planet_earth <- "Planet Earth|Worldwide|Earth planet|Earth, for now|Earth, Milky Way|Somewhere on Earth|Somewhere in the world|Earth (for now)|Earth, Solar System|Earth, Solar System, Milky Way|Anywhere, Earth|Somewhere in the world...|Somewhere on Planet Earth|Somewhere on the earth"
-somewhere_in_space <- "deep space|Universe|Milky Way|Virgo Supercluster|ZZ9 Plural Z Alpha|Sector ZZ9 Plural Z Alpha|The Universe|milky way|Outer Space|3rd rock from the sun|The Milky Way|Galactic Sector ZZ9 Plural Z Alpha|Earth, Solar System, Milky Way, Laniakea|Earth (currently)|Earth (mostly)|Laniakea Supercluster|Somewhere in the universe|Milkey Way|Middle-Earth|Milkyway Galaxy"
-#some_any_nowhere <- "Somewhere|Nowhere|Anywhere|everywhere|Somewhere.|The middle of nowhere"
-ficticious_places <- "Gensokyo|Matrix|The Matrix|Wonderland|Somewhere over the Rainbow|Somewhere under the rainbow|5th dimension|4th dimension"
-worldwide_web <- "worldwide|international|WWW|cyberspace|Internets|Interwebz|interwebs"
-
 
 # let's recode all of the strings and put them in a new data.table 
 users_gh_cc <- data.table(oss_data) %>%
@@ -305,18 +298,6 @@ users_gh_cc <- data.table(oss_data) %>%
                                       paste("europe", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = americas), 
                                       paste("americas", detected_country, sep=","), no = detected_country)) %>%
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = middle_east), 
-                                      paste("middle_east", detected_country, sep=","), no = detected_country)) %>%
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = planet_earth), 
-                                      paste("planet_earth", detected_country, sep=","), no = detected_country)) %>%
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = somewhere_in_space), 
-                                      paste("somewhere_in_space", detected_country, sep=","), no = detected_country)) %>%
-  #dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = some_any_nowhere), 
-  #                                    paste("some_any_nowhere", detected_country, sep=","), no = detected_country)) %>%
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ficticious_places), 
-                                      paste("ficticious_places", detected_country, sep=","), no = detected_country)) %>%
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = worldwide_web), 
-                                      paste("worldwide_web", detected_country, sep=","), no = detected_country)) %>%
   # now we are adding all of the country codes 
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = af), paste("af", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = ax), paste("ax", detected_country, sep=","), no = detected_country)) %>%
@@ -425,7 +406,7 @@ users_gh_cc <- data.table(oss_data) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = im), paste("im", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = il), paste("il", detected_country, sep=","), no = detected_country)) %>%
   # i did india down here so that i didn't have to name a variable "in", which created problems 
-  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = "\\b(?i)(India|Mumbai|Delhi|Kolkata|Chennai|Bangalore|Hyderabad|Ahmedabad|Pune|VIT (?!Nam)|NIT |Amritsar|(?<!Lahore[ ,])Punjab(?! Pakistan)|Bhubaneswar|Gandhinagar|Gujarat|^IIT |Indian|Jaipur|jammu|kashmir|^MNNIT)\\b"), paste("in", detected_country, sep=","), no = detected_country)) %>%
+  dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = "\\b(?i)(India|Mumbai|Delhi|Kolkata|Chennai|Bangalore|Hyderabad|Ahmedabad|Pune|VIT |NIT |Amritsar|(?<!Lahore[ ,])Punjab(?! Pakistan)|Bhubaneswar|Gandhinagar|Gujarat|^IIT |Indian|Jaipur|jammu|kashmir|^MNNIT)\\b"), paste("in", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = jp), paste("jp", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lv), paste("lv", detected_country, sep=","), no = detected_country)) %>%
   dt_mutate(detected_country = ifelse(test = str_detect(string = oss_data$location, pattern = lu), paste("lu", detected_country, sep=","), no = detected_country)) %>%
@@ -569,138 +550,7 @@ users_gh_cc <- data.table(oss_data) %>%
 # removing the commas at the end of the strings from the column just created
 users_gh_cc$new_country_code <- gsub("\\,$", "", users_gh_cc$new_country_code)
 users_gh_cc$new_country_code <- trimws(users_gh_cc$new_country_code)
-
-users_gh_cc %>% 
-  select(login, new_country_code, everything()) %>% 
-  drop_na(new_country_code)
 ```
-
-Ok, now we need to see if we can increase the number of users classified based on the other column data. 
-
-First, let's try imputing old country_code information into new_county_code information 
-
-```{r}
-# after recoding all the strings into new_cc, lets impute old_cc into new_cc when missing 
-users_with_old_cc <- users_gh_cc %>% 
-  dt_mutate(new_country_code = ifelse(is.na(new_country_code), country_code, new_country_code),
-            new_country_code = ifelse(new_country_code == "", country_code, new_country_code),
-            country_code = trimws(country_code),
-            new_country_code = trimws(new_country_code),
-            # fixing systematic false positives (would be better if i did this in regex but it would take a long time)
-            new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,br"), yes = "br", no = new_country_code),
-            new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,in"), yes = "in", no = new_country_code))
-users_with_old_cc
-  
-# dropped from 5,126 cases that do not match to 3,883 after reiterative coding 
-non_matching <- users_with_old_cc %>% 
-  dt_mutate(match_test = ifelse(country_code == new_country_code, TRUE, FALSE)) %>% 
-  dt_filter(match_test == FALSE) %>% 
-  select(login, new_country_code, country_code, location, city, match_test, everything())
-non_matching # there is some room to improve with these (might just impute original country code instead)
-
-# dropped from 2,078 that do not match (bc we allow multiple countries) to 687 after recoding 
-non_matching %>% 
-  select(login, country_code, new_country_code, everything()) %>% 
-  dt_filter(grepl(",", new_country_code)) #%>% count(new_country_code) %>% arrange(-n)
-
-```
-
-Now, let's see if the sectored academic data (with country codes) help classify more users.
-
-```{r}
-# joining increases dataset from 717492 to 717558
-users_with_uni_cc <- users_with_old_cc %>% 
-  left_join(academic_data, by = "login") %>% 
-  #select(login, country, country_code, new_country_code, institution) %>% 
-  #filter(is.na(new_country_code) & !is.na(country)) %>% 
-  mutate(tmp_cc = countrycode(country, origin = 'country.name', destination = 'iso2c'),
-         tmp_cc = tolower(tmp_cc),
-         new_country_code = ifelse(is.na(new_country_code), tmp_cc, new_country_code)) %>% 
-  select(login, new_country_code, country_code, everything(), 
-         -institution, -tmp_cc, is_academic, -country, -match_test, -is_academic)
-
-users_with_uni_cc %>% 
-  count(new_country_code) %>% 
-  arrange(-n)
-
-users_with_uni_cc %>% 
-  drop_na(new_country_code)
-# we are up from 700,105 users in the first draft of the Scientific Reports paper to 733,074 users 
-```
-
-Next, let's try emails. This entails pulling out all of the country codes from the email subdomains and then classifying into countries from there.
-
-```{r}
-email_domain_by_country <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/government/email_to_country_code.csv")
-email_domain_by_country <- email_domain_by_country %>% 
-  mutate(country_code = tolower(country_code)) %>% 
-  rename(domain = country_email, 
-         cc_by_email = country_code) %>% 
-  select(domain, cc_by_email, country_name); email_domain_by_country
-
-cc_by_email <- users_with_uni_cc %>% 
-  filter(is.na(new_country_code) & !is.na(email)) %>% 
-  dt_mutate(domain = str_extract(email, ".[^.]*$")) %>% 
-  filter(domain != ".com" & domain != ".org" & domain != ".io" & domain != ".im" &
-         domain != ".net" & domain != ".me" & domain != ".cc" & domain != ".co" & domain != ".sh") %>% 
-  left_join(email_domain_by_country, by = "domain") %>% 
-  drop_na(cc_by_email) %>% 
-  select(login, cc_by_email) 
-
-users_with_email_cc <- users_with_uni_cc %>% 
-  left_join(cc_by_email, by = "login") %>% 
-  mutate(new_country_code = ifelse(is.na(new_country_code), cc_by_email, new_country_code)) %>% 
-  select(login, new_country_code, everything())
-
-users_with_email_cc %>% 
-  count(new_country_code) %>% 
-  arrange(-n)
-
-users_with_email_cc %>% 
-  drop_na(new_country_code)
-# we are up from 700,105 users in the first draft of the Scientific Reports paper to 750,885 users 
-```
-```{r}
-users_with_email_cc %>% 
-  filter(is.na(new_country_code) & !is.na(email)) %>% 
-  dt_mutate(domain = str_extract(email, ".[^.]*$")) %>% 
-  filter(domain != ".com" & domain != ".org" & domain != ".io" & domain != ".im" &
-         domain != ".net" & domain != ".me" & domain != ".cc" & domain != ".co" & domain != ".sh") %>% 
-  left_join(email_domain_by_country, by = "domain") %>% 
-  filter(domain == ".edu")
-  count(domain) %>% 
-  arrange(-n)
-# .gov|.nyc|.mil|.army = us 
-# .eu = europe 
-# .asia = asia 
-# .quebec = canada 
-# .berlin = germany
-# .tokyo = japan
-# also about 550 .edu people that should be classified in academia, why are they not? 
-```
-```{r}
-look at china and japan in the company colomn 
-
-```
-
-
-```{r}
-users_with_email_cc %>% 
-  filter(is.na(new_country_code) & !is.na(city)) 
-# could improve on this -- about 55 rows of random cities without country codes
-
-users_with_email_cc %>% 
-  filter(is.na(new_country_code) & !is.na(city)) %>% 
-  count(location) %>% 
-  arrange(-n)
-```
-
-```{r}
-users_with_email_cc %>% 
-  filter(is.na(new_country_code) & !is.na(long) & long != 0) 
-# also 387 rows with lat and lon but no country code  
-```
-
 
 First, we want to get the total counts of countries even when they are listed more than once.
 
