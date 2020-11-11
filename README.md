@@ -8,7 +8,7 @@ The structure for this repo is outlined below, but this repo also links to sever
 [GHOSS.jl](https://github.com/uva-bi-sdad/GHOSS.jl), [CRAN](https://github.com/uva-bi-sdad/CRAN), [standardizeR](https://github.com/brandonleekramer/standardizeR), and [DSPG-Young-Scholars-Program/dspg20oss](https://github.com/DSPG-Young-Scholars-Program/dspg20oss).
 
     ├── data 
-        ├── GHTorrent
+        ├── GHTorrent data
         ├── GitHub commit data
         ├── Cost estimations data 
         ├── Sectoring data 
@@ -30,11 +30,11 @@ The structure for this repo is outlined below, but this repo also links to sever
             ├── Cost estimates for GitHub activity by country
             ├── Cost estimates for GitHub activity by sector
         ├── 03_github-network-analysis 
-             ├── Network analysis of full GitHub network 
+            ├── Network analysis of full GitHub network 
             ├── Network analysis of international collaboration on GitHub
             ├── Network analysis of academic collaboration on GitHub
             ├── Network analysis of business collaboration on GitHub
-        ├── 04_sectoring-analysis
+        ├── 04_github-sectoring-analysis
             ├── Full sectoring approach
             ├── Academic 
             ├── Business
@@ -44,7 +44,7 @@ The structure for this repo is outlined below, but this repo also links to sever
         ├── 05_cran-maintainer-survey
             ├── CRAN Maintainer data tool
             ├── CRAN wrangling and descriptives
-        ├── 06_data-wrangling 
+        ├── 06_oss-data-wrangling 
             ├── Data wrangling files
             ├── Code for posting data to PostgreSQL 
 
