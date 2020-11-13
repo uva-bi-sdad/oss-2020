@@ -1,0 +1,25 @@
+---
+title: "Publication Plans"
+output: html_document
+---
+
+### Cost estimations 
+
+- Current draft prepared for [*Research Policy*](https://www.journals.elsevier.com/research-policy)
+
+### Network analysis 
+
+- International Collaboration draft prepared for [*Scientific Reports*](https://www.nature.com/srep/) 
+- Networks communities paper
+- Full network paper 
+- Academic networks paper 
+
+### Sectoring 
+
+- Full sectoring paper for [*Frontiers in Research Methods and Analytics*](https://www.frontiersin.org/journals/research-metrics-and-analytics/sections/research-policy-and-strategic-management)
+- code.gov paper
+
+### Scraping Package 
+
+- Paper in preparation for [*Mining Software Repositories*](http://www.msrconf.org/) conference 
+

@@ -270,7 +270,7 @@ ug	<- "\\b(?i)(Uganda)\\b"
 ua	<- "\\b(?i)(Ukraine|Ukrane|Kyiv|Kiev|Zaporozhye|Dnepr|Dnipro)\\b"
 ae	<- "\\b(?i)(United Arab|Emirates|UAE|Abu Dhabi)\\b"
 gb <- "\\b(?i)(UK|UK,|United Kingdom|united-kingdom|London(?![, Ontario|, ON|Ontario| Canada|, Canada|, CA])|(?<!New )England|Wales|U.K.|Aberdeen|Cardiff(?!, CA)|Scotland|Edinburgh|Glasglow|Brighton(?!, [M|C]))\\b"
-us	<- "\\b(?i)(?:Ala(?:(?:bam|sk)a)|American Samoa|Arizona|Arkansas|(?<!Baja )California|Colorado|Connecticut|Delaware|District of Columbia|Florida|(?<!Tbilisi, )Georgia(?!, tbilisi)|Guam|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Miss(?:(?:issipp|our)i)|Montana|Nebraska|Nevada|New (?:Hampshire|Jersey|Mexico|York)|North (?:(?:Carolin|Dakot)a)|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South (?:(?:Carolin|Dakot)a)|Tennessee|Texas|Utah|Vermont|Virgin(?:ia| Island(s?))|Washington|West Virginia|Wisconsin|Wyoming|United States|A[KLRSZ]|(?<![Ontario |Ontario, |Toronto |Toronto, |ON, |ON |Vancouver |Vancouver, |Vancouver,])C[AOT]|, DC|(?<![Berlin, |Hamburg, |Munich, |Dresden, |Frankfurt, ])DE|FL|G[AU]|HI|(?<![Jakarta, |Bandung, |Yogyakarta, ])I[AL]|(?<!Pune), IN|, ID|K[SY]|, LA|M[DEINOST]|(?<!Imperatriz-)MA|N[CDEHJMVY]|O[HK]|, OR|PA|RI|(?<!Blumenau, )S[CD](?![ - Brasil| - Brazil|, Brazil|, Brasil| Brazil| Brasil| - BR])|T[NX](?!, India)|UT|V[AIT]|W[AIVY](?!, Australia)|NYC|DC|D.C.|US|USA|Seattle|San Francisco|Chicago|Philly|Philadelphia|Los Angeles|Portland|Houston|Phoenix|San Antonio|San Diego|Oakland|Boston|Bay Area|Berkeley|Stanford|Harvard|Dallas|Silicon|San Jose(?!, Costa Rica)|USC|Twin Cities|NYU|Yale|, Mass| Mass|newyork|new_york|U.S.|Atlanta|Austin|Albany|Manhattan|Brooklyn|Bronx|Cal|Cape Cod|Cleveland|Denver|Detroit|East Bay|Pittsburgh|Salt Lake|St. Louis|Honolulu|Miami|Minneapolis|Palo Alto|^san fran|socal|^SF|Merica$|Greater Nashville Area)\\b"
+us	<- "\\b(?i)(?:Ala(?:(?:bam|sk)a)|American Samoa|Arizona|Arkansas|(?<!Baja )California|Colorado|Connecticut|Delaware|District of Columbia|Florida|(?<!Tbilisi, )Georgia(?!, tbilisi)|Guam|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Miss(?:(?:issipp|our)i)|Montana|Nebraska|Nevada|New (?:Hampshire|Jersey|Mexico|York)|North (?:(?:Carolin|Dakot)a)|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South (?:(?:Carolin|Dakot)a)|Tennessee|Texas|Utah|Vermont|Virgin(?:ia| Island(s?))|Washington|West Virginia|Wisconsin|Wyoming|United States|A[KLRSZ]|(?<![Ontario |Ontario, |Toronto |Toronto, |ON, |ON |Vancouver |Vancouver, |Vancouver,])C[AOT]|, DC|(?<![Berlin, |Hamburg, |Munich, |Dresden, |Frankfurt, ])DE|FL|G[AU]|HI|(?<![Jakarta, |Bandung, |Yogyakarta, |Pune, ])I[ALDN]|, ID|K[SY]|, LA|M[DEINOST]|(?<!Imperatriz-)MA|N[CDEHJMVY]|O[HK]|, OR|PA|RI|(?<!Blumenau, )S[CD](?![ - Brasil| - Brazil|, Brazil|, Brasil| Brazil| Brasil| - BR])|T[NX](?!, India)|UT|V[AIT]|W[AIVY](?!, Australia)|NYC|DC(?!, Colombia)|D.C.|US|USA|Seattle|San Francisco|Chicago|Philly|Philadelphia|Los Angeles|Portland|Houston|Phoenix|San Antonio|San Diego|Oakland|Boston|Bay Area|Berkeley|Stanford|Harvard|Dallas|Silicon|San Jose(?!, Costa Rica)|USC|Twin Cities|NYU|Yale|, Mass| Mass|newyork|new_york|U.S.|Atlanta|Austin|Albany|Manhattan|Brooklyn|Bronx|Cal|Cape Cod|Cleveland|Denver|Detroit|East Bay|Pittsburgh|Salt Lake|St. Louis|Honolulu|Miami|Minneapolis|Palo Alto|^san fran|socal|^SF|Merica$|Greater Nashville Area)\\b"
 uy	<- "\\b(?i)(Uruguay)\\b"
 uz	<- "\\b(?i)(Uzbekistan)\\b"
 vu	<- "\\b(?i)(Vanuatu)\\b"
@@ -582,15 +582,15 @@ First, let's try imputing old country_code information into new_county_code info
 ```{r}
 # after recoding all the strings into new_cc, lets impute old_cc into new_cc when missing 
 users_with_old_cc <- users_gh_cc %>% 
-  dt_mutate(new_country_code = ifelse(is.na(new_country_code), country_code, new_country_code),
-            new_country_code = ifelse(new_country_code == "", country_code, new_country_code),
-            country_code = trimws(country_code),
-            new_country_code = trimws(new_country_code),
+  select(login, new_country_code, country_code, everything()) %>% 
+  mutate(new_country_code = ifelse(is.na(new_country_code), country_code, new_country_code),
+         new_country_code = ifelse(new_country_code == "", country_code, new_country_code),
+         country_code = trimws(country_code),
+         new_country_code = trimws(new_country_code),
             # fixing systematic false positives (would be better if i did this in regex but it would take a long time)
-            new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,br"), yes = "br", no = new_country_code),
-            new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,in"), yes = "in", no = new_country_code))
-users_with_old_cc
-  
+         new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,br"), yes = "br", no = new_country_code),
+         new_country_code = ifelse(test = str_detect(string = new_country_code, pattern = "us,in"), yes = "in", no = new_country_code))
+
 # dropped from 5,126 cases that do not match to 3,883 after reiterative coding 
 non_matching <- users_with_old_cc %>% 
   dt_mutate(match_test = ifelse(country_code == new_country_code, TRUE, FALSE)) %>% 
@@ -647,10 +647,28 @@ cc_by_email <- users_with_uni_cc %>%
   drop_na(cc_by_email) %>% 
   select(login, cc_by_email) 
 
+china_japan <- users_with_uni_cc %>%
+  filter(is.na(new_country_code) & (company == "japan" | company == "china")) %>% 
+  mutate(jp_cn = ifelse(str_detect(company, "china"), "cn", new_country_code),
+         jp_cn = ifelse(str_detect(company, "japan"), "jp", new_country_code)) %>% 
+  select(login, jp_cn)
+
 users_with_email_cc <- users_with_uni_cc %>% 
   left_join(cc_by_email, by = "login") %>% 
-  mutate(new_country_code = ifelse(is.na(new_country_code), cc_by_email, new_country_code)) %>% 
-  select(login, new_country_code, everything())
+  mutate(new_country_code = ifelse(is.na(new_country_code), cc_by_email, new_country_code), 
+         domain = str_extract(email, ".[^.]*$"),
+         new_country_code = ifelse(str_detect(domain, ".gov"), "us", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".mil"), "us", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".nyc"), "us", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".army"), "us", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".eu"), "europe", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".asia"), "asia", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".quebec"), "ca", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".berlin"), "de", new_country_code),
+         new_country_code = ifelse(str_detect(domain, ".tokyo"), "jp", new_country_code)) %>%
+  left_join(china_japan, by = "login") %>% 
+  mutate(new_country_code = ifelse(is.na(new_country_code), jp_cn, new_country_code)) %>% 
+  select(login, new_country_code, everything(), -cc_by_email, -jp_cn)
 
 users_with_email_cc %>% 
   count(new_country_code) %>% 
@@ -660,6 +678,7 @@ users_with_email_cc %>%
   drop_na(new_country_code)
 # we are up from 700,105 users in the first draft of the Scientific Reports paper to 750,885 users 
 ```
+
 ```{r}
 users_with_email_cc %>% 
   filter(is.na(new_country_code) & !is.na(email)) %>% 
@@ -667,22 +686,12 @@ users_with_email_cc %>%
   filter(domain != ".com" & domain != ".org" & domain != ".io" & domain != ".im" &
          domain != ".net" & domain != ".me" & domain != ".cc" & domain != ".co" & domain != ".sh") %>% 
   left_join(email_domain_by_country, by = "domain") %>% 
-  filter(domain == ".edu")
-  count(domain) %>% 
-  arrange(-n)
-# .gov|.nyc|.mil|.army = us 
-# .eu = europe 
-# .asia = asia 
-# .quebec = canada 
-# .berlin = germany
-# .tokyo = japan
-# also about 550 .edu people that should be classified in academia, why are they not? 
+  filter(domain == ".edu") %>% 
+  select( email, company, login, everything())
+# also about 550 .edu people that should be classified in academia
+# most are cases where the put info in the company column but still have .edu domains 
+# too time consuming to pursue this here, but could develop in academia 
 ```
-```{r}
-look at china and japan in the company colomn 
-
-```
-
 
 ```{r}
 users_with_email_cc %>% 
