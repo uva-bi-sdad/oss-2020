@@ -5,6 +5,8 @@ date: "10/11/2019"
 output: html_document
 ---
 
+### WARNING: THIS FILE IS JUST DEVELOPMENT. THE ACTUAL CLASSIFICAITON SYSTEM IS IN intl-ctr-ctry-codes.Rmd
+
 In this project, we want to examine open source software (OSS) development within the context of international collaboration networks. More specifically, we want to conduct analyses of international collaboration networks in the context of GitHub. Using data gathered from [GH Torrent](http://ghtorrent.org/), we have a dataset of over 2 million users and __ million repos. The first step in creating an international collaboration network is checking to see how many country codes we actually have for this data.
 
 Let's bring in the data from our PostgreSQL database. 

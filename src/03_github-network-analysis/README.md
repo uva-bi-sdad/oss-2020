@@ -8,10 +8,7 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
 - Finish running full network analyses over time 
   - Convert code to function in `R` and run `slurm` 
 - Re-run international network analyses 
-  - Match users to country code through academic institutions  
-  - Match users to countries based on email 
-  - Match users to countries based on cities 
-  - Re-run international networks based on these updates
+  - Re-run international networks based new 750k numbers
   - Convert code to function in `R` and run `slurm` 
 - Run repo networks using the `slurm` procedure
 - Run academic academic networks using the `slurm` procedure 
@@ -36,7 +33,7 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
         ├── 02_full-ctr-analysis
         ├── 03_full-repo-analysis
     02_international-collaboration
-        ├── 01_intl-network-data-construction 
+        ├── 01_network-construction 
         ├── 02_contributor-networks
         ├── 03_country-networks
         ├── 04_repository-networks
