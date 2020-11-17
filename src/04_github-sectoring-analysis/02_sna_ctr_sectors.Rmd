@@ -501,24 +501,6 @@ ggplot(country_users_sorted[(.N-20):.N, ], aes(color = continent)) +
                      values=c("#232D4B", "#99BDAD",  "#E57200", "#0E879C", "#D9E12B")) 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # now that they are all classified, we will add in the country_code information and write this back to the database 
 
 ```{r}
@@ -547,6 +529,10 @@ classified_users <- classified_users %>%
   select(login, sector, city_info, cc_multiple, cc_di, cc_viz, raw_location, email, company_original, company_cleaned) %>% 
   distinct()
 
+classified_users %>% 
+  count(cc_viz) %>% 
+  arrange(-n)
+
 classified_users
 ```
 
@@ -564,6 +550,8 @@ dbWriteTable(conn, name = c(schema = "gh", name = "sna_ctr_sectors"), classified
 
 # disconnect from postgresql database 
 dbDisconnect(conn)
+
+# GRANT ALL PRIVILEGES ON TABLE gh.sna_ctr_sectors TO ncses_oss;  
 ```
 
 

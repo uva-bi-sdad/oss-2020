@@ -103,6 +103,8 @@ The GitHub network data was constructed from the raw GitHub commits data (`gh.co
             - This is the original 2.1m contributors from GHTorrent (but in gh schema)
         ├── gh.ctrs_extra
             - This is the 2.1m contributors GHTorrent data with more ctr attributes
+        ├── gh.sna_ctr_ctry_codes 
+            - This is the 750k contributors with valid country codes
     Geographic matching data 
         ├── gh.ctrs_raw
             - Matched contributors to country based on 

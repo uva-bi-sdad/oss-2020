@@ -14,6 +14,8 @@ ON A.login = B.login ) AS D
 ON C.login = D.login
 )
 
+GRANT ALL PRIVILEGES ON TABLE gh.cost_by_sector_geo_0919 TO ncses_oss;
+
 SELECT slug, sector, inst_country, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions,
 					SUM(additions + deletions) AS sum_adds_dels, SUM(additions - deletions) AS net_adds_dels
 FROM table_join

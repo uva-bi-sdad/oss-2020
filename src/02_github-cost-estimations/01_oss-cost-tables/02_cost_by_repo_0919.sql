@@ -12,3 +12,5 @@ FROM commits_annual
 WHERE year > 2008 AND year < 2020
 GROUP BY slug
 );
+
+GRANT ALL PRIVILEGES ON TABLE gh.cost_by_repo_0919 TO ncses_oss;

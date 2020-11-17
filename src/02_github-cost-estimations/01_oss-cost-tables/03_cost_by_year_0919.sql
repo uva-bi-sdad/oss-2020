@@ -12,3 +12,5 @@ SELECT slug, login, year, COUNT(*) AS commits, SUM(additions) AS additions, SUM(
 FROM commits_annual
 WHERE year > 2008 AND year < 2020
 GROUP BY slug, login, year );
+
+GRANT ALL PRIVILEGES ON TABLE gh.cost_by_year_0919 TO ncses_oss;
