@@ -3,24 +3,7 @@ title: "GitHub Totals, By Country"
 output: html_document
 ---
 
-This code pulls from original commits data and groups by slug and country so that repos per country can be calculated.
-
-```{sql }
-CREATE MATERIALIZED VIEW gh.commits_by_cc_repo AS (
-SELECT slug, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM (SELECT slug, 
-	  commits_pre.login, 
-	  EXTRACT(YEAR FROM committed_date)::int AS YEAR, 
-	  users_gh_cc.country_code AS country_code, 
-	  additions, deletions
-	  FROM gh.commits_pre
-	  FULL JOIN github.users_gh_cc 
-	  ON commits_pre.login = users_gh_cc.login) A
-GROUP BY slug, A.country_code
-); 
-```
-
-After that, we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
+After running `02_commits_by_cc_repo.sql` to create the table, we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
 
 ```{r setup, include=FALSE}
 #rm(list = ls())
@@ -73,29 +56,6 @@ stats_by_country <- ctrs_by_ctry %>%
 stats_by_country
 ```
 
-Next, we pull in repos per country and recode the multiple column... 
-
-```{r}
-# recodes all of the countries with multiple names into one "multiple" category 
-repos_by_ctry <- repos_by_ctry %>% 
-  dplyr::mutate(old_cc = country_code) %>% 
-  dplyr::mutate(country_code = ifelse(
-    test = str_detect(string = country_code, 
-                      pattern = "_"), paste("multiple"), no = country_code)) 
-
-repos_by_ctry$country_code <- trimws(repos_by_ctry$country_code)
-
-repos_by_ctry %>% 
-  #grepl("us", "us")
-  filter(country_code == "us")
-
-# distinct countries 
-n_distinct(repos_by_ctry$country_code)
-
-# distinct slugs 
-n_distinct(repos_by_ctry$slug)
-
-```
 
 Then we calculate repos, commits, additions, deletions, additions + deletions and additions - deletions by country... 
 
@@ -173,8 +133,7 @@ stats_by_country <- stats_by_country %>%
                                             pattern = "africa"), yes = "Africa", no = country)) %>%
   select(country, country_code, everything())
 
-setwd("~/oss-data/intl-country-nets")
-write_csv(stats_by_country, "oss-repos-per-country.csv")
+write_csv(stats_by_country, "~/git/oss-2020/data/intl_totals/oss-repos-per-country.csv")
 ```
 
 And write our summary table to the database... 

@@ -31,6 +31,11 @@ city_codes <- dbGetQuery(conn, "SELECT * FROM gh.sna_ctr_city_codes;")
 dbDisconnect(conn)
 ```
 
+```{r}
+oss_data %>% 
+  drop_na(country_code)
+```
+
 ## Recoding Country Codes and Writing New Table to SQL ##########################################################################################
 
 This code simply repeats the final recoding step in the country-cleaning.Rmd file. Conceptually, this chunk recodes the location column into a detected_country column and then adds that new information to the already existing country_code column. (Note: Brandon did make a slight adjustment to the US string since it was case sensitive before, which drove our totals down.)

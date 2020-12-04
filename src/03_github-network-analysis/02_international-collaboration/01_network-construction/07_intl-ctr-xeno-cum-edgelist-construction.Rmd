@@ -77,15 +77,17 @@ intl_ctr_edgelist <- intl_ctr_edgelist %>%
                           pattern = "xk"), yes = "Kosovo", no = country1)) %>%  
   mutate(country2 = ifelse(test = str_detect(string = ctrycode2, 
                           pattern = "xk"), yes = "Kosovo", no = country2)) %>% 
-  select(ctr1, ctrycode1, country1, ctr2, ctrycode2, country2, repo_wts)
+  select(ctr1, ctrycode1, country1, ctr2, ctrycode2, country2, repo_wts) %>% 
+  
+  # THIS REMOVES ALL OF THE WITHIN COUNTRY COLLABORATIONS 
+  filter(ctrycode1 != ctrycode2)
 
 #create sna_intl_ctr_edgelist
 sna_intl_ctr_edgelist <- intl_ctr_edgelist %>% 
   select(ctr1, ctr2, repo_wts)
 
-#create sna_intl_ctr_edgelist
-sna_intl_ctry_edgelist <- intl_ctr_edgelist %>% 
-  select(country1, country2, repo_wts)
+intl_ctr_edgelist 
+sna_intl_ctr_edgelist 
 
 ```
 
@@ -142,7 +144,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # write the edgelist to the database
-dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_edgelist_0819"), 
+dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_xeno_edgelist_0819"), 
              value = sna_intl_ctr_edgelist, row.names = FALSE, temporary = TRUE)
 
 # disconnect from postgresql
