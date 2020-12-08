@@ -25,7 +25,7 @@ ctr_nodelist <- ctr_nodelist %>% rename(country_code = country_code_vis)
   
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_ctr_edgelist_0819")
+                                  FROM gh.sna_ctr_edgelist_08")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -86,6 +86,7 @@ sna_intl_ctr_edgelist <- intl_ctr_edgelist %>%
 #create sna_intl_ctr_edgelist
 sna_intl_ctry_edgelist <- intl_ctr_edgelist %>% 
   select(country1, country2, repo_wts)
+
 
 ```
 
