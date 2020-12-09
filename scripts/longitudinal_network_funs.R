@@ -1,6 +1,6 @@
 
 
-long_ctr_net_desc <- function(edgelist, years_analyzed){
+long_ctr_net_desc <- function(edgelist, years_analyzed, network_type){
 
   # import packages
   library(dplyr)
@@ -68,7 +68,7 @@ long_ctr_net_desc <- function(edgelist, years_analyzed){
   network_stats$centr_eigen <- centr_eigen(network, directed = FALSE)$centralization
 
   # decomposition statistics
-  decomposition_stats <- table(sapply(decompose.graph(network), vcount))
+  #decomposition_stats <- table(sapply(decompose.graph(network), vcount))
 
   net_comm_det <- data.frame(event="net_comm_det", time=now("EST"))
   time_log <- rbind(time_log, net_comm_det); rm(net_comm_det)
@@ -94,11 +94,40 @@ long_ctr_net_desc <- function(edgelist, years_analyzed){
   node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
   time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
 
-  setwd("~/oss-data/intl-ctr-nets-cum")
-  saveRDS(network_stats, str_c("global_netstats_",years_analyzed,".rds"))
-  saveRDS(decomposition_stats, str_c("decomposition_stats_",years_analyzed,".rds"))
-  saveRDS(nodelist, str_c("nodelist_",years_analyzed,".rds"))
-  saveRDS(time_log, str_c("timelog_",years_analyzed,".rds"))
+  if(network_type == "cum_full"){
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-cum")
+    saveRDS(network_stats, str_c("global_cum_",years_analyzed,".rds"))
+    #saveRDS(decomposition_stats, str_c("decomp_stats_cum_",years_analyzed,".rds"))
+    saveRDS(nodelist, str_c("nodelist_cum_",years_analyzed,".rds"))
+    saveRDS(time_log, str_c("timelog_cum_",years_analyzed,".rds"))
+  }
+
+  if(network_type == "cum_xeno"){
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-cum-xeno")
+    saveRDS(network_stats, str_c("global_cum_xeno_",years_analyzed,".rds"))
+    #saveRDS(decomposition_stats, str_c("decomp_stats_cum_xeno_",years_analyzed,".rds"))
+    saveRDS(nodelist, str_c("nodelist_cum_xeno_",years_analyzed,".rds"))
+    saveRDS(time_log, str_c("timelog_cum_xeno_",years_analyzed,".rds"))
+  }
+
+  if(network_type == "yxy_full"){
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-yxy")
+    saveRDS(network_stats, str_c("global_yxy_",years_analyzed,".rds"))
+    #saveRDS(decomposition_stats, str_c("decomp_stats_yxy_",years_analyzed,".rds"))
+    saveRDS(nodelist, str_c("nodelist_yxy_",years_analyzed,".rds"))
+    saveRDS(time_log, str_c("timelog_yxy_",years_analyzed,".rds"))
+  }
+
+  if(network_type == "yxy_xeno"){
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-yxy-xeno")
+    saveRDS(network_stats, str_c("global_yxy_xeno_",years_analyzed,".rds"))
+    #saveRDS(decomposition_stats, str_c("decomp_stats_yxy_xeno_",years_analyzed,".rds"))
+    saveRDS(nodelist, str_c("nodelist_yxy_xeno_",years_analyzed,".rds"))
+    saveRDS(time_log, str_c("timelog_yxy_xeno_",years_analyzed,".rds"))
+  }
+
+  network_stats
+  nodelist
 
 }
 
@@ -243,7 +272,7 @@ long_ctry_net_desc <- function(edgelist, years_analyzed, network_type){
   if(network_type == "cum_full"){
 
     setwd("~/git/oss-2020/data/intl-networks/intl-ctry-nets-cum")
-    saveRDS(network_stats, str_c("global_netstats_cum_",years_analyzed,".rds"))
+    saveRDS(network_stats, str_c("global_cum_",years_analyzed,".rds"))
     #saveRDS(decomposition_stats, str_c("decomp_stats_cum_",years_analyzed,".rds"))
     saveRDS(nodelist, str_c("nodelist_cum_",years_analyzed,".rds"))
     saveRDS(time_log, str_c("timelog_cum_",years_analyzed,".rds"))
@@ -253,7 +282,7 @@ long_ctry_net_desc <- function(edgelist, years_analyzed, network_type){
   if(network_type == "cum_xeno"){
 
   setwd("~/git/oss-2020/data/intl-networks/intl-ctry-nets-cum-xeno")
-  saveRDS(network_stats, str_c("global_netstats_cum_xeno_",years_analyzed,".rds"))
+  saveRDS(network_stats, str_c("global_cum_xeno_",years_analyzed,".rds"))
   #saveRDS(decomposition_stats, str_c("decomp_stats_cum_xeno_",years_analyzed,".rds"))
   saveRDS(nodelist, str_c("nodelist_cum_xeno_",years_analyzed,".rds"))
   saveRDS(time_log, str_c("timelog_cum_xeno_",years_analyzed,".rds"))
@@ -262,8 +291,8 @@ long_ctry_net_desc <- function(edgelist, years_analyzed, network_type){
 
   if(network_type == "yxy_full"){
 
-    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-yxy")
-    saveRDS(network_stats, str_c("global_netstats_yxy_",years_analyzed,".rds"))
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctry-nets-yxy")
+    saveRDS(network_stats, str_c("global_yxy_",years_analyzed,".rds"))
     #saveRDS(decomposition_stats, str_c("decomp_stats_yxy_",years_analyzed,".rds"))
     saveRDS(nodelist, str_c("nodelist_yxy_",years_analyzed,".rds"))
     saveRDS(time_log, str_c("timelog_yxy_",years_analyzed,".rds"))
@@ -272,8 +301,8 @@ long_ctry_net_desc <- function(edgelist, years_analyzed, network_type){
 
   if(network_type == "yxy_xeno"){
 
-    setwd("~/git/oss-2020/data/intl-networks/intl-ctr-nets-yxy-xeno")
-    saveRDS(network_stats, str_c("global_netstats_yxy_xeno_",years_analyzed,".rds"))
+    setwd("~/git/oss-2020/data/intl-networks/intl-ctry-nets-yxy-xeno")
+    saveRDS(network_stats, str_c("global_yxy_xeno_",years_analyzed,".rds"))
     #saveRDS(decomposition_stats, str_c("decomp_stats_yxy_xeno_",years_analyzed,".rds"))
     saveRDS(nodelist, str_c("nodelist_yxy_xeno_",years_analyzed,".rds"))
     saveRDS(time_log, str_c("timelog_yxy_xeno_",years_analyzed,".rds"))
@@ -284,20 +313,6 @@ long_ctry_net_desc <- function(edgelist, years_analyzed, network_type){
   nodelist
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

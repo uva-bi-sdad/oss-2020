@@ -17,8 +17,9 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts
                            FROM gh.sna_intl_ctr_edgelist_08")
+dbDisconnect(conn)
 long_ctr_net_desc(edgelist = ctr_edgelist, years_analyzed = "2008", network_type = "cum_full")
-dbDisconnect(conn); rm(ctr_edgelist)
+rm(ctr_edgelist)
 
 # 2008-09
 conn <- dbConnect(drv = PostgreSQL(),

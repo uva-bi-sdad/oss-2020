@@ -19,8 +19,9 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # query the bipartite edgelist data from github data  
-ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
+ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code_vis
                                   FROM gh.sna_ctr_ctry_codes")
+ctr_nodelist <- ctr_nodelist %>% rename(country_code = country_code_vis)
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
@@ -41,6 +42,7 @@ omitted_geographies <- c("europe", "asia", "africa", "americas", "multiple")
 
 # removes our list of omitted_geographies 
 intl_ctr_nodelist <- ctr_nodelist %>% 
+  drop_na(country_code) %>% 
   dplyr::mutate(country_code = ifelse(test = str_detect(string = country_code,
                                       pattern = ","), paste("multiple"), no = country_code)) %>% 
   filter(country_code %notin% omitted_geographies)

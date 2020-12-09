@@ -1,3 +1,32 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+```{r cars}
+rm(list = ls())
+
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode",
+              "RPostgreSQL", "cowplot", "maditr", "gt", "tidytext")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195",
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+#github user with emails
+ctrs_data <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_extra")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+
 # FUNCTIONS FOR STANDARDIZING INSTIUTIONS IN ACADEMIC AND GOVERNMENT SECTORS
 
 standardize_gov <- function(df, institution){
@@ -192,11 +221,7 @@ standardize_gov <- function(df, institution){
                                    yes = "u.s. national defense university", no = institution)) %>%
     dt_mutate(institution = ifelse(test = str_detect(string = institution,
            pattern = "\\b(?i)(information resource management college|national defense university icollege|college of information and cyberspace|national defense university - college of information and cyberspace)\\b"),
-                                   yes = "u.s. national defense university - college of information and cyberspace", no = institution))
-
-}
-
-nothing <- function(data_frame, institution){
+                                   yes = "u.s. national defense university - college of information and cyberspace", no = institution)) %>% 
 
     # bureaus
     dt_mutate(institution = ifelse(test = str_detect(string = institution,
@@ -1416,6 +1441,49 @@ nothing <- function(data_frame, institution){
 
     df
 }
+
+```
+
+
+```{r}
+# load local functions 
+#source("/sfs/qumulo/qhome/kb7hp/git/oss-2020/scripts/standardize_gov.R")
+
+ctrs_gov <- ctrs_data %>% 
+  standardize_gov(ctrs_data$company) %>% 
+  select(login, institution, email)
+ctrs_gov
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
