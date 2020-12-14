@@ -1,0 +1,66 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+```{r cars}
+rm(list = ls())
+
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode", "stringr", "tidytable",
+              "RPostgreSQL", "cowplot", "gt", "tidytext")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get our data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195",
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+#github user with emails
+ctrs_data <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_extra")
+government <- dbGetQuery(conn, "SELECT login, is_gov FROM gh.sna_ctr_gov;")
+
+# disconnect from postgresql database 
+dbDisconnect(conn)
+```
+
+```{r}
+
+# load local functions 
+source("~/git/oss-2020/scripts/standardize_gov.R")
+
+test <- ctrs_data %>%
+  rename(institution = company) %>% 
+  standardize_gov(ctrs_data$institution)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

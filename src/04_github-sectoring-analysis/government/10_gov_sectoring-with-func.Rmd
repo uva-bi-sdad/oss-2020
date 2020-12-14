@@ -5,134 +5,14 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
-# to add 9/14
-# province of british columbia
-# ufrn.edu.br = Colombian education dept 
-# Interpol, United Nations, etc can all have multiple countries attached to organization 
-```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
-rm(list = ls())
-
-for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "countrycode",
-              "RPostgreSQL", "cowplot", "maditr", "gt", "tidytext")) {library(pkg, character.only = TRUE)}
-
-# connect to postgresql to get our data
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", 
-                  host = "10.250.124.195",
-                  port = 5432, 
-                  user = Sys.getenv("db_userid"), 
-                  password = Sys.getenv("db_pwd"))
-
-# query the users_gh data (table of all github users) 
-us_gov_ffrdcs <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_ffrdcs")
-
-# query the users_gh data (table of all github users) 
-us_gov_azindex <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_azindex_clean")
-
-# query the users_gh data (table of all github users) 
-us_gov_manual <- dbGetQuery(conn, "SELECT * FROM us_gov_depts.us_gov_manual")
-
-#github user with emails
-gh_extra <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_extra")
-
-# disconnect from postgresql database 
-dbDisconnect(conn)
-
-# goverment email domains
-#https://home.dotgov.gov/data/ (All .gov domains)
-#The official public list of .gov domains is updated about every two weeks:
-#List of .gov domains - includes all federal, state, interstate, local, and tribal .gov and .fed.us domains.
-email_domain_gov <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/src/sectoring/government/email_domain_federal_full.csv") %>%
-  #read_csv("/sfs/qumulo/qhome/zz3hs/oss-data/email_domain_federal_full.csv") %>%
-  rename("domain_name" = "Domain Name",
-          "domain_type" ="Domain Type") %>%
-  select(-"Security Contact Email", 
-         -"City", -"State") %>%
-  mutate(domain_name = tolower(domain_name), gov = T)
-
-#email domain country
-#https://www.sitepoint.com/complete-list-country-code-top-level-domains/
-email_domain_cc <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-2020/src/sectoring/government/email_domain_by_country.csv")
-#remove dot in the email domain
-email_domain_cc$email_domain <- str_replace_all(email_domain_cc$domain, fixed("."), "")
-# add in country_code
-email_domain_cc$country_code <- countrycode(email_domain_cc$country_name, origin = 'country.name', destination = 'iso2c')
-
-```
-
-First we are going to clean the company code by implementing all of Daniel's techniques 
-
-```{r}
-# implementing daniel's approaches 
-legal_entities <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/curatedLegalEntitesRaw.csv", header=FALSE)
-legal_entities <- legal_entities %>% 
-  rename(strings = V1) %>% 
-  mutate(strings = as.character(strings))
-legal_entities$strings <- substring(legal_entities$strings, 2)
-legal_entities$strings <- substr(legal_entities$strings,1, nchar(legal_entities$strings)-1)
-
-symbol_strings <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/symbolRemove.csv", header=FALSE)
-symbol_strings <- symbol_strings %>% 
-  rename(strings = V1) %>% 
-  mutate(strings = as.character(strings))
-symbol_strings$strings <- substring(symbol_strings$strings, 2)
-symbol_strings$strings <- substr(symbol_strings$strings,1, nchar(symbol_strings$strings)-1)
-symbol_strings <- symbol_strings %>% slice(-17:-20)
-
-curated_domains <- read.csv("/sfs/qumulo/qhome/kb7hp/git/dspg20oss/ossPy/keyFiles/curatedDomains.csv", header=FALSE)
-curated_domains <- curated_domains %>% 
-  rename(strings = V1) %>% 
-  mutate(strings = as.character(strings))
-curated_domains$strings <- substring(curated_domains$strings, 2)
-curated_domains$strings <- substr(curated_domains$strings,1, nchar(curated_domains$strings)-1)
-
-users_gh <- users_gh %>% 
-  mutate(company_original = company) %>%
-  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(legal_entities$strings), 
-                                                    "zqx|, Inc.)"), collapse = "|"), "")) %>% 
-  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(symbol_strings$strings), 
-                                                    ", $|,$|zqx)"), collapse = "|"), "")) %>%
-  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(curated_domains$strings), 
-                                                    "zqx)"), collapse = "|"), "")) %>%
-  mutate(company = tolower(company)); users_gh
-```
-
-
-# A count of missingness
-
-```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-gh_extra_not_na_email <- gh_extra %>%
- filter(!is.na(email))
-
-nrow(gh_extra_not_na_email) 
-nrow(gh_extra_not_na_email) /nrow(gh_extra) *100
-
-gh_extra_not_na_company <- gh_extra %>%
- filter(!is.na(company))
-
-nrow(gh_extra_not_na_company) 
-nrow(gh_extra_not_na_company) /nrow(gh_extra) *100
-
-
-gh_extra_not_na <- gh_extra %>%
- filter(!is.na(email) | !is.na(company))
-nrow(gh_extra_not_na) 
-nrow(gh_extra_not_na) /nrow(gh_extra) *100
-```
 
 # Split github user data into users with email and users with no email
 
 ```{r}
 #match email adress domain
-gh_extra <- gh_extra%>%
-  as.data.table()%>%#convert to data table
+gh_extra <- gh_extra %>%
+  as.data.table() %>% #convert to data table
   mutate(email_domain_full =  str_extract(email, "(?<=@).*")) #all strings after @
 
 gh_extra_email <- gh_extra%>%  
@@ -144,7 +24,7 @@ nrow(gh_extra_email)/nrow(gh_extra) #27% of github users had email address
 ##github users don't have emails
 gh_extra_no_email <- gh_extra%>%
   filter(is.na(email_domain_full))%>%
-  select(login, email, company, cc_multiple) %>% #prepare for a join
+  #select(login, email, company, cc_multiple) %>% #prepare for a join
   mutate(is.gov = NA)
 
 nrow(gh_extra_no_email)
@@ -217,9 +97,18 @@ gh_extra_email_final <- gh_extra_email%>%
 ```
 
 ## Full-string matching on identified company names from users previously identified in government sector using email domain
+
+```{r}
+gh_extra_no_email
+gh_extra_email_final
+```
+
+
 ```{r}
 gh_extra_company <- rbind(gh_extra_no_email, gh_extra_email_final)
 nrow(gh_extra_company)
+
+
 #company cleaning
 gh_extra_company <- gh_extra_company%>%
     mutate(company = tolower(company))
@@ -265,6 +154,7 @@ table(gh_extra_company$is.gov)
 ```
 
 ## Bag of words (singleton/bigrams) matching
+
 ```{r}
 #companies names listed by previously identified users in government sector
 company_list <- gh_extra_company%>%
@@ -319,6 +209,7 @@ bag_of_words <- bag_of_words%>%
 ```
 
 ## U.S. Government Department/Agency name matching
+
 ```{r}
 #I.azindex
 #I.1 agency
