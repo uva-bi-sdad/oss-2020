@@ -253,14 +253,16 @@ table(gh_extra_company$is.gov)
 source("~/git/oss-2020/scripts/standardize_gov.R")
 
 gh_stand_gov <- gh_extra_company %>%
-  rename(institution = company) %>% 
-  standardize_gov(gh_extra_company$institution)
+  mutate(institution = company) %>% 
+  standardize_gov(gh_extra_company$institution) %>% 
+  mutate.(possible_gov = if_else(company_original == institution, FALSE, TRUE)) %>% 
+  select(login, institution, possible_gov, everything()) 
 
 
 gh_stand_gov %>% 
   as.tibble() %>% 
-  select(login, institution, everything()) %>% 
-  filter(is.gov == TRUE) %>% 
+  select(login, company, institution, possible_gov, everything()) %>% 
+  filter(possible_gov == TRUE) %>% 
   count(institution) %>% 
   arrange(-n)
 
@@ -268,7 +270,24 @@ gh_stand_gov %>%
   as.tibble() %>% 
   select(login, institution, everything()) %>% 
   filter(is.gov == TRUE)
-# lanl, ornl, nist, nrel, metoffice, usgs, gds, cdc, dstl, 
+
+gh_stand_gov %>% 
+  select(company_original, institution) %>% 
+  mutate.(possible_gov = if_else(company_original == institution, FALSE, TRUE))
+
+
+gh_extra_company %>% 
+  select(login, company_original, domain_name) %>% 
+  filter(grepl("microsoft", domain_name)) %>% 
+  count(company_original) %>% 
+  arrange(-n)
+  
+gh_extra_company %>% 
+  select(domain_name) %>% 
+  filter(grepl("stanford", domain_name)) %>% 
+  count(domain_name) %>% 
+  arrange(-n)
+
 ```
 
 

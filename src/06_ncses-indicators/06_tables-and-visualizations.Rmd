@@ -1,0 +1,81 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("janitor")
+
+oss_intl_collaborations_2019 <- read.csv("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2008.csv", sep=";")
+
+oss_intl_collaborations_2019_prcs <- oss_intl_collaborations_2019 %>%
+  clean_names() %>% 
+  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>% 
+  mutate_at(vars(-country, row_sum), funs(. / row_sum)) %>% 
+  mutate_if(is.numeric, `*`, 100) %>% 
+  mutate_if(is.numeric, round, 2) 
+
+# this cannot be correct 
+# reminder: i had to re-run all of the matrices before this because the edge weights did not collapse 
+# now when i came back to calculate the total collaborations by row the us is 98% with itself 
+# that obviously cannot be right 
+# i think this has to do with the imbalance in the matrix - maybe i just need to mirror the top of the matrix to the bottom
+
+oss_intl_collaborations_2019 %>% 
+  clean_names() %>% 
+  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>%
+  select(country, united_states, row_sum) %>% 
+  arrange(-united_states) %>% 
+  mutate(prc = united_states / row_sum)
+
+```
+
+```{r}
+top_15_countries <- c("United States", "China", "Germany", "United Kingdom", "India",
+                      "Canada", "Brazil", "France", "Russia", "Japan", 
+                      "Australia", "Netherlands", "Spain", "Poland", "Sweden")
+
+oss_intl_collaborations_2019_prcs %>% 
+  select(country, united_states, china, germany, united_kingdom, india,
+         canada, brazil, france, russia, japan, 
+         australia, netherlands, spain, poland, sweden) %>% 
+  filter(country %in% top_15_countries) %>% 
+  arrange(-united_states)
+```
+
+```{r}
+oss_intl_collaborations_2019_prcs %>% 
+  select(country, united_states) %>% 
+  #filter(country %in% top_15_countries) %>% 
+  arrange(-united_states)
+```
+```{r}
+
+oss_intl_collaborations_2019_prcs %>% 
+  select(country, united_states, row_sum)
+
+quick_calc <- oss_intl_collaborations_2019 %>%
+  clean_names() %>% 
+  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>% 
+  select(country, row_sum) 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

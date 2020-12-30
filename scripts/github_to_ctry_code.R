@@ -1,4 +1,6 @@
 
+# NOT DONE
+
 github_to_ctry_code <- function(df, location) {
 
   # load packages
