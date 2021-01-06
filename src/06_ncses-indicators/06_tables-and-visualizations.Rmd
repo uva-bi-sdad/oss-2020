@@ -11,29 +11,67 @@ knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("janitor")
 
-oss_intl_collaborations_2019 <- read.csv("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2008.csv", sep=";")
+raw_collab_matrix <- read.csv("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2019.csv", sep=";")
 
-oss_intl_collaborations_2019_prcs <- oss_intl_collaborations_2019 %>%
+# calculate total collaborations 
+total_collaboration_counts <- raw_collab_matrix %>%
   clean_names() %>% 
-  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>% 
-  mutate_at(vars(-country, row_sum), funs(. / row_sum)) %>% 
-  mutate_if(is.numeric, `*`, 100) %>% 
-  mutate_if(is.numeric, round, 2) 
+  replace(is.na(.), 0) %>%
+  select_if(is.numeric) %>%
+  summarise_all(funs(sum(.))) %>% 
+  t %>% as.data.frame %>% 
+  rownames_to_column() %>% 
+  rename(country = rowname, num_collabs = V1)
 
-# this cannot be correct 
-# reminder: i had to re-run all of the matrices before this because the edge weights did not collapse 
-# now when i came back to calculate the total collaborations by row the us is 98% with itself 
-# that obviously cannot be right 
-# i think this has to do with the imbalance in the matrix - maybe i just need to mirror the top of the matrix to the bottom
+# impute zeroes into the matrix now 
+country_names <- raw_collab_matrix %>% select(Country)
+imputed_collab_matrix <- raw_collab_matrix %>% select(-Country)
+diag(imputed_collab_matrix) <- 0
+imputed_collab_matrix <- cbind(country_names, imputed_collab_matrix)
+imputed_collab_matrix
 
-oss_intl_collaborations_2019 %>% 
+# calculate non-self collaborations 
+foreign_collaboration_counts <- imputed_collab_matrix %>%
   clean_names() %>% 
-  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>%
-  select(country, united_states, row_sum) %>% 
-  arrange(-united_states) %>% 
-  mutate(prc = united_states / row_sum)
+  replace(is.na(.), 0) %>%
+  select_if(is.numeric) %>%
+  summarise_all(funs(sum(.))) %>% 
+  t %>% as.data.frame %>% 
+  rownames_to_column() %>% 
+  rename(country = rowname, num_foreign = V1)
+
+collab_df <- total_collaboration_counts %>% 
+  left_join(foreign_collaboration_counts, by = "country") %>% 
+  mutate(prc_foreign = round(num_foreign / num_collabs * 100, 2),
+         prc_domestic = 100.00 - prc_foreign) %>% 
+  arrange(-num_collabs)
+
+t(collab_df) %>% as.data.frame()
 
 ```
+
+```{r}
+
+# Create data
+set.seed(1124)
+data <- matrix(sample(1:30,15) , nrow=3)
+colnames(data) <- c("A","B","C","D","E")
+rownames(data) <- c("var1","var2","var3")
+ 
+# create color palette:
+library(RColorBrewer)
+coul <- brewer.pal(3, "Pastel2") 
+ 
+# Transform this data in %
+data_percentage <- apply(data, 2, function(x){x*100/sum(x,na.rm=T)})
+ 
+# Make a stacked barplot--> it will be in %!
+barplot(data_percentage, col=coul , border="white", xlab="group")
+
+```
+
+
+
 
 ```{r}
 top_15_countries <- c("United States", "China", "Germany", "United Kingdom", "India",
