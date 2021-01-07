@@ -42,33 +42,50 @@ foreign_collaboration_counts <- imputed_collab_matrix %>%
 
 collab_df <- total_collaboration_counts %>% 
   left_join(foreign_collaboration_counts, by = "country") %>% 
-  mutate(prc_foreign = round(num_foreign / num_collabs * 100, 2),
+  mutate(num_domestic = num_collabs - num_foreign,
+         prc_foreign = round(num_foreign / num_collabs * 100, 2),
          prc_domestic = 100.00 - prc_foreign) %>% 
   arrange(-num_collabs)
 
-t(collab_df) %>% as.data.frame()
+collab_df
 
 ```
 
-```{r}
-
-# Create data
-set.seed(1124)
-data <- matrix(sample(1:30,15) , nrow=3)
-colnames(data) <- c("A","B","C","D","E")
-rownames(data) <- c("var1","var2","var3")
- 
-# create color palette:
-library(RColorBrewer)
-coul <- brewer.pal(3, "Pastel2") 
- 
-# Transform this data in %
-data_percentage <- apply(data, 2, function(x){x*100/sum(x,na.rm=T)})
- 
-# Make a stacked barplot--> it will be in %!
-barplot(data_percentage, col=coul , border="white", xlab="group")
-
+```{r, fig.width=10, fig.height=5}
+collab_df %>% 
+  slice_max(num_collabs, n = 15) %>% 
+  select(country, num_domestic, num_foreign) %>% 
+  pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
+  mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
+         country = str_replace(country, "united_kingdom", "United Kingdom"), country = str_replace(country, "china", "China"),
+         country = str_replace(country, "france", "France"), country = str_replace(country, "india", "India"),
+         country = str_replace(country, "canada", "Canada"), country = str_replace(country, "australia", "Australia"),
+         country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
+         country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
+         country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
+         country = str_replace(country, "poland", "Poland")) %>% 
+  mutate(country = as.factor(country), country = fct_relevel(country, 
+                               "United States", "Germany", "United Kingdom", "China", "France",
+                               "India", "Canada", "Australia", "Russia", "Netherlands",
+                               "Japan", "Brazil", "Switzerland", "Sweden", "Poland")) %>%
+  ggplot(., aes(fill=collaborations, y=count, x=country)) + 
+    geom_bar(position="stack", stat="identity", width = 0.6) +
+  theme_minimal() + 
+  theme(legend.position="bottom", 
+        title =element_text(size=10, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 35, hjust = 0.9)) +
+  scale_fill_discrete(name = "", labels = c("Domestic Collaborations", "International Collaborations")) +
+  labs(title = "International collaborations on GitHub, for the 15 largest producing countries by GitHub commits: 2019", 
+       x = "Country", y = "Number of GitHub Collaborations Per Country") +
+  scale_fill_manual(values = c("#d62828","#457b9d"))
 ```
+
+
+
+
+
+
 
 
 

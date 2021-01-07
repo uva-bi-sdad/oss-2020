@@ -7,8 +7,8 @@ output: html_document
 rm(list = ls())
 
 # load packages 
-for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "countrycode",
-              "cowplot", "maditr", "lubridate", "igraph")) {library(pkg, character.only = TRUE)}
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "countrycode", "tidytable",
+              "cowplot", "lubridate", "igraph")) {library(pkg, character.only = TRUE)}
 
 # connect to postgresql to get data (in rivanna)
 conn <- dbConnect(drv = PostgreSQL(), 
@@ -24,12 +24,23 @@ ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
-                                  FROM gh.sna_ctr_edgelist_yxy
+                                  FROM gh.sna_ctr_edgelist_yxy_old
                                   WHERE year > 2007")
 
 # disconnect from postgresql
 dbDisconnect(conn)
 
+```
+
+```{r}
+filtered_edgelist <- ctr_edgelist %>% 
+  filter(!grepl("null|bot$|bot\\]$", ctr1) | !grepl("null|bot$|bot\\]$", ctr2)) %>% 
+  arrange(-repo_wts, year)
+
+filtered_edgelist <- filtered_edgelist %>% 
+  filter(ctr1 != ctr2)
+  
+filtered_edgelist 
 ```
 
 ```{r}
@@ -47,7 +58,7 @@ intl_ctr_nodelist <- ctr_nodelist %>%
   filter(country_code %notin% omitted_geographies)
 
 # join the country_codes to ctr_edgelist
-intl_ctr_edgelist <- ctr_edgelist %>% 
+intl_ctr_edgelist <- filtered_edgelist %>% 
   # removes all of the self-loops between individuals 
   # this is needed on the country level bc we do not want individual self-loops but we do want within country collaborations
   filter(ctr1 != ctr2) %>%  
@@ -90,7 +101,8 @@ sna_intl_ctry_edgelist <- intl_ctr_edgelist %>%
   group_by(country1, country2, year) %>% 
   summarize(repo_wts = sum(repo_wts))
 
-sna_intl_ctry_edgelist
+sna_intl_ctry_edgelist %>% 
+  arrange(-repo_wts)
 ```
 
 Now lets write this YXY edgelist to the database. 
