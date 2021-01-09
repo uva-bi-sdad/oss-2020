@@ -41,6 +41,7 @@ filtered_edgelist <- filtered_edgelist %>%
   filter(ctr1 != ctr2)
   
 filtered_edgelist 
+rm
 ```
 
 ```{r}

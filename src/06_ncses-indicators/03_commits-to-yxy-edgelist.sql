@@ -14,12 +14,13 @@ WITH A AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2, B.commits
 	FROM B
 	INNER JOIN B AS C ON B.year = C.year
-	WHERE B.login != C.login -- removes self-loops
+	WHERE B.login < C.login -- removes duplicate rows of A-B, B-A
 ), edgelist AS (
 	SELECT ctr1, ctr2, year, COUNT(*) AS repo_wts
 	FROM D
 	GROUP BY ctr1, ctr2, year
 )
+
 SELECT * FROM edgelist
 ORDER BY repo_wts DESC
 
