@@ -25,7 +25,7 @@ ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
                                   FROM gh.sna_ctr_edgelist_yxy_old
-                                  WHERE year > 2007")
+                                  WHERE year > 2007 AND year < 2020")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -33,15 +33,14 @@ dbDisconnect(conn)
 ```
 
 ```{r}
-filtered_edgelist <- ctr_edgelist %>% 
+ctr_edgelist <- ctr_edgelist %>% 
   filter(!grepl("null|bot$|bot\\]$", ctr1) | !grepl("null|bot$|bot\\]$", ctr2)) %>% 
   arrange(-repo_wts, year)
 
-filtered_edgelist <- filtered_edgelist %>% 
+ctr_edgelist <- ctr_edgelist %>% 
   filter(ctr1 != ctr2)
   
-filtered_edgelist 
-rm
+ctr_edgelist 
 ```
 
 ```{r}
@@ -59,7 +58,7 @@ intl_ctr_nodelist <- ctr_nodelist %>%
   filter(country_code %notin% omitted_geographies)
 
 # join the country_codes to ctr_edgelist
-intl_ctr_edgelist <- filtered_edgelist %>% 
+intl_ctr_edgelist <- ctr_edgelist %>% 
   # removes all of the self-loops between individuals 
   # this is needed on the country level bc we do not want individual self-loops but we do want within country collaborations
   filter(ctr1 != ctr2) %>%  

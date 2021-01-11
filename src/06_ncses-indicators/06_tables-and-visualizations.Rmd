@@ -3,7 +3,7 @@ title: "Untitled"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r}
 rm(list = ls())
 
 knitr::opts_chunk$set(echo = TRUE)
@@ -11,7 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("janitor")
 
-raw_collab_matrix <- read.csv("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2019.csv", sep=";")
+analysis_year <- "2018"
+
+raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_",analysis_year,".csv"), sep=";")
 
 # calculate total collaborations 
 total_collaboration_counts <- raw_collab_matrix %>%
@@ -24,6 +26,7 @@ total_collaboration_counts <- raw_collab_matrix %>%
   rename(country = rowname, num_collabs = V1)
 
 # impute zeroes into the matrix now 
+# this recodes all of the domestic collaborations to 0
 country_names <- raw_collab_matrix %>% select(Country)
 imputed_collab_matrix <- raw_collab_matrix %>% select(-Country)
 diag(imputed_collab_matrix) <- 0
@@ -40,6 +43,7 @@ foreign_collaboration_counts <- imputed_collab_matrix %>%
   rownames_to_column() %>% 
   rename(country = rowname, num_foreign = V1)
 
+# combine all and foreign collaborations to calculate domestic calcs
 collab_df <- total_collaboration_counts %>% 
   left_join(foreign_collaboration_counts, by = "country") %>% 
   mutate(num_domestic = num_collabs - num_foreign,
@@ -52,8 +56,13 @@ collab_df
 ```
 
 ```{r, fig.width=10, fig.height=5}
-collab_df %>% 
-  slice_max(num_collabs, n = 15) %>% 
+top_15_by_commits <- c("united_states", "germany", "united_kingdom", "china", 
+                       "canada", "france", "netherlands", "australia", "sweden", 
+                       "japan", "india", "switzerland", "spain", "russia", "brazil")
+  
+intl_collabs_figure1 <- collab_df %>% 
+  #slice_max(num_collabs, n = 15) %>% 
+  filter(country %in% top_15_by_commits) %>% 
   select(country, num_domestic, num_foreign) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
   mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
@@ -63,7 +72,7 @@ collab_df %>%
          country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
          country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
          country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
-         country = str_replace(country, "poland", "Poland")) %>% 
+         country = str_replace(country, "poland", "Poland"), country = str_replace(country, "spain", "Spain")) %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
                                "United States", "Germany", "United Kingdom", "China", "France",
                                "India", "Canada", "Australia", "Russia", "Netherlands",
@@ -71,14 +80,23 @@ collab_df %>%
   ggplot(., aes(fill=collaborations, y=count, x=country)) + 
     geom_bar(position="stack", stat="identity", width = 0.6) +
   theme_minimal() + 
-  theme(legend.position="bottom", 
+  theme(#legend.position="bottom", 
+        legend.position = c(0.85, 0.9), 
+        #legend.direction = "horizontal",
         title =element_text(size=10, hjust = 1),
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 35, hjust = 0.9)) +
-  scale_fill_discrete(name = "", labels = c("Domestic Collaborations", "International Collaborations")) +
-  labs(title = "International collaborations on GitHub, for the 15 largest producing countries by GitHub commits: 2019", 
+  labs(title = str_c("International collaborations on GitHub, for top-15 countries by GitHub commits: ", analysis_year), 
        x = "Country", y = "Number of GitHub Collaborations Per Country") +
-  scale_fill_manual(values = c("#d62828","#457b9d"))
+  scale_y_continuous(breaks=c(0,10000000,20000000,30000000,40000000,50000000), 
+                     labels=c("0", "10M", "20M", "30M", "40M", "50M")) +
+  scale_fill_manual(name = "", values = c("#d62828","#457b9d"), 
+                    labels = c("Domestic Collaborations", "International Collaborations"))
+
+png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_fig1_",
+               analysis_year,".png"), width=600, height=350); intl_collabs_figure1; dev.off()
+
+intl_collabs_figure1
 ```
 
 
