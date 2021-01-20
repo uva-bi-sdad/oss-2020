@@ -1,0 +1,3 @@
+/home/kb7hp/git/oss-2020/src/03_github-network-analysis/01_full-networks/02_full-ctr-nets-cum-analysis/
+03_full-ctr-nets-cum-analysis-withbots.slurm
+04_full-ctr-nets-cum-analysis-withoutbots.slurm

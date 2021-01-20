@@ -43,16 +43,33 @@ foreign_collaboration_counts <- imputed_collab_matrix %>%
   rownames_to_column() %>% 
   rename(country = rowname, num_foreign = V1)
 
+wo_us_matrix <- raw_collab_matrix %>%
+  clean_names() %>% 
+  replace(is.na(.), 0) %>% 
+  filter(country == "United States") %>% 
+  select_if(is.numeric) %>%
+  summarise_all(funs(sum(.))) %>% 
+  t %>% as.data.frame %>% 
+  rownames_to_column() %>% 
+  rename(country = rowname, num_us = V1)
+wo_us_matrix
+
 # combine all and foreign collaborations to calculate domestic calcs
 collab_df <- total_collaboration_counts %>% 
   left_join(foreign_collaboration_counts, by = "country") %>% 
+  left_join(wo_us_matrix, by = "country") %>% 
   mutate(num_domestic = num_collabs - num_foreign,
          prc_foreign = round(num_foreign / num_collabs * 100, 2),
-         prc_domestic = 100.00 - prc_foreign) %>% 
+         prc_domestic = 100.00 - prc_foreign,
+         num_non_us = num_foreign - num_us,
+         prc_us = round(num_us / num_collabs * 100, 2),
+         prc_non_us = round(num_non_us / num_collabs * 100, 2)) %>% 
+  select(country, starts_with("prc_"), everything()) %>% 
   arrange(-num_collabs)
 
-collab_df
-
+# need to figure this one out 
+collab_df <- collab_df %>% 
+  mutate(num_non_us = if_else(num_non_us == 25999896, num_foreign, num_non_us))
 ```
 
 ```{r, fig.width=10, fig.height=5}
@@ -99,56 +116,49 @@ png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaboration
 intl_collabs_figure1
 ```
 
+```{r, fig.width=10, fig.height=5}
+top_15_by_commits <- c("united_states", "germany", "united_kingdom", "china", 
+                       "canada", "france", "netherlands", "australia", "sweden", 
+                       "japan", "india", "switzerland", "spain", "russia", "brazil")
+  
+intl_collabs_figure2 <- collab_df %>% 
+  filter(country %in% top_15_by_commits) %>% 
+  select(country, num_domestic, num_us, num_non_us) %>% 
+  pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
+  mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
+         country = str_replace(country, "united_kingdom", "United Kingdom"), country = str_replace(country, "china", "China"),
+         country = str_replace(country, "france", "France"), country = str_replace(country, "india", "India"),
+         country = str_replace(country, "canada", "Canada"), country = str_replace(country, "australia", "Australia"),
+         country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
+         country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
+         country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
+         country = str_replace(country, "poland", "Poland"), country = str_replace(country, "spain", "Spain")) %>% 
+  mutate(country = as.factor(country), country = fct_relevel(country, 
+                               "United States", "Germany", "United Kingdom", "China", "France",
+                               "India", "Canada", "Australia", "Russia", "Netherlands",
+                               "Japan", "Brazil", "Switzerland", "Sweden", "Poland")) %>% 
+  filter(!(country == "United States" & collaborations == "num_us")) %>% 
+  ggplot(., aes(fill=collaborations, y=count, x=country)) + 
+    geom_bar(position="stack", stat="identity", width = 0.6) +
+  theme_minimal() + 
+  theme(#legend.position="bottom", 
+        legend.position = c(0.82, 0.9), 
+        #legend.direction = "horizontal",
+        title =element_text(size=10, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 35, hjust = 0.9)) +
+  labs(title = str_c("International collaborations on GitHub, for top-15 countries by GitHub commits: ", analysis_year), 
+       x = "Country", y = "Number of GitHub Collaborations Per Country") +
+  scale_y_continuous(breaks=c(0,10000000,20000000,30000000,40000000,50000000), 
+                     labels=c("0", "10M", "20M", "30M", "40M", "50M")) +
+  scale_fill_manual(#name = "", values = c("#E57200","#232D4B", "#628ED8"), # uva version
+                    name = "", values = c("#d62828","#457b9d", "#ffb703"), # ncses version
+                    labels = c("Domestic Collaborations", "Non-US International Collaborations", "US-Based International Collaborations"))
 
+png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_fig2_",
+               analysis_year,".png"), width=600, height=350); intl_collabs_figure2; dev.off()
 
-
-
-
-
-
-
-
-```{r}
-top_15_countries <- c("United States", "China", "Germany", "United Kingdom", "India",
-                      "Canada", "Brazil", "France", "Russia", "Japan", 
-                      "Australia", "Netherlands", "Spain", "Poland", "Sweden")
-
-oss_intl_collaborations_2019_prcs %>% 
-  select(country, united_states, china, germany, united_kingdom, india,
-         canada, brazil, france, russia, japan, 
-         australia, netherlands, spain, poland, sweden) %>% 
-  filter(country %in% top_15_countries) %>% 
-  arrange(-united_states)
+intl_collabs_figure2
 ```
-
-```{r}
-oss_intl_collaborations_2019_prcs %>% 
-  select(country, united_states) %>% 
-  #filter(country %in% top_15_countries) %>% 
-  arrange(-united_states)
-```
-```{r}
-
-oss_intl_collaborations_2019_prcs %>% 
-  select(country, united_states, row_sum)
-
-quick_calc <- oss_intl_collaborations_2019 %>%
-  clean_names() %>% 
-  mutate(row_sum = rowSums(select_if(., is.numeric), na.rm = TRUE)) %>% 
-  select(country, row_sum) 
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
 
 
