@@ -23,15 +23,6 @@ analyze_ctr_network <- function(analysis_year){
   # disconnect from postgresql
   dbDisconnect(conn)
 
-  ##################################################################################  filter nulls, bots, loops
-
-  ctr_edgelist <- ctr_edgelist %>%
-    filter(!grepl("null", ctr1) | !grepl("null", ctr2)) %>%
-    arrange(-repo_wts)
-
-  ctr_edgelist <- ctr_edgelist %>%
-    filter(ctr1 != ctr2)
-
   ################################################################################## convert edgelist to network
 
   ctr_edgelist <- ctr_edgelist %>%

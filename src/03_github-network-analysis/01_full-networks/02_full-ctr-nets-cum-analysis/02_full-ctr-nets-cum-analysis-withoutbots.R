@@ -1,5 +1,4 @@
 
-
 #######################################################################################  load libraries & data
 
 analyze_ctr_network <- function(analysis_year){
@@ -20,26 +19,18 @@ analyze_ctr_network <- function(analysis_year){
   # query the bipartite edgelist data from github data
   ctr_edgelist <- dbGetQuery(conn, str_c("SELECT ctr1, ctr2, repo_wts
                                           FROM gh.sna_ctr_edgelist_", analysis_year,
-                                         "WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND login NOT LIKE '%[bot]%' AND
-                                          WHERE ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND login NOT LIKE '%[bot]%';"))
+                                         " WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND ctr1 NOT LIKE '%[bot]%' AND
+                                          ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND ctr2 NOT LIKE '%[bot]%';"))
+
+  known_bots <- dbGetQuery(conn, "SELECT login FROM gh_2007_2020.test_usr WHERE acctype = 'Bot' ORDER BY login;")
 
   # disconnect from postgresql
   dbDisconnect(conn)
 
-  ##################################################################################  filter nulls, bots, loops
-
-  `%notin%` <- Negate(`%in%`)
+  ################################################################################## filter out known bots
 
   ctr_edgelist <- ctr_edgelist %>%
-    filter(!grepl("null", ctr1) | !grepl("null", ctr2)) %>%
-    arrange(-repo_wts)
-
-  ctr_edgelist <- ctr_edgelist %>%
-    filter(!grepl("bot$|-bot$|bot]$|bot\\]$", ctr1) | !grepl("bot$|-bot$|bot]$|bot\\]$", ctr2)) %>%
-    arrange(-repo_wts)
-
-  ctr_edgelist <- ctr_edgelist %>%
-    filter(ctr1 != ctr2)
+    filter(!ctr1 %in% known_bots$login & !ctr2 %in% known_bots$login)
 
   ################################################################################## convert edgelist to network
 

@@ -14,11 +14,11 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
 
 # pulls in contributor collaboration edgelist for one year
-ctr_edgelist <- dbGetQuery(conn, "SELECT * FROM gh.sna_intl_ctry_edgelist_yxy")
+# note: bots, loops and nulls have already been filtered out in the previous stage
+ctr_edgelist <- dbGetQuery(conn, "SELECT * FROM gh.sna_intl_ctry_edgelist_yxy;")
 
 # disconnects from database
 dbDisconnect(conn)
-
 
 # set functions for collapsing edgelists and mirroring matrices
 

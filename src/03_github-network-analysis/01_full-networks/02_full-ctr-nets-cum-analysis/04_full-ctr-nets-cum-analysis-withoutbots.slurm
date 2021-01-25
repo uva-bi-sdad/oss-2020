@@ -3,7 +3,7 @@
 #SBATCH -p bii
 #SBATCH -A biocomplexity
 #SBATCH --job-name=oss_gh_nets_botcomp
-#SBATCH --time=1-24:00:00
+#SBATCH --time=1-72:00:00
 #SBATCH -c 2
 #SBATCH --mem=250G
 

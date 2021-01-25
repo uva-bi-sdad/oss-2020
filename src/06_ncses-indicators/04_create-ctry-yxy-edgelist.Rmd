@@ -24,30 +24,33 @@ ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
 
 # query the bipartite edgelist data from github data  
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
-                                  FROM gh.sna_ctr_edgelist_yxy_old
-                                  WHERE year > 2007 AND year < 2020")
+                                  FROM gh.sna_ctr_edgelist_yxy
+                                  WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND ctr1 NOT LIKE '%[bot]%' AND
+                                        ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND ctr2 NOT LIKE '%[bot]%' AND 
+                                        year > 2007 AND year < 2020")
+
+known_bots <- dbGetQuery(conn, "SELECT login FROM gh_2007_2020.test_usr WHERE acctype = 'Bot' ORDER BY login;")
 
 # disconnect from postgresql
 dbDisconnect(conn)
 
+# filter out known bots and loops 
+ctr_edgelist <- ctr_edgelist %>%
+  filter(!ctr1 %in% known_bots$login & !ctr2 %in% known_bots$login)
+ctr_edgelist <- ctr_edgelist %>% filter(ctr1 != ctr2)
+
 ```
 
 ```{r}
-ctr_edgelist <- ctr_edgelist %>% 
-  filter(!grepl("null|bot$|bot\\]$", ctr1) | !grepl("null|bot$|bot\\]$", ctr2)) %>% 
-  arrange(-repo_wts, year)
-
-ctr_edgelist <- ctr_edgelist %>% 
-  filter(ctr1 != ctr2)
-  
-ctr_edgelist 
+intl_ctr_edgelist %>% filter(is.na(ctrycode2))
 ```
 
 ```{r}
 
 # some ctrs used continents in location data. let's remove that by 
 # creating a list and defining a %notin% function to remove them. 
-omitted_geographies <- c("europe", "asia", "africa", "americas", "multiple")
+omitted_geographies <- c("europe", "asia", "africa", "americas", "multiple", "ficticious_places", 
+                         "middle_east", "planet_earth", "somewhere_in_space", "worldwide_web")
 `%notin%` <- Negate(`%in%`)
 
 # removes our list of omitted_geographies 
@@ -102,7 +105,7 @@ sna_intl_ctry_edgelist <- intl_ctr_edgelist %>%
   summarize(repo_wts = sum(repo_wts))
 
 sna_intl_ctry_edgelist %>% 
-  arrange(-repo_wts)
+  arrange(-repo_wts) 
 ```
 
 Now lets write this YXY edgelist to the database. 
