@@ -6,6 +6,8 @@ output: html_document
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
 rm(list = ls())
 
+analysis_year <- "0819"
+
 # load packages 
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "countrycode",
               "cowplot", "maditr", "lubridate", "igraph")) {library(pkg, character.only = TRUE)}
@@ -24,8 +26,8 @@ ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code_vis
 ctr_nodelist <- ctr_nodelist %>% rename(country_code = country_code_vis)
   
 # query the bipartite edgelist data from github data  
-ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, repo_wts 
-                                  FROM gh.sna_ctr_edgelist_0819")
+ctr_edgelist <- dbGetQuery(conn, str_c("SELECT ctr1, ctr2, repo_wts 
+                                  FROM gh.sna_ctr_edgelist_", analysis_year))
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -36,7 +38,8 @@ dbDisconnect(conn)
 
 # some ctrs used continents in location data. let's remove that by 
 # creating a list and defining a %notin% function to remove them. 
-omitted_geographies <- c("europe", "asia", "africa", "americas", "multiple")
+omitted_geographies <- c("europe", "asia", "africa", "americas", "multiple", "ficticious_places", 
+                         "middle_east", "planet_earth", "somewhere_in_space", "worldwide_web")
 `%notin%` <- Negate(`%in%`)
 
 # removes our list of omitted_geographies 
@@ -88,6 +91,7 @@ sna_intl_ctr_edgelist <- intl_ctr_edgelist %>%
 sna_intl_ctry_edgelist <- intl_ctr_edgelist %>% 
   select(country1, country2, repo_wts)
 
+intl_ctr_edgelist %>% filter(is.na(ctrycode1) | is.na(ctrycode1))
 
 ```
 
@@ -144,7 +148,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # write the edgelist to the database
-dbWriteTable(conn, name = c(schema = "gh" , name = "sna_intl_ctr_edgelist_0819"), 
+dbWriteTable(conn, name = c(schema = "gh" , name = str_c("sna_intl_ctr_edgelist_", analysis_year)), 
              value = sna_intl_ctr_edgelist, row.names = FALSE, temporary = TRUE)
 
 # disconnect from postgresql

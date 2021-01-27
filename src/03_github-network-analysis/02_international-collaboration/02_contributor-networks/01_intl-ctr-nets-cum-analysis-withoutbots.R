@@ -1,10 +1,12 @@
 
+###### this is a direct copy of the full network no bots script with the SQL query updated for intl networks
+###### then i updated the paths, added in centralization analyses,
 #######################################################################################  load libraries & data
 
 analyze_ctr_network <- function(analysis_year){
 
   #rm(list = ls())
-
+  #analysis_year <- "08"
   # load packages
   for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate")) {library(pkg, character.only = TRUE)}
 
@@ -18,7 +20,7 @@ analyze_ctr_network <- function(analysis_year){
 
   # query the bipartite edgelist data from github data
   ctr_edgelist <- dbGetQuery(conn, str_c("SELECT ctr1, ctr2, repo_wts
-                                          FROM gh.sna_ctr_edgelist_", analysis_year,
+                                          FROM gh.sna_intl_ctr_edgelist_", analysis_year,
                                          " WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND ctr1 NOT LIKE '%[bot]%' AND
                                           ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND ctr2 NOT LIKE '%[bot]%';"))
 
@@ -56,8 +58,13 @@ analyze_ctr_network <- function(analysis_year){
   network_stats$edge_count <- gsize(login_network)
   network_stats$commits <- sum(ctr_edgelist$weight)
 
-  # isolates
+  # isolates (added trids as well)
   network_stats$isolates <- sum(degree(simplify(login_network))==0)
+  oss_triads <- triad.census(login_network)
+  network_stats$triads_003 <- oss_triads[1]
+  network_stats$triads_102 <- oss_triads[3]
+  network_stats$triads_201 <- oss_triads[11]
+  network_stats$triads_300 <- oss_triads[16]
   net_counts <- data.frame(event="net_counts", time=now("EST"))
   time_log <- rbind(net_stats_start, net_counts); rm(net_stats_start, net_counts)
 
@@ -67,8 +74,14 @@ analyze_ctr_network <- function(analysis_year){
   net_globals <- data.frame(event="net_globals", time=now("EST"))
   time_log <- rbind(time_log, net_globals); rm(net_globals)
 
+  # analyze centralization trends
+  network_stats$centr_deg <- centr_degree(login_network)$centralization
+  network_stats$centr_clo <- centr_clo(login_network, mode = "all")$centralization
+  network_stats$centr_btw <- centr_betw(login_network, directed = FALSE)$centralization
+  network_stats$centr_eigen <- centr_eigen(login_network, directed = FALSE)$centralization
+
   # cache the results
-  setwd("~/oss-data/full-ctr-nets-cum/without-bots/")
+  setwd("~/oss-data/intl-ctr-nets-cum/no-bots_no-isos/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
 
   # community detection (using louvain method)
@@ -113,7 +126,7 @@ analyze_ctr_network <- function(analysis_year){
   # cache the results
   node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
   time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
-  setwd("~/oss-data/full-ctr-nets-cum/without-bots/")
+  setwd("~/oss-data/intl-ctr-nets-cum/no-bots_no-isos/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
   saveRDS(decomposition_stats, str_c("decomp_stats_",analysis_year,".rds"))
   saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))
@@ -123,7 +136,6 @@ analyze_ctr_network <- function(analysis_year){
 
 ##################################################################################### for loop of all years
 
-#for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
-for (year in c("0817", "0818", "0819")) {
+for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
   analyze_ctr_network(year)
 }
