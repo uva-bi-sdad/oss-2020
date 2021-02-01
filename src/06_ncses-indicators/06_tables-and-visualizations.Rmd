@@ -13,7 +13,8 @@ library("janitor")
 
 analysis_year <- "2018"
 
-raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_",analysis_year,".csv"), sep=";")
+raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_",
+                                    analysis_year,".csv"), sep=";")
 
 # calculate total collaborations 
 total_collaboration_counts <- raw_collab_matrix %>%
@@ -54,6 +55,9 @@ wo_us_matrix <- raw_collab_matrix %>%
   rename(country = rowname, num_us = V1)
 wo_us_matrix
 
+# we want the nice names names in the country col, not the var.names()
+country_names <- raw_collab_matrix %>% select(Country)
+
 # combine all and foreign collaborations to calculate domestic calcs
 collab_df <- total_collaboration_counts %>% 
   left_join(foreign_collaboration_counts, by = "country") %>% 
@@ -64,34 +68,30 @@ collab_df <- total_collaboration_counts %>%
          num_non_us = num_foreign - num_us,
          prc_us = round(num_us / num_collabs * 100, 2),
          prc_non_us = round(num_non_us / num_collabs * 100, 2)) %>% 
-  select(country, starts_with("prc_"), everything()) %>% 
-  arrange(-num_collabs)
+  select(country, starts_with("prc_"), everything()) 
+
+collab_df <- cbind(country_names, collab_df) %>% select(-country) %>% rename(country = Country)
 
 # need to figure this one out 
 collab_df <- collab_df %>% 
   mutate(num_non_us = if_else(num_non_us == 25999896, num_foreign, num_non_us))
 
 collab_df %>% arrange(prc_foreign)
+
+write_csv(collab_df, "~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2018_summary.csv")
+
 ```
 
 ```{r, fig.width=10, fig.height=5}
-top_15_by_commits <- c("united_states", "germany", "united_kingdom", "china", 
-                       "canada", "france", "netherlands", "australia", "sweden", 
-                       "japan", "india", "switzerland", "spain", "russia", "brazil")
+top_15_by_commits <- c("United States", "Germany", "United Kingdom", "China", 
+                       "Canada", "France", "Netherlands", "Australia", "Sweden", 
+                       "Japan", "India", "Switzerland", "Spain", "Russia", "Brazil")
   
 intl_collabs_figure1 <- collab_df %>% 
   #slice_max(num_collabs, n = 15) %>% 
   filter(country %in% top_15_by_commits) %>% 
   select(country, num_domestic, num_foreign) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
-  mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
-         country = str_replace(country, "united_kingdom", "United Kingdom"), country = str_replace(country, "china", "China"),
-         country = str_replace(country, "france", "France"), country = str_replace(country, "india", "India"),
-         country = str_replace(country, "canada", "Canada"), country = str_replace(country, "australia", "Australia"),
-         country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
-         country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
-         country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
-         country = str_replace(country, "poland", "Poland"), country = str_replace(country, "spain", "Spain")) %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
                                "United States", "Germany", "United Kingdom", "China", "France",
                                "India", "Canada", "Australia", "Russia", "Netherlands",
@@ -119,22 +119,14 @@ intl_collabs_figure1
 ```
 
 ```{r, fig.width=10, fig.height=5}
-top_15_by_commits <- c("united_states", "germany", "united_kingdom", "china", 
-                       "canada", "france", "netherlands", "australia", "sweden", 
-                       "japan", "india", "switzerland", "spain", "russia", "brazil")
+top_15_by_commits <- c("United States", "Germany", "United Kingdom", "China", 
+                       "Canada", "France", "Netherlands", "Australia", "Sweden", 
+                       "Japan", "India", "Switzerland", "Spain", "Russia", "Brazil")
   
 intl_collabs_figure2 <- collab_df %>% 
   filter(country %in% top_15_by_commits) %>% 
   select(country, num_domestic, num_us, num_non_us) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
-  mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
-         country = str_replace(country, "united_kingdom", "United Kingdom"), country = str_replace(country, "china", "China"),
-         country = str_replace(country, "france", "France"), country = str_replace(country, "india", "India"),
-         country = str_replace(country, "canada", "Canada"), country = str_replace(country, "australia", "Australia"),
-         country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
-         country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
-         country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
-         country = str_replace(country, "poland", "Poland"), country = str_replace(country, "spain", "Spain")) %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
                                "United States", "Germany", "United Kingdom", "China", "Canada", 
                                "France", "Netherlands", "Australia", "Sweden", "Japan",
@@ -168,22 +160,14 @@ collab_df %>% arrange(-num_collabs)
 ```
 
 ```{r, fig.width=10, fig.height=5}
-top_15_by_collabs <- c("united_states", "india", "germany", "china","united_kingdom", 
-                       "canada", "france", "brazil", "australia", "japan", "russia",
-                       "netherlands", "poland", "sweden", "spain")
+top_15_by_collabs <- c("United States", "India", "Germany", "China","United Kingdom", 
+                       "Canada", "France", "Brazil", "Australia", "Japan", "Russia",
+                       "Netherlands", "Poland", "Sweden", "Spain")
   
 intl_collabs_figure2 <- collab_df %>% 
   filter(country %in% top_15_by_collabs) %>% 
   select(country, num_domestic, num_us, num_non_us) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
-  mutate(country = str_replace(country, "united_states", "United States"), country = str_replace(country, "germany", "Germany"),
-         country = str_replace(country, "united_kingdom", "United Kingdom"), country = str_replace(country, "china", "China"),
-         country = str_replace(country, "france", "France"), country = str_replace(country, "india", "India"),
-         country = str_replace(country, "canada", "Canada"), country = str_replace(country, "australia", "Australia"),
-         country = str_replace(country, "russia", "Russia"), country = str_replace(country, "netherlands", "Netherlands"),
-         country = str_replace(country, "japan", "Japan"), country = str_replace(country, "brazil", "Brazil"),
-         country = str_replace(country, "switzerland", "Switzerland"), country = str_replace(country, "sweden", "Sweden"),
-         country = str_replace(country, "poland", "Poland"), country = str_replace(country, "spain", "Spain")) %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
                                "United States", "India", "Germany", "China", "United Kingdom", 
                                "Canada", "France", "Brazil", "Australia", "Japan", "Russia", 
@@ -204,21 +188,15 @@ intl_collabs_figure2 <- collab_df %>%
                      labels=c("0", "10M", "20M", "30M", "40M", "50M")) +
   scale_fill_manual(#name = "", values = c("#E57200","#232D4B", "#628ED8"), # uva version
                     name = "", values = c("#d62828","#457b9d", "#ffb703"), # ncses version
-                    labels = c("Domestic Collaborations", "Non-US International Collaborations", "US-Based International Collaborations"))
+                    labels = c("Domestic Collaborations", 
+                               "Non-US International Collaborations", 
+                               "US-Based International Collaborations"))
 
 png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_fig2_",
                analysis_year,".png"), width=600, height=350); intl_collabs_figure2; dev.off()
 
 intl_collabs_figure2
 ```
-
-```{r}
-TODO 
-
-Gizem wants this to match the NCSES indicator that shows the fractions based on the total number of repos 
-
-```
-
 
 # Other statistics 
 
@@ -235,3 +213,7 @@ raw_collab_matrix %>%
          fraction = round(United.States / us_total$total, 4) * 100) %>% 
   arrange(-fraction)
 ```
+
+TODO (1-25-2020)
+
+Gizem wants this to match the NCSES indicator that shows the fractions based on the total number of repos 

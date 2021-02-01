@@ -49,7 +49,7 @@ WITH C AS (
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A and loops
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR = 2008 AND C.YEAR = 2008
 )
@@ -75,7 +75,7 @@ WITH C AS (
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A and loops
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2009 AND C.YEAR BETWEEN 2008 AND 2009
 )
@@ -99,7 +99,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2010 AND C.YEAR BETWEEN 2008 AND 2010
 )
 
@@ -122,7 +122,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2011 AND C.YEAR BETWEEN 2008 AND 2011
 )
 
@@ -145,7 +145,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2012 AND C.YEAR BETWEEN 2008 AND 2012
 )
 
@@ -168,7 +168,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2013 AND C.YEAR BETWEEN 2008 AND 2013
 )
 
@@ -191,7 +191,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2014 AND C.YEAR BETWEEN 2008 AND 2014
 )
 
@@ -214,7 +214,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2015 AND C.YEAR BETWEEN 2008 AND 2015
 )
 
@@ -237,7 +237,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2016 AND C.YEAR BETWEEN 2008 AND 2016
 )
 
@@ -260,7 +260,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2017 AND C.YEAR BETWEEN 2008 AND 2017
 )
 
@@ -283,7 +283,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2018 AND C.YEAR BETWEEN 2008 AND 2018
 )
 
@@ -306,7 +306,7 @@ WITH C AS (
 	SELECT B.slug, B.year, B.login AS ctr1, C.login AS ctr2
 	FROM gh.commits_per_user B
 	INNER JOIN gh.commits_per_user AS C ON B.year = C.year AND B.slug = C.slug
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	AND B.YEAR BETWEEN 2008 AND 2019 AND C.YEAR BETWEEN 2008 AND 2019
 )
 

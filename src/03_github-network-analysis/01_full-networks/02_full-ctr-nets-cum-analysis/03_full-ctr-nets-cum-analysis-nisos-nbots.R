@@ -4,7 +4,7 @@
 analyze_ctr_network <- function(analysis_year){
 
   #rm(list = ls())
-
+  #analysis_year <- "0819"
   # load packages
   for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate")) {library(pkg, character.only = TRUE)}
 
@@ -123,7 +123,7 @@ analyze_ctr_network <- function(analysis_year){
 
 ##################################################################################### for loop of all years
 
-#for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
-for (year in c("0817", "0818", "0819")) {
+for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
+#for (year in c("0817", "0818", "0819")) {
   analyze_ctr_network(year)
 }

@@ -64,6 +64,24 @@ LIMIT 100;
 CREATE INDEX login_nmrc_idx ON gh.commits_per_user_nmrc (login);
 GRANT ALL PRIVILEGES ON gh.commits_per_user_nmrc TO ncses_oss;
 
+
+-- to delete tables if needed
+
+drop materialized view gh.sna_ctr_edgelist_nmrc_08;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0809;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0810;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0811;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0812;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0813;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0814;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0815;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0816;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0817;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0818;
+drop materialized view gh.sna_ctr_edgelist_nmrc_0819;
+
+
+
 -- then we can create the networks from that view (left off here 4:46 pm)
 
 -- 2008
@@ -75,7 +93,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR = 2008 AND C.YEAR = 2008
 )
@@ -100,7 +118,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2009 AND C.YEAR BETWEEN 2008 AND 2009
 )
@@ -125,7 +143,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2010 AND C.YEAR BETWEEN 2008 AND 2010
 )
@@ -150,7 +168,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2011 AND C.YEAR BETWEEN 2008 AND 2011
 )
@@ -175,7 +193,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2012 AND C.YEAR BETWEEN 2008 AND 2012
 )
@@ -200,7 +218,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2013 AND C.YEAR BETWEEN 2008 AND 2013
 )
@@ -225,7 +243,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2014 AND C.YEAR BETWEEN 2008 AND 2014
 )
@@ -250,7 +268,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2015 AND C.YEAR BETWEEN 2008 AND 2015
 )
@@ -275,7 +293,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2016 AND C.YEAR BETWEEN 2008 AND 2016
 )
@@ -300,7 +318,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2017 AND C.YEAR BETWEEN 2008 AND 2017
 )
@@ -325,7 +343,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2018 AND C.YEAR BETWEEN 2008 AND 2018
 )
@@ -350,7 +368,7 @@ WITH C AS (
 	FROM gh.commits_per_user_nmrc B
 	INNER JOIN gh.commits_per_user_nmrc AS C ON B.year = C.year AND B.slug = C.slug
 	-- line below removes duplicate rows of A-B, B-A
-	WHERE B.login < C.login
+	WHERE B.login <= C.login
 	-- cuts down table joins to certain yars
 	AND B.YEAR BETWEEN 2008 AND 2019 AND C.YEAR BETWEEN 2008 AND 2019
 )
