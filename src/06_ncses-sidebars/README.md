@@ -5,17 +5,21 @@
 
 ### Scripts: 
 
-    ├── 05_ncses_intl_indicators
-        ├── 01_README.md 
+    ├── 01_intl_collaborations
+        ├── README.md 
             ├── Provides structure of materials for indicator creation
-        ├── 02_commits-to-edgelist.sql 
+        ├── 01_github-to-ctry-code.Rmd 
+            ├── Classifies GitHub users to countries
+        ├── 02_commits-to-yxy-edgelist.sql 
             ├── Converts commits data to edgelist 
-        ├── 03_github-to-ctry-code.Rmd 
-            ├── Classifies GitHub users to countries  
-        ├── 04_create-ctry-edgelist.Rmd 
+        ├── 03_create-ctry-yxy-edgelist.Rmd 
             ├── Converts country edgelist to country collaboration edgelist 
-        ├── 05_collaboration-matrix.R
+        ├── 04_collaboration-matrix.R
             ├── Converts edgelist to collaboration matrix 
+        ├── 05_tables-and-visualizations.Rmd
+            ├── Creates visualizations and tables included in sidebar
+    ├── 02_gov_contributions
+        ├── TBD 
 
 ### Relevant Data: 
 
