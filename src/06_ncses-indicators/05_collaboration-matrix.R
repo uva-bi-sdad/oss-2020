@@ -51,27 +51,27 @@ collaboration_matrix <- function(wtd_edgelist, analysis_year){
 
 # create collaboration matrices for all years
 
-oss_intl_collaborations_2008 <- collaboration_matrix(ctr_edgelist, "2008")
-oss_intl_collaborations_2009 <- collaboration_matrix(ctr_edgelist, "2009")
-oss_intl_collaborations_2010 <- collaboration_matrix(ctr_edgelist, "2010")
-oss_intl_collaborations_2011 <- collaboration_matrix(ctr_edgelist, "2011")
-oss_intl_collaborations_2012 <- collaboration_matrix(ctr_edgelist, "2012")
-oss_intl_collaborations_2013 <- collaboration_matrix(ctr_edgelist, "2013")
-oss_intl_collaborations_2014 <- collaboration_matrix(ctr_edgelist, "2014")
-oss_intl_collaborations_2015 <- collaboration_matrix(ctr_edgelist, "2015")
-oss_intl_collaborations_2016 <- collaboration_matrix(ctr_edgelist, "2016")
-oss_intl_collaborations_2017 <- collaboration_matrix(ctr_edgelist, "2017")
-oss_intl_collaborations_2018 <- collaboration_matrix(ctr_edgelist, "2018")
-oss_intl_collaborations_2019 <- collaboration_matrix(ctr_edgelist, "2019")
+oss_intl_collaborations_matrix_2008 <- collaboration_matrix(ctr_edgelist, "2008")
+oss_intl_collaborations_matrix_2009 <- collaboration_matrix(ctr_edgelist, "2009")
+oss_intl_collaborations_matrix_2010 <- collaboration_matrix(ctr_edgelist, "2010")
+oss_intl_collaborations_matrix_2011 <- collaboration_matrix(ctr_edgelist, "2011")
+oss_intl_collaborations_matrix_2012 <- collaboration_matrix(ctr_edgelist, "2012")
+oss_intl_collaborations_matrix_2013 <- collaboration_matrix(ctr_edgelist, "2013")
+oss_intl_collaborations_matrix_2014 <- collaboration_matrix(ctr_edgelist, "2014")
+oss_intl_collaborations_matrix_2015 <- collaboration_matrix(ctr_edgelist, "2015")
+oss_intl_collaborations_matrix_2016 <- collaboration_matrix(ctr_edgelist, "2016")
+oss_intl_collaborations_matrix_2017 <- collaboration_matrix(ctr_edgelist, "2017")
+oss_intl_collaborations_matrix_2018 <- collaboration_matrix(ctr_edgelist, "2018")
+oss_intl_collaborations_matrix_2019 <- collaboration_matrix(ctr_edgelist, "2019")
 
 # output data to data_folder
 
-intl_collabs <- c("oss_intl_collaborations_2008", "oss_intl_collaborations_2009",
-                  "oss_intl_collaborations_2010", "oss_intl_collaborations_2011",
-                  "oss_intl_collaborations_2012", "oss_intl_collaborations_2013",
-                  "oss_intl_collaborations_2014", "oss_intl_collaborations_2015",
-                  "oss_intl_collaborations_2016", "oss_intl_collaborations_2017",
-                  "oss_intl_collaborations_2018", "oss_intl_collaborations_2019")
+intl_collabs <- c("oss_intl_collaborations_matrix_2008", "oss_intl_collaborations_matrix_2009",
+                  "oss_intl_collaborations_matrix_2010", "oss_intl_collaborations_matrix_2011",
+                  "oss_intl_collaborations_matrix_2012", "oss_intl_collaborations_matrix_2013",
+                  "oss_intl_collaborations_matrix_2014", "oss_intl_collaborations_matrix_2015",
+                  "oss_intl_collaborations_matrix_2016", "oss_intl_collaborations_matrix_2017",
+                  "oss_intl_collaborations_matrix_2018", "oss_intl_collaborations_matrix_2019")
 
 for(i in 1:length(intl_collabs)) { write.csv2(get(intl_collabs[i]),
                                               paste0("~/git/oss-2020/data/intl-indicator-output/",
