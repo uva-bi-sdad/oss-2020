@@ -1,7 +1,8 @@
-
+<div align="center">
 ### National Center for Science Engineering Statistics 
-### Open Source Software 2020 Economic Indicators 
+### Open Source Software 2020 Indicator Sidebars
 ### International Collaborations Indicator 
+</div>
 
 ### Scripts: 
 
@@ -23,7 +24,7 @@
 
 ### Relevant Data: 
 
-    ├── GHOSST.jl_Data 
+    ├── GHOST.jl_Data 
         ├── commits_raw
             ├── slug
             ├── login
