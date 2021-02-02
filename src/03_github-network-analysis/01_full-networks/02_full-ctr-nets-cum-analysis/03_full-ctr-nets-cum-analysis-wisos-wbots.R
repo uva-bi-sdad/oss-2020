@@ -4,7 +4,7 @@
 analyze_ctr_network <- function(analysis_year){
 
   #rm(list = ls())
-  #analysis_year <- "0819"
+
   # load packages
   for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate")) {library(pkg, character.only = TRUE)}
 
@@ -18,19 +18,10 @@ analyze_ctr_network <- function(analysis_year){
 
   # query the bipartite edgelist data from github data
   ctr_edgelist <- dbGetQuery(conn, str_c("SELECT ctr1, ctr2, repo_wts
-                                          FROM gh.sna_ctr_edgelist_", analysis_year,
-                                         " WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND ctr1 NOT LIKE '%[bot]%' AND
-                                          ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND ctr2 NOT LIKE '%[bot]%';"))
-
-  known_bots <- dbGetQuery(conn, "SELECT login FROM gh_2007_2020.test_usr WHERE acctype = 'Bot' ORDER BY login;")
+                                          FROM gh.sna_ctr_edgelist_wisos_",analysis_year,";"))
 
   # disconnect from postgresql
   dbDisconnect(conn)
-
-  ################################################################################## filter out known bots
-
-  ctr_edgelist <- ctr_edgelist %>%
-    filter(!ctr1 %in% known_bots$login & !ctr2 %in% known_bots$login)
 
   ################################################################################## convert edgelist to network
 
@@ -68,7 +59,7 @@ analyze_ctr_network <- function(analysis_year){
   time_log <- rbind(time_log, net_globals); rm(net_globals)
 
   # cache the results
-  setwd("~/oss-data/full-ctr-nets-cum/without-bots/")
+  setwd("~/oss-data/full-ctr-nets-cum/wisos-wbots/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
 
   # community detection (using louvain method)
@@ -113,7 +104,7 @@ analyze_ctr_network <- function(analysis_year){
   # cache the results
   node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
   time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
-  setwd("~/oss-data/full-ctr-nets-cum/without-bots/")
+  setwd("~/oss-data/full-ctr-nets-cum/wisos-wbots/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
   saveRDS(decomposition_stats, str_c("decomp_stats_",analysis_year,".rds"))
   saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))
@@ -124,6 +115,5 @@ analyze_ctr_network <- function(analysis_year){
 ##################################################################################### for loop of all years
 
 for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
-#for (year in c("0817", "0818", "0819")) {
   analyze_ctr_network(year)
 }

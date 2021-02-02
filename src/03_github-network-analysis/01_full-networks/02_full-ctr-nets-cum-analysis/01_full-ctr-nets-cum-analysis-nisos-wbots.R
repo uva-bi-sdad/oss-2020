@@ -59,7 +59,7 @@ analyze_ctr_network <- function(analysis_year){
   time_log <- rbind(time_log, net_globals); rm(net_globals)
 
   # cache the results
-  setwd("~/oss-data/full-ctr-nets-cum/with-bots/")
+  setwd("~/oss-data/full-ctr-nets-cum/nisos-wbots/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
 
   # community detection (using louvain method)
@@ -104,7 +104,7 @@ analyze_ctr_network <- function(analysis_year){
   # cache the results
   node_stats_end <- data.frame(event="node_stats_end", time=now("EST"))
   time_log <- rbind(time_log, node_stats_end); rm(node_stats_end, louvain, components)
-  setwd("~/oss-data/full-ctr-nets-cum/with-bots/")
+  setwd("~/oss-data/full-ctr-nets-cum/nisos-wbots/")
   saveRDS(network_stats, str_c("global_netstats_",analysis_year,".rds"))
   saveRDS(decomposition_stats, str_c("decomp_stats_",analysis_year,".rds"))
   saveRDS(nodelist, str_c("nodelist_",analysis_year,".rds"))

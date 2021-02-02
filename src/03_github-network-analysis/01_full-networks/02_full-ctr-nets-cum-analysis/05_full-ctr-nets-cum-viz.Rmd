@@ -1,0 +1,217 @@
+---
+title: "Full OSS Network - Network Reduction Strategies"
+output: html_document
+---
+
+In this document, we are looking to compare network reduction strategies for the OSS GitHub networks. 
+- 
+-
+- 
+
+Step 1: Aggregate all of the global and decomposition stats for each network type 
+
+```{r setup, include=FALSE}
+
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# pull in each of the network reduction variations 
+setwd("~/oss-data/full-ctr-nets-cum/nisos-wbots/")
+global_nisos_wbots <- list.files(pattern="global_netstats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-wbots")
+decomp_nisos_wbots <- list.files(pattern="decomp_stats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-wbots")
+
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots/")
+global_nisos_nbots <- list.files(pattern="global_netstats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-nbots")
+decomp_nisos_nbots <- list.files(pattern="decomp_stats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-nbots")
+
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots-nmrc/")
+global_nisos_nbots_nmrc <- list.files(pattern="global_netstats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-nbots-nmrc")
+decomp_nisos_nbots_nmrc <- list.files(pattern="decomp_stats_*") %>% 
+  map_df(~read_rds(.)) %>% mutate(network_type = "nisos-nbots-nmrc")
+
+# aggregate the global and decomp stats together 
+global_stats <- global_nisos_wbots %>% 
+  bind_rows(global_nisos_nbots) %>% 
+  bind_rows(global_nisos_nbots_nmrc) %>% 
+  select(network_type, everything()) %>% 
+  mutate(year = str_replace(year, "\\b(?i)(08)\\b", "2008"), year = str_replace(year, "0809", "2009"),
+         year = str_replace(year, "0810", "2010"), year = str_replace(year, "0811", "2011"),
+         year = str_replace(year, "0812", "2012"), year = str_replace(year, "0813", "2013"),
+         year = str_replace(year, "0814", "2014"), year = str_replace(year, "0815", "2015"),
+         year = str_replace(year, "0816", "2016"), year = str_replace(year, "0817", "2017"),
+         year = str_replace(year, "0818", "2018"), year = str_replace(year, "0819", "2019"), 
+         year = as.integer(year))
+
+decomp_stats <- decomp_nisos_wbots %>% 
+  bind_rows(decomp_nisos_nbots) %>%            
+  bind_rows(decomp_nisos_nbots_nmrc) %>% 
+  select(network_type, everything())
+
+# adding a year column to decomp_stats since original code did not 
+decomp_stats <- decomp_stats %>% mutate(year = c(
+                                 "2008", "2009", "2010", "2011", "2012", "2013", 
+                                 "2014", "2015", "2016", "2017", "2018", "2019",
+                                 "2008", "2009", "2010", "2011", "2012", "2013", 
+                                 "2014", "2015", "2016", "2017", "2018", #"2019",
+                                 "2008", "2009", "2010", "2011", "2012", "2013", 
+                                 "2014", "2015", "2016", "2017", "2018", "2019"
+                                 )) %>% select(network_type, year, everything())
+
+setwd("~/oss-data/full-ctr-nets-cum/")
+saveRDS(global_stats, "full_all_global_stats.rds")
+saveRDS(decomp_stats, "full_all_decomp_stats.rds")
+```
+
+```{r}
+global_stats %>% ggplot() + 
+  geom_line(aes(y = node_count, x = year, colour = network_type), 
+            size = 0.5, stat="identity") + 
+  theme_minimal() +
+  theme(axis.title.x = element_blank(), 
+        legend.title = element_blank(), 
+        legend.position = "bottom") +
+  scale_x_continuous(limits = c(2008, 2019),
+                     breaks = c(2008, 2013, 2019))
+```
+
+Step 2: Aggregate all of the nodelists for each network type 
+
+```{r}
+# pulls in the function convert_to_cum_nodelist() 
+source("~/git/oss-2020/scripts/convert_to_cum_nodelist.R")
+
+analsis_timeframe <- c("2008", "2009", "2010", "2011", "2012", "2013", 
+                       "2014", "2015", "2016", "2017", "2018", "2019")
+
+setwd("~/oss-data/full-ctr-nets-cum/nisos-wbots/")
+nodelist_2008 <- readRDS("nodelist_08.rds")
+nodelist_200809 <- readRDS("nodelist_0809.rds")
+nodelist_200810 <- readRDS("nodelist_0810.rds")
+nodelist_200811 <- readRDS("nodelist_0811.rds")
+nodelist_200812 <- readRDS("nodelist_0812.rds")
+nodelist_200813 <- readRDS("nodelist_0813.rds")
+nodelist_200814 <- readRDS("nodelist_0814.rds")
+nodelist_200815 <- readRDS("nodelist_0815.rds")
+nodelist_200816 <- readRDS("nodelist_0816.rds")
+nodelist_200817 <- readRDS("nodelist_0817.rds")
+nodelist_200818 <- readRDS("nodelist_0818.rds")
+nodelist_200819 <- readRDS("nodelist_0819.rds")
+full_nodelist <- convert_to_cum_nodelist()
+setwd("~/oss-data/full-ctr-nets-cum/nisos-wbots/")
+saveRDS(full_nodelist, "full_nodelist_cum.rds")
+
+mean_deg_nisos_wbots <- as.data.frame(c(
+  mean(full_nodelist$deg08, na.rm = TRUE), 
+  mean(full_nodelist$deg0809, na.rm = TRUE), 
+  mean(full_nodelist$deg0810, na.rm = TRUE),
+  mean(full_nodelist$deg0811, na.rm = TRUE),
+  mean(full_nodelist$deg0812, na.rm = TRUE),
+  mean(full_nodelist$deg0813, na.rm = TRUE),
+  mean(full_nodelist$deg0814, na.rm = TRUE),
+  mean(full_nodelist$deg0815, na.rm = TRUE),
+  mean(full_nodelist$deg0816, na.rm = TRUE),
+  mean(full_nodelist$deg0817, na.rm = TRUE),
+  mean(full_nodelist$deg0818, na.rm = TRUE),
+  mean(full_nodelist$deg0819, na.rm = TRUE))) 
+colnames(mean_deg_nisos_wbots) <- "avg_deg"
+mean_deg_nisos_wbots <- mean_deg_nisos_wbots %>% 
+  mutate(network_type = "nisos-wbots", year = analsis_timeframe)
+
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots/")
+nodelist_2008 <- readRDS("nodelist_08.rds")
+nodelist_200809 <- readRDS("nodelist_0809.rds")
+nodelist_200810 <- readRDS("nodelist_0810.rds")
+nodelist_200811 <- readRDS("nodelist_0811.rds")
+nodelist_200812 <- readRDS("nodelist_0812.rds")
+nodelist_200813 <- readRDS("nodelist_0813.rds")
+nodelist_200814 <- readRDS("nodelist_0814.rds")
+nodelist_200815 <- readRDS("nodelist_0815.rds")
+nodelist_200816 <- readRDS("nodelist_0816.rds")
+nodelist_200817 <- readRDS("nodelist_0817.rds")
+nodelist_200818 <- readRDS("nodelist_0818.rds")
+nodelist_200819 <- readRDS("nodelist_0818.rds")  # NOTE: THIS WAS CHANGED TO 2018 UNTIL 2019 IS DONE 
+full_nodelist <- convert_to_cum_nodelist()
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots/")
+saveRDS(full_nodelist, "full_nodelist_cum.rds")
+
+mean_deg_nisos_nbots <- as.data.frame(c(
+  mean(full_nodelist$deg08, na.rm = TRUE), 
+  mean(full_nodelist$deg0809, na.rm = TRUE), 
+  mean(full_nodelist$deg0810, na.rm = TRUE),
+  mean(full_nodelist$deg0811, na.rm = TRUE),
+  mean(full_nodelist$deg0812, na.rm = TRUE),
+  mean(full_nodelist$deg0813, na.rm = TRUE),
+  mean(full_nodelist$deg0814, na.rm = TRUE),
+  mean(full_nodelist$deg0815, na.rm = TRUE),
+  mean(full_nodelist$deg0816, na.rm = TRUE),
+  mean(full_nodelist$deg0817, na.rm = TRUE),
+  mean(full_nodelist$deg0818, na.rm = TRUE),
+  mean(full_nodelist$deg0819, na.rm = TRUE))) 
+colnames(mean_deg_nisos_nbots) <- "avg_deg"
+mean_deg_nisos_nbots <- mean_deg_nisos_nbots %>% 
+  mutate(network_type = "nisos-nbots", year = analsis_timeframe)
+
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots-nmrc/")
+nodelist_2008 <- readRDS("nodelist_08.rds")
+nodelist_200809 <- readRDS("nodelist_0809.rds")
+nodelist_200810 <- readRDS("nodelist_0810.rds")
+nodelist_200811 <- readRDS("nodelist_0811.rds")
+nodelist_200812 <- readRDS("nodelist_0812.rds")
+nodelist_200813 <- readRDS("nodelist_0813.rds")
+nodelist_200814 <- readRDS("nodelist_0814.rds")
+nodelist_200815 <- readRDS("nodelist_0815.rds")
+nodelist_200816 <- readRDS("nodelist_0816.rds")
+nodelist_200817 <- readRDS("nodelist_0817.rds")
+nodelist_200818 <- readRDS("nodelist_0818.rds")
+nodelist_200819 <- readRDS("nodelist_0819.rds")
+full_nodelist <- convert_to_cum_nodelist()
+setwd("~/oss-data/full-ctr-nets-cum/nisos-nbots-nmrc/")
+saveRDS(full_nodelist, "full_nodelist_cum.rds")
+
+mean_deg_nisos_nbots_nmrc <- as.data.frame(c(
+  mean(full_nodelist$deg08, na.rm = TRUE), 
+  mean(full_nodelist$deg0809, na.rm = TRUE), 
+  mean(full_nodelist$deg0810, na.rm = TRUE),
+  mean(full_nodelist$deg0811, na.rm = TRUE),
+  mean(full_nodelist$deg0812, na.rm = TRUE),
+  mean(full_nodelist$deg0813, na.rm = TRUE),
+  mean(full_nodelist$deg0814, na.rm = TRUE),
+  mean(full_nodelist$deg0815, na.rm = TRUE),
+  mean(full_nodelist$deg0816, na.rm = TRUE),
+  mean(full_nodelist$deg0817, na.rm = TRUE),
+  mean(full_nodelist$deg0818, na.rm = TRUE),
+  mean(full_nodelist$deg0819, na.rm = TRUE))) 
+colnames(mean_deg_nisos_nbots_nmrc) <- "avg_deg"
+mean_deg_nisos_nbots_nmrc <- mean_deg_nisos_nbots_nmrc %>% 
+  mutate(network_type = "nisos-nbots-nmrc", year = analsis_timeframe)
+
+# aggregate all of the mean degrees for each network and save 
+mean_deg_aggregated <- rbind(mean_deg_nisos_wbots, mean_deg_nisos_nbots, mean_deg_nisos_nbots_nmrc)
+global_stats <- global_stats %>% 
+  left_join(mean_deg_aggregated %>% 
+            mutate(year = as.integer(year)), 
+            by = c("network_type", "year"))
+global_stats
+setwd("~/oss-data/full-ctr-nets-cum/")
+saveRDS(global_stats, "full_all_global_stats.rds")
+
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+

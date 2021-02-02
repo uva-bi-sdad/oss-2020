@@ -86,8 +86,9 @@ Step 2: Write the data to CSV
 
 ```{r}
 output_df <- collab_df %>% 
-  select(country, num_collabs, num_us, num_foreign, prc_domestic, prc_foreign, prc_us) %>% 
-  rename(ttl_collabs = num_collabs, us_collabs = num_us, frgn_collabs = num_foreign, prc_frgn = prc_foreign) 
+  select(country, num_collabs, num_domestic, num_foreign, num_us, prc_domestic, prc_foreign, prc_us) %>% 
+  rename(ttl_collabs = num_collabs, us_collabs = num_us, 
+         frgn_collabs = num_foreign, dom_collabs = num_domestic, prc_frgn = prc_foreign) 
 
 output_df
 
