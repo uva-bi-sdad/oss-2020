@@ -11,7 +11,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_repo_0919;")
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_repo_0919_nmrc;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -38,7 +38,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919;")
+counts_by_sector <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_sector_0919_nmrc;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)

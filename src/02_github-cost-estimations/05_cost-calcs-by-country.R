@@ -12,7 +12,11 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_repo_0919;")
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919;")                # original_table
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_0919;")             # deduplicated_table
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nbots_0919;")       # no bots
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nmrc_0919;")        # no multi-repo commits
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nmrc_nbots_0919;")  # nmrc + nbots
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -40,6 +44,10 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_country_0919;")
+counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_country_0919_dd;")
+counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_country_0919_dd_nbots;")
+counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_country_0919_dd_nmrc;")
+counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_country_0919_dd_nmrc_nbots;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)

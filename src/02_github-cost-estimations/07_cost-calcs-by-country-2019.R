@@ -12,7 +12,11 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919 WHERE year = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919 WHERE YEAR = 2019;")
+counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919_dd WHERE YEAR = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919_dd_nbots WHERE YEAR = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919_dd_nmrc WHERE YEAR = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh.cost_by_year_0919_dd_nmrc_nbots WHERE YEAR = 2019;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
