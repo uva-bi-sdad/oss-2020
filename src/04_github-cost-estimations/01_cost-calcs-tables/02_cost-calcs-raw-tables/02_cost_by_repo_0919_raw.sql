@@ -1,9 +1,9 @@
 -- first, we want all the commits, additions, deletions, sum and net by repo (2008-2019)
 
-CREATE MATERIALIZED VIEW gh.cost_by_repo_dd_0919 AS (
+CREATE MATERIALIZED VIEW gh_cost.cost_by_repo_0919_raw AS (
 WITH commits_annual AS (
 SELECT slug, login, additions, deletions, EXTRACT(YEAR FROM committed_date)::int AS year
-FROM gh.commits_dd
+FROM gh.commits_raw
 )
 
 SELECT slug, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions,
@@ -13,4 +13,4 @@ WHERE year > 2008 AND year < 2020
 GROUP BY slug
 );
 
-GRANT ALL PRIVILEGES ON TABLE gh.cost_by_repo_dd_0919 TO ncses_oss;
+GRANT ALL PRIVILEGES ON TABLE gh_cost.cost_by_repo_0919_raw TO ncses_oss;

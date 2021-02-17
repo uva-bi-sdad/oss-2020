@@ -1,11 +1,11 @@
 
 --fourth, we want all the commits, additions, deletions, sum and net by country (2008-2019)
 
-CREATE MATERIALIZED VIEW gh.cost_by_country_0919 AS (
+CREATE MATERIALIZED VIEW gh_cost.cost_by_country_0919_dd_nbots AS (
 WITH sector_join AS (
 SELECT slug, A.login, COALESCE(B.cc_viz, 'missing') AS country, A.additions, A.deletions,
 	EXTRACT(YEAR FROM A.committed_date)::int AS year
-FROM gh.commits_raw A
+FROM gh.commits_dd_nbots A
 LEFT JOIN gh.cost_logins_w_sector_info AS B
 ON A.login = B.login
 )
@@ -18,4 +18,4 @@ GROUP BY slug, country
 ORDER BY slug, country
 );
 
-GRANT ALL PRIVILEGES ON TABLE gh.cost_by_country_0919 TO ncses_oss;
+GRANT ALL PRIVILEGES ON TABLE gh_cost.cost_by_country_0919_dd_nbots TO ncses_oss;
