@@ -1,10 +1,9 @@
 
-### National Center for Science Engineering Statistics 
-### Open Source Software 2020 Indicator Sidebars
-### International Collaborations Indicator 
+#### National Center for Science Engineering Statistics 
+#### Open Source Software 2020 Indicator Sidebars
+#### International Collaborations Indicator 
 
-
-### Scripts: 
+#### Scripts: 
 
     ├── 01_intl_collaborations
         ├── README.md 
@@ -22,7 +21,7 @@
     ├── 02_gov_contributions
         ├── TBD 
 
-### Relevant Data: 
+#### Relevant Data: 
 
     ├── GHOST.jl_Data 
         ├── commits_raw
