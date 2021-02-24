@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("janitor")
 
-analysis_year <- "2018"
+analysis_year <- "2019"
 
 raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_",
                                     analysis_year,".csv"), sep=";")
@@ -92,7 +92,8 @@ output_df <- collab_df %>%
 
 output_df
 
-write_csv(output_df, "~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_2018_tograph.csv")
+write_csv(output_df, str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_",
+                           analysis_year,"_tograph.csv"))
 ```
 
 Figure 1: Domestic-Foreign Collaborations (Simple)

@@ -16,8 +16,8 @@ conn <- dbConnect(drv = PostgreSQL(),
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nbots WHERE YEAR = 2019;")
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc WHERE YEAR = 2019;")
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_nbots WHERE YEAR = 2019;")
-#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc WHERE YEAR = 2019;")
-counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc_nbots WHERE YEAR = 2019;")
+counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc WHERE YEAR = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc_nbots WHERE YEAR = 2019;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -38,16 +38,16 @@ dim(repos_by_year)
 repos_by_year <- as.data.table(repos_by_year)
 
 #COST BASED ON Additions
-repos_by_year[,adds_wo_gross := round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
-repos_by_year[,adds_w_gross := round(27797.24 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+repos_by_year[,adds_wo_gross := round(2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
+repos_by_year[,adds_w_gross := round(2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
 
 #COST BASED ON Additions + Deletions
-repos_by_year[,sum_wo_gross := round(22094.19 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
-repos_by_year[,sum_w_gross := round(27797.24 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+repos_by_year[,sum_wo_gross := round(2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
+repos_by_year[,sum_w_gross := round(2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
 
 #COST BASED ON Additions - Deletions
-repos_by_year[,net_wo_gross := round(22094.19 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
-repos_by_year[,net_w_gross := round(27797.24 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+repos_by_year[,net_wo_gross := round(2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+repos_by_year[,net_w_gross := round(2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
 
 repos_by_year %>% count()
 repos_by_year %>% distinct(slug) %>% count()
@@ -76,7 +76,7 @@ counts_by_year_top <- repos_by_year %>% top_n(adds_wo_gross, n = 100)
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/04_cost_dd_nmrc")         # dd_nmrc
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/05_cost_dd_nmrc_nbots")   # dd_nmrc_nbots
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/06_cost_dd_nmrc_jbsc")   # dd_nmrc_jbsc
-setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/07_cost_dd_nmrc_jbsc_nbots")
-write_csv(summary_df, "cost_estimates_summary_2019.csv")
-write_csv(counts_by_year, "cost_by_year_2019.csv")
-write_csv(counts_by_year_top, "cost_by_year_top_2019.csv")
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/06_cost_dd_nmrc_jbsc_nbots")
+write_csv(summary_df, "cost_estimates_summary_2019_nonus.csv")
+write_csv(counts_by_year, "cost_by_year_2019_nonus.csv")
+write_csv(counts_by_year_top, "cost_by_year_top_2019_nonus.csv")

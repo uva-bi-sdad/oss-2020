@@ -1,30 +1,8 @@
 # TODO
 
 -- deduped tables
-X run 03_desc_repos_summary.sql
 
 rerun cost_logsin_w_sector_info.sql (outdated bc of commits being off)
-
-cost_by_sector* tables
-_ updates to code/schemas
-_ dd, _ dd_nbots, _ dd_nmrc, _ dd_nmrc_nbots
-
-cost_by_country* tables
-_ updates to code/schemas
-X dd, _ dd_nbots, _ dd_nmrc, _ dd_nmrc_nbots
-
-cost_by_year* tables
-_ updates to code/schemas
-0 dd_nmrc, 0 dd_nmrc_nbots
-
-commits_per_repo* tables
-_ updates to code/schemas
-X dd, _ dd_nbots, _ dd_nmrc, _ dd_nmrc_nbots
-
-cost_by_login_* tables
-_ updates to code/schemas
-X dd, _ dd_nbots, _ dd_nmrc, _ dd_nmrc_nbots
-
 
 --
 run 07_desc_ctrs_summary.sql

@@ -13,10 +13,11 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_raw;")            # original_table
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd;")             # deduplicated_table
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nbots;")       # no bots
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nbots;")       # no bots
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc;")        # no multi-repo commits
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_nbots;")  # nmrc + nbots
-
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc_nbots;")
 # disconnect from postgresql database
 dbDisconnect(conn)
 
@@ -60,11 +61,13 @@ summary_df <- data.frame(measure = measure, cost = cost)
 
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/01_cost_raw")        # original_table
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/02_cost_dd")              # deduplicated_table
-setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/03_cost_dd_nbots")        # dd_nbots
+#setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/03_cost_dd_nbots")        # dd_nbots
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/04_cost_dd_nmrc")         # dd_nmrc
 #setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/05_cost_dd_nmrc_nbots")   # dd_nmrc_nbots
-write_csv(summary_df, "cost_estimates_summary.csv")
-write_csv(counts_by_repo, "cost_by_repo_all.csv")
-write_csv(counts_by_repo_top, "cost_by_repo_top.csv")
+#setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/06_cost_dd_nmrc_jbsc")
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/07_cost_dd_nmrc_jbsc_nbots")
+write_csv(summary_df, "cost_estimates_summary_0919.csv")
+write_csv(counts_by_repo, "cost_by_repo_all_0919.csv")
+write_csv(counts_by_repo_top, "cost_by_repo_top_0919.csv")
 
 
