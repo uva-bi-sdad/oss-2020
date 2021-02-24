@@ -109,9 +109,11 @@ intl_collabs_figure1 <- collab_df %>%
   select(country, num_domestic, num_foreign) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
-                               "United States", "Germany", "United Kingdom", "China", "France",
-                               "India", "Canada", "Australia", "Russia", "Netherlands",
-                               "Japan", "Brazil", "Switzerland", "Sweden", "Poland")) %>%
+                               top_15_by_commits[1], top_15_by_commits[2], top_15_by_commits[3],
+                               top_15_by_commits[4], top_15_by_commits[5], top_15_by_commits[6],
+                               top_15_by_commits[7], top_15_by_commits[8], top_15_by_commits[9],
+                               top_15_by_commits[10], top_15_by_commits[11], top_15_by_commits[12],
+                               top_15_by_commits[13], top_15_by_commits[14], top_15_by_commits[15])) %>%
   ggplot(., aes(fill=collaborations, y=count, x=country)) + 
     geom_bar(position="stack", stat="identity", width = 0.6) +
   theme_minimal() + 
@@ -137,18 +139,19 @@ intl_collabs_figure1
 Figure 2: Domestic-Foreign Collaborations (With US, Sorted by Collaborations)
 
 ```{r, fig.width=10, fig.height=5}
-top_15_by_collabs <- c("United States", "India", "Germany", "China","United Kingdom", 
-                       "Canada", "France", "Brazil", "Australia", "Japan", "Russia",
-                       "Netherlands", "Poland", "Sweden", "Spain")
-  
+top_15_by_collabs <- collab_df %>% arrange(-num_collabs) %>% top_n(15, num_collabs)
+top_15_by_collabs <- as.character(top_15_by_collabs$country)
+
 intl_collabs_figure2 <- collab_df %>% 
   filter(country %in% top_15_by_collabs) %>% 
   select(country, num_domestic, num_us, num_non_us) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
-                               "United States", "India", "Germany", "China", "United Kingdom", 
-                               "Canada", "France", "Brazil", "Australia", "Japan", "Russia", 
-                               "Netherlands", "Poland", "Sweden", "Spain")) %>% 
+                               top_15_by_collabs[1], top_15_by_collabs[2], top_15_by_collabs[3],
+                               top_15_by_collabs[4], top_15_by_collabs[5], top_15_by_collabs[6],
+                               top_15_by_collabs[7], top_15_by_collabs[8], top_15_by_collabs[9],
+                               top_15_by_collabs[10], top_15_by_collabs[11], top_15_by_collabs[12],
+                               top_15_by_collabs[13], top_15_by_collabs[14], top_15_by_collabs[15])) %>% 
   filter(!(country == "United States" & collaborations == "num_us")) %>% 
   ggplot(., aes(fill=collaborations, y=count, x=country)) + 
     geom_bar(position="stack", stat="identity", width = 0.6) +
@@ -159,7 +162,7 @@ intl_collabs_figure2 <- collab_df %>%
         title =element_text(size=10, hjust = 1),
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 35, hjust = 0.9)) +
-  labs(title = str_c("International collaborations on GitHub, for top-15 countries based on GitHub collaborations: ", analysis_year), 
+  labs(title = str_c("International collaborations on GitHub, for top-15 countries based on total collaborations in ", analysis_year), 
        x = "Country", y = "Number of GitHub Collaborations Per Country") +
   scale_y_continuous(breaks=c(0,10000000,20000000,30000000,40000000,50000000), 
                      labels=c("0", "10M", "20M", "30M", "40M", "50M")) +
