@@ -20,7 +20,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # grab the licenses data 
 owners_summary <- dbGetQuery(conn, "SELECT owner, repos, commits, additions, deletions  
-                                  FROM gh.desc_owners_summary")
+                                    FROM gh.desc_owners_summary_dd_lchn")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -76,28 +76,20 @@ uva_cols <- function(...) {
 }
 
 # create labels for our graph
-df <- cbind.data.frame(c("1 repo\n(58.2%)",
-                         "2-3 repos\n(24.3%)",
-                         "4-5 repos\n(7.6%)",
-                         "6-20 repos\n(8.8%)", 
-                         "21+ repos (1.1%)"),
+df <- cbind.data.frame(c(str_c("1 repo\n(",summarized_breakdown$percent[1],"%)"),
+                         str_c("2-3 repos\n(",summarized_breakdown$percent[2],"%)"),
+                         str_c("4-5 repos\n(",summarized_breakdown$percent[3],"%)"),
+                         str_c("6-20 repos\n(",summarized_breakdown$percent[4],"%)"), 
+                         str_c("21+ repos (",summarized_breakdown$percent[5],"%)")),
                          summarized_breakdown$new_totals)
 colnames(df) <- c("repos", "totals")
 
 # apply the palette to the graph 
-pal <- c(uva_cols("dark blue"),       # 1 ctr
-         #uva_cols("pink"),     # 2 ctrs
+pal <- c(uva_cols("dark blue"),    
          uva_cols("dark red"),
-         uva_cols("yellow"),
-              # 11-50 ctrs 
          uva_cols("light blue"),
          uva_cols("orange"),
-         
-          
-         #uva_cols("orange"),        # 201-1000
-         #uva_cols("purple"),
-         uva_cols("yellow")
-         )     # 3-5 ctrs
+         uva_cols("yellow"))    
 
 # create the tree map 
 treemap::treemap(df, 

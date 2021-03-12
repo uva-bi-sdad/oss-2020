@@ -7,10 +7,10 @@ FROM gh.commits_raw
 GROUP BY login
 );
 
---- dedeuped data
-CREATE MATERIALIZED VIEW gh.desc_ctrs_summary_dd AS (
+-- longest_chain refinement / ctr summary
+CREATE MATERIALIZED VIEW gh.desc_ctrs_summary_dd_lchn AS (
 SELECT login, COUNT(DISTINCT slug) AS repos,
     COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM gh.commits_dd
+FROM gh.commits_dd_nmrc_jbsc
 GROUP BY login
 );

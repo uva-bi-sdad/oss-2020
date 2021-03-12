@@ -5,24 +5,6 @@ output: html_document
 
 Next, let's look at descriptives per contributor. 
 
-First, we have to write a desc_ctrs_summary table to the database... 
-
-```{sql}
-
-CREATE MATERIALIZED VIEW gh.desc_owners_intl_summary AS (
-SELECT split_part(slug, '/', 1) AS owner, COUNT(DISTINCT slug) AS repos, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM (SELECT slug, sna_intl_ctr_nodelist.login, EXTRACT(YEAR FROM committed_date)::int AS YEAR, sna_intl_ctr_nodelist.country_code_vis AS country_code, additions, deletions
-      FROM gh.commits_raw
-      FULL JOIN gh.sna_intl_ctr_nodelist
-      ON commits_raw.login = sna_intl_ctr_nodelist.login
-      WHERE sna_intl_ctr_nodelist.country_code IS NOT NULL) A
-GROUP BY owner
-); 
-
-```
-
-And pull that into R. 
-
 ```{r setup, include=FALSE}
 rm(list = ls())
 
@@ -39,8 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # grab the licenses data 
-owners_summary <- dbGetQuery(conn, "SELECT owner, repos, commits, additions, deletions  
-                                  FROM gh.desc_owners_intl_summary")
+owners_summary <- dbGetQuery(conn, "SELECT * FROM gh.desc_owners_intl_sum_dd_lchn")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -105,19 +86,11 @@ df <- cbind.data.frame(c("1 repo\n(51.8%)",
 colnames(df) <- c("repos", "totals")
 
 # apply the palette to the graph 
-pal <- c(uva_cols("dark blue"),       # 1 ctr
-         #uva_cols("pink"),     # 2 ctrs
+pal <- c(uva_cols("dark blue"),    
          uva_cols("dark red"),
-         uva_cols("yellow"),
-              # 11-50 ctrs 
          uva_cols("light blue"),
          uva_cols("orange"),
-         
-          
-         #uva_cols("orange"),        # 201-1000
-         #uva_cols("purple"),
-         uva_cols("yellow")
-         )     # 3-5 ctrs
+         uva_cols("yellow"))   
 
 # create the tree map 
 treemap(df, 

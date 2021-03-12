@@ -1,13 +1,12 @@
 # TODO
 
 -- deduped tables
-
 rerun cost_logsin_w_sector_info.sql (outdated bc of commits being off)
-
---
 run 07_desc_ctrs_summary.sql
 run 09_desc_owners_summary.sql
 run all the figures and save to 00_figures
+
+--
 
 
 

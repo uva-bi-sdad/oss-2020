@@ -5,23 +5,6 @@ output: html_document
 
 Next, let's look at contributors per repo. 
 
-First, we have to write a repos_summary table to the database... 
-
-```{sql}
-CREATE MATERIALIZED VIEW gh.desc_repos_intl_summary AS (
-SELECT slug, COUNT(*) AS commits, COUNT(DISTINCT login) AS logins, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM (SELECT slug, sna_intl_ctr_nodelist.login, sna_intl_ctr_nodelist.country_code_vis AS country_code, 
-      EXTRACT(YEAR FROM committed_date)::int AS YEAR, additions, deletions
-      FROM gh.commits_raw
-      FULL JOIN gh.sna_intl_ctr_nodelist
-      ON commits_raw.login = sna_intl_ctr_nodelist.login
-      WHERE sna_intl_ctr_nodelist.country_code_vis IS NOT NULL) A
-GROUP BY slug
-); 
-```
-
-And pull that into R. 
-
 ```{r setup, include=FALSE}
 rm(list = ls())
 
@@ -38,8 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # grab the licenses data 
-repos_summary <- dbGetQuery(conn, "SELECT slug, logins, commits, additions, deletions  
-                                   FROM gh.desc_repos_intl_summary")
+repos_summary <- dbGetQuery(conn, "SELECT * FROM gh.desc_repos_intl_sum_dd_lchn")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -58,9 +40,8 @@ users_per_repo <- repos_summary %>%
 
 # recode user ranges into categories  
 users_per_repo$new_logins <- cut(users_per_repo$new_logins, 
-                                 breaks=c(0,1,2,5,10,50,100,100000), 
-                                 labels=c("1", "2", "3-5", "6-10", "11-50", 
-                                          "51-100", "101+"))
+                                 breaks=c(0,1,2,5,10,100000), 
+                                 labels=c("1", "2", "3-5", "6-10", "11+"))
 # get the percentage breakdowns
 summarized_breakdown <- users_per_repo %>% 
   group_by(new_logins) %>% 
@@ -69,8 +50,6 @@ summarized_breakdown <- users_per_repo %>%
   distinct(new_logins, .keep_all = TRUE) %>% 
   mutate(percent = round(new_totals * 100 / sum(users_per_repo$totals), 2))
 summarized_breakdown
-
-sum(summarized_breakdown$percent) 
 ```
 
 Then, we graph those results and beautify the graph a little bit. 
@@ -97,23 +76,23 @@ uva_cols <- function(...) {
 }
 
 # create labels for our graph
-df <- cbind.data.frame(c("1 contributor\n(77.6%)",
-                         "2 contributors\n(8.8%)",
-                         "3-5\n(7.2%)",
-                         "6-10\n(2.4%)", 
-                         "11-50\n(3.1%)",
-                         "51-100 (0.5%)",
-                         "101+ (0.5%)"),
+df <- cbind.data.frame(c(str_c("1 contributor\n(",summarized_breakdown$percent[1],"%)"),
+                         str_c("2 contributors\n(",summarized_breakdown$percent[2],"%)"),
+                         str_c("3-5 contributors\n(",summarized_breakdown$percent[3],"%)"),
+                         str_c("6-10\n(",summarized_breakdown$percent[4],"%)"), 
+                         str_c("11+\n(",summarized_breakdown$percent[5],"%)")),
+                         #str_c("51+ ",summarized_breakdown$percent[6],"%")),
+                         #str_c("101+ ",summarized_breakdown$percent[7],"")),
                          summarized_breakdown$new_totals)
 colnames(df) <- c("contributors", "totals")
 
 # apply the palette to the graph 
 pal <- c(uva_cols("dark blue"),       # 1 ctr
          #uva_cols("pink"),     # 2 ctrs
-         uva_cols("green"),
          uva_cols("light blue"),
-         uva_cols("dark red"),     # 11-50 ctrs  
-         uva_cols("orange"),        # 201-1000
+         uva_cols("dark red"),
+         uva_cols("orange"),     # 11-50 ctrs  
+         uva_cols("yellow"),        # 201-1000
          uva_cols("purple"),
          uva_cols("yellow"))     # 3-5 ctrs
 

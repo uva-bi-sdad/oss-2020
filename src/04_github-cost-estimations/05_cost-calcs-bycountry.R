@@ -12,12 +12,13 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919;")                # original_table
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_hbs;")
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_raw;")                # original_table
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd;")             # deduplicated_table
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nbots;")       # no bots
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc;")        # no multi-repo commits
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_nbots;")  # nmrc + nbots
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -44,11 +45,12 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-#counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919;")
+counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_hbs;")
+#counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_raw;")
 #counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_dd;")
 #counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_dd_nbots;")
 #counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_dd_nmrc;")
-counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_dd_nmrc_jbsc;")
+#counts_by_country <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_country_0919_dd_nmrc_jbsc;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)

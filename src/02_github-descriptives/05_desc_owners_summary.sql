@@ -9,10 +9,10 @@ FROM gh.commits_raw
 GROUP BY owner
 );
 
---- dedeuped data
-CREATE MATERIALIZED VIEW gh.desc_owners_summary AS (
+-- longest_chain refinement / owner summary
+CREATE MATERIALIZED VIEW gh.desc_owners_summary_dd_lchn AS (
 SELECT split_part(slug, '/', 1) AS owner, COUNT(DISTINCT slug) AS repos,
       COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
-FROM gh.commits_dd
+FROM gh.commits_dd_nmrc_jbsc
 GROUP BY owner
 );

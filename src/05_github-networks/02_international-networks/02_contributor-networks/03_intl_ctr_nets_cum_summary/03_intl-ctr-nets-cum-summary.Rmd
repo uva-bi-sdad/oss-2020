@@ -14,8 +14,7 @@ for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "extrafont",
               "R.utils", "RPostgreSQL", "cowplot", "maditr", "lubridate", 
               "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
 
-#setwd("~/Documents/OSS/Data")
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
 full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
 kcore_data <- read_rds("kcore_data_cum.rds")
@@ -121,8 +120,8 @@ network_commits <- global_netstats_cum %>%
   labs(y = "Commit Count (in Millions)") +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019)) +
-  scale_y_continuous(breaks = c(0, 100000000, 200000000, 300000000, 400000000, 500000000), 
-                                labels = c(0, 100, 200, 300, 400, 500))
+  scale_y_continuous(breaks = c(0, 5000000,  15000000,  25000000,  35000000), 
+                                labels = c(0, 5, 15,  25,  35))
 
 figure <- grid.arrange(network_nodes, network_edges, network_commits, 
              nrow=1, ncol=3 
@@ -222,6 +221,7 @@ network_descriptives <- global_netstats_cum %>%
 paged_table(network_descriptives, options = list(rows.print = 15))
 
 ```
+
 ```{r, fig.width=11, fig.height=4.5, echo=FALSE, layout="l-body-outset"}
 network_nodes <- global_netstats_cum %>% 
   ggplot( aes(time, node_count), y=node_count) +
@@ -262,8 +262,8 @@ network_commits <- global_netstats_cum %>%
   labs(y = "Commits (in Millions)") +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019)) +
-  scale_y_continuous(breaks = c(0, 100000000, 200000000, 300000000, 400000000, 500000000), 
-                                labels = c(0, 100, 200, 300, 400, 500))
+  scale_y_continuous(breaks = c(0, 5000000,10000000,15000000, 20000000, 25000000, 30000000, 35000000), 
+                                labels = c(0, 5, 10, 15, 20, 25, 30, 35))
 
 density_cum<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=density,group=1), size=1.5) + 
@@ -288,8 +288,8 @@ fstgrdy_cum_logged<-ggplot(global_netstats_cum) +
   geom_line(aes(x=time, y=fstgrdy_logged, group=1), size=1.5) + 
   labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
-  scale_y_continuous(breaks = c(0.045, 0.05, 0.055, 0.06, 0.065, 0.07),
-                     labels = c(0.045, 0.05, 0.055, 0.06, 0.065, 0.07)) +
+  scale_y_continuous(breaks = c(0.05, 0.055, 0.06, 0.065, 0.07, 0.075),
+                     labels = c(0.05, 0.055, 0.06, 0.065, 0.07, 0.075)) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019))
 

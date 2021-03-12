@@ -1,3 +1,5 @@
+-- this creates a table that looks at the number of commits per repo/country
+
 CREATE MATERIALIZED VIEW gh.commits_by_cc_repo AS (
 SELECT slug, country_code, COUNT(*) AS commits, SUM(additions) AS additions, SUM(deletions) AS deletions
 FROM (SELECT slug,

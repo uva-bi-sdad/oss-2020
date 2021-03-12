@@ -16,19 +16,21 @@ rm(list = ls())
 for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL",
               "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
 
-setwd("~/oss-data/intl-ctr-nets-cum")
-nodelist_2008 <- readRDS("nodelist_2008.rds") 
-nodelist_200809 <- readRDS("nodelist_2008-09.rds")              
-nodelist_200810 <- readRDS("nodelist_2008-10.rds")
-nodelist_200811 <- readRDS("nodelist_2008-11.rds") 
-nodelist_200812 <- readRDS("nodelist_2008-12.rds") 
-nodelist_200813 <- readRDS("nodelist_2008-13.rds")
-nodelist_200814 <- readRDS("nodelist_2008-14.rds")
-nodelist_200815 <- readRDS("nodelist_2008-15.rds")
-nodelist_200816 <- readRDS("nodelist_2008-16.rds")
-nodelist_200817 <- readRDS("nodelist_2008-17.rds")
-nodelist_200818 <- readRDS("nodelist_2008-18.rds")
-nodelist_200819 <- readRDS("nodelist_2008-19.rds")
+this_path = "~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/"
+
+setwd(this_path)
+nodelist_2008 <- readRDS("nodelist_08.rds") 
+nodelist_200809 <- readRDS("nodelist_0809.rds")              
+nodelist_200810 <- readRDS("nodelist_0810.rds")
+nodelist_200811 <- readRDS("nodelist_0811.rds") 
+nodelist_200812 <- readRDS("nodelist_0812.rds") 
+nodelist_200813 <- readRDS("nodelist_0813.rds")
+nodelist_200814 <- readRDS("nodelist_0814.rds")
+nodelist_200815 <- readRDS("nodelist_0815.rds")
+nodelist_200816 <- readRDS("nodelist_0816.rds")
+nodelist_200817 <- readRDS("nodelist_0817.rds")
+nodelist_200818 <- readRDS("nodelist_0818.rds")
+nodelist_200819 <- readRDS("nodelist_0819.rds")
 
 full_nodelist <- nodelist_2008 %>% 
   select(-id) %>% 
@@ -176,26 +178,26 @@ full_nodelist <- nodelist_2008 %>%
          fstgrdy0819 = fstgrdy_comm,
          comp0819 = component)
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 saveRDS(full_nodelist, "full_nodelist_cum.rds")
 ```
 
 ```{r concatenating global_netstats_cum}
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 #setwd("~/2008")
-global_netstats_2008 <- readRDS("global_netstats_2008.rds") 
-global_netstats_200809 <- readRDS("global_netstats_2008-09.rds") 
-global_netstats_200810 <- readRDS("global_netstats_2008-10.rds") 
-global_netstats_200811 <- readRDS("global_netstats_2008-11.rds") 
-global_netstats_200812 <- readRDS("global_netstats_2008-12.rds")
-global_netstats_200813 <- readRDS("global_netstats_2008-13.rds")
-global_netstats_200814 <- readRDS("global_netstats_2008-14.rds")
-global_netstats_200815 <- readRDS("global_netstats_2008-15.rds")
-global_netstats_200816 <- readRDS("global_netstats_2008-16.rds")
-global_netstats_200817 <- readRDS("global_netstats_2008-17.rds")
-global_netstats_200818 <- readRDS("global_netstats_2008-18.rds")
-global_netstats_200819 <- readRDS("global_netstats_2008-19.rds")
+global_netstats_2008 <- readRDS("global_netstats_08.rds") 
+global_netstats_200809 <- readRDS("global_netstats_0809.rds") 
+global_netstats_200810 <- readRDS("global_netstats_0810.rds") 
+global_netstats_200811 <- readRDS("global_netstats_0811.rds") 
+global_netstats_200812 <- readRDS("global_netstats_0812.rds")
+global_netstats_200813 <- readRDS("global_netstats_0813.rds")
+global_netstats_200814 <- readRDS("global_netstats_0814.rds")
+global_netstats_200815 <- readRDS("global_netstats_0815.rds")
+global_netstats_200816 <- readRDS("global_netstats_0816.rds")
+global_netstats_200817 <- readRDS("global_netstats_0817.rds")
+global_netstats_200818 <- readRDS("global_netstats_0818.rds")
+global_netstats_200819 <- readRDS("global_netstats_0819.rds")
 
 global_netstats_cum <- rbind(global_netstats_2008, global_netstats_200809,
                              global_netstats_200810, global_netstats_200811, 
@@ -225,14 +227,14 @@ global_netstats_cum <- global_netstats_cum %>%
 
 global_netstats_cum
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 saveRDS(global_netstats_cum, "global_netstats_cum.rds") 
 
 ```
 
 ```{r k_core}
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 full_nodelist <- readRDS("full_nodelist_cum.rds")
 global_netstats_cum <- readRDS("global_netstats_cum.rds")
 
@@ -284,7 +286,7 @@ kmax_df[,2] <- data.frame(kmax = c(max(k08$core),max(k09$core),max(k10$core),max
 
 global_netstats_cum <- full_join(global_netstats_cum,kmax_df, by = "time")
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 write_rds(kcore_data, "kcore_data_cum.rds")
 write_rds(global_netstats_cum, "global_netstats_cum.rds")
 
@@ -292,18 +294,19 @@ write_rds(global_netstats_cum, "global_netstats_cum.rds")
 
 ```{r decomp_stats}
 
-setwd("~/oss-data/intl-ctr-nets-cum")
-dc08 <- as.data.frame(readRDS("decomposition_stats_2008.rds")) %>% rename(decomp = Var1, dc08 = Freq)
-dc09 <- as.data.frame(readRDS("decomposition_stats_2008-09.rds")) %>% rename(decomp = Var1, dc09 = Freq)
-dc10 <- as.data.frame(readRDS("decomposition_stats_2008-10.rds")) %>% rename(decomp = Var1, dc10 = Freq)
-dc11 <- as.data.frame(readRDS("decomposition_stats_2008-11.rds")) %>% rename(decomp = Var1, dc11 = Freq)
-dc12 <- as.data.frame(readRDS("decomposition_stats_2008-12.rds")) %>% rename(decomp = Var1, dc12 = Freq)
-dc13 <- as.data.frame(readRDS("decomposition_stats_2008-13.rds")) %>% rename(decomp = Var1, dc13 = Freq)
-dc14 <- as.data.frame(readRDS("decomposition_stats_2008-14.rds")) %>% rename(decomp = Var1, dc14 = Freq)
-dc15 <- as.data.frame(readRDS("decomposition_stats_2008-15.rds")) %>% rename(decomp = Var1, dc15 = Freq)
-dc16 <- as.data.frame(readRDS("decomposition_stats_2008-16.rds")) %>% rename(decomp = Var1, dc16 = Freq)
-dc17 <- as.data.frame(readRDS("decomposition_stats_2008-17.rds")) %>% rename(decomp = Var1, dc17 = Freq)
-dc18 <- as.data.frame(readRDS("decomposition_stats_2008-18.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+setwd(this_path)
+dc08 <- as.data.frame(readRDS("decomp_stats_08.rds")) %>% rename(decomp = Var1, dc08 = Freq)
+dc09 <- as.data.frame(readRDS("decomp_stats_0809.rds")) %>% rename(decomp = Var1, dc09 = Freq)
+dc10 <- as.data.frame(readRDS("decomp_stats_0810.rds")) %>% rename(decomp = Var1, dc10 = Freq)
+dc11 <- as.data.frame(readRDS("decomp_stats_0811.rds")) %>% rename(decomp = Var1, dc11 = Freq)
+dc12 <- as.data.frame(readRDS("decomp_stats_0812.rds")) %>% rename(decomp = Var1, dc12 = Freq)
+dc13 <- as.data.frame(readRDS("decomp_stats_0813.rds")) %>% rename(decomp = Var1, dc13 = Freq)
+dc14 <- as.data.frame(readRDS("decomp_stats_0814.rds")) %>% rename(decomp = Var1, dc14 = Freq)
+dc15 <- as.data.frame(readRDS("decomp_stats_0815.rds")) %>% rename(decomp = Var1, dc15 = Freq)
+dc16 <- as.data.frame(readRDS("decomp_stats_0816.rds")) %>% rename(decomp = Var1, dc16 = Freq)
+dc17 <- as.data.frame(readRDS("decomp_stats_0817.rds")) %>% rename(decomp = Var1, dc17 = Freq)
+dc18 <- as.data.frame(readRDS("decomp_stats_0818.rds")) %>% rename(decomp = Var1, dc18 = Freq)
+dc19 <- as.data.frame(readRDS("decomp_stats_0819.rds")) %>% rename(decomp = Var1, dc19 = Freq)
 
 decomp_data_cum <- full_join(dc08,dc09, by = "decomp")  
 decomp_data_cum <- full_join(decomp_data_cum,dc10, by = "decomp")  
@@ -315,41 +318,14 @@ decomp_data_cum <- full_join(decomp_data_cum,dc15, by = "decomp")
 decomp_data_cum <- full_join(decomp_data_cum,dc16, by = "decomp")
 decomp_data_cum <- full_join(decomp_data_cum,dc17, by = "decomp")
 decomp_data_cum <- full_join(decomp_data_cum,dc18, by = "decomp")
+decomp_data_cum <- full_join(decomp_data_cum,dc19, by = "decomp")
 
-setwd("~/oss-data/intl-ctr-nets-cum")
+setwd(this_path)
 write_rds(decomp_data_cum, "decomp_data_cum.rds")
 
 ```
 
-```{r centralization_stats}
 
-setwd("~/oss-data/intl-ctr-nets-cum")
-centralization08 <- readRDS("centr_stats_2008.rds")
-centralization0809 <- readRDS("centr_stats_2008-09.rds")
-centralization0810 <- readRDS("centr_stats_2008-10.rds")
-centralization0811 <- readRDS("centr_stats_2008-11.rds")
-centralization0812 <- readRDS("centr_stats_2008-12.rds")
-centralization0813 <- readRDS("centr_stats_2008-13.rds")
-centralization0814 <- readRDS("centr_stats_2008-14.rds")
-centralization0815 <- readRDS("centr_stats_2008-15.rds")
-centralization0816 <- readRDS("centr_stats_2008-16.rds")
-centralization0817 <- readRDS("centr_stats_2008-17.rds")
-centralization0818 <- readRDS("centr_stats_2008-18.rds")
-centralization0819 <- readRDS("centr_stats_2008-19.rds")
-
-centralization_all <- rbind(centralization08, centralization0809, centralization0810, centralization0811, 
-      centralization0812, centralization0813, centralization0814, centralization0815, centralization0816)
-
-centralization_all
-
-ggplot(data=centralization_all, aes(x=year, y=centr_deg, group=1)) +
-  geom_line()+
-  geom_point()
-
-ggplot(data=centralization_all, aes(x=year, y=centr_btw, group=1)) +
-  geom_line()+
-  geom_point()
-```
 
 
 

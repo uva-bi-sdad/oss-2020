@@ -20,7 +20,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # grab the repos data 
 repos <- dbGetQuery(conn, "SELECT slug, spdx, created
-                           FROM gh.desc_repos_info")
+                           FROM gh.desc_repos_info_lchn")
 
 # disconnect from postgresql
 dbDisconnect(conn)

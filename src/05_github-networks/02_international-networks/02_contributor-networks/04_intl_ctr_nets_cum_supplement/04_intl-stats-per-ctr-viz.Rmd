@@ -21,8 +21,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # grab the licenses data 
-ctrs_summary <- dbGetQuery(conn, "SELECT login, repos, commits, additions, deletions  
-                                   FROM gh.desc_ctrs_summary")
+ctrs_summary <- dbGetQuery(conn, "SELECT * FROM gh.desc_ctrs_intl_sum_dd_lchn")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -40,9 +39,8 @@ repos_per_user
 
 # recode user ranges into categories  
 repos_per_user$repos <- cut(repos_per_user$repos, 
-                            breaks=c(0,1,3,5,10,50,100,100000), 
-                            labels=c("1", "2-3", "4-5", "6-10", 
-                                     "11-50", "51-100", "101+"))
+                            breaks=c(0,1,3,5,10,100000), 
+                            labels=c("1", "2-3", "4-5", "6-10", "11-50"))
 # get the percentage breakdowns
 summarized_breakdown <- repos_per_user %>% 
   drop_na() %>% 
@@ -51,6 +49,9 @@ summarized_breakdown <- repos_per_user %>%
   select(-totals) %>%   
   distinct(repos, .keep_all = TRUE) %>% 
   mutate(percent = round(new_totals * 100 / sum(repos_per_user$totals), 2))
+
+sum(summarized_breakdown$percent) 
+
 summarized_breakdown
 ```
 
@@ -78,32 +79,29 @@ uva_cols <- function(...) {
 }
 
 # create labels for our graph
-df <- cbind.data.frame(c("1 repo\n(50.5%)",
-                         "2-3 repos\n(23.2%)",
-                         "4-5 repos\n(8.1%)",
-                         "6-10 repos\n(7.9%)", 
-                         "11-50 repos\n(8.2%)",
-                         "51-100 (1.2%)",
-                         "101+ (1.1%)"),
+df <- cbind.data.frame(c(str_c("1 repo\n(",summarized_breakdown$percent[1],"%)"),
+                         str_c("2-3 repos\n(",summarized_breakdown$percent[2],"%)"),
+                         str_c("4-5 repos\n(",summarized_breakdown$percent[3],"%)"),
+                         str_c("6-10 repos\n(",summarized_breakdown$percent[4],"%)"), 
+                         str_c("11-50 repos\n(",summarized_breakdown$percent[5],"%)")),
                          summarized_breakdown$new_totals)
 colnames(df) <- c("repos", "totals")
 
 # apply the palette to the graph 
-pal <- c(uva_cols("dark blue"),       # 1 ctr
-         #uva_cols("pink"),     # 2 ctrs
-         uva_cols("green"),
+pal <- c(uva_cols("dark blue"),    
          uva_cols("light blue"),
-         uva_cols("dark red"),     # 11-50 ctrs  
-         uva_cols("orange"),        # 201-1000
+         uva_cols("dark red"),
+         uva_cols("orange"),    
+         uva_cols("yellow"),        
          uva_cols("purple"),
-         uva_cols("yellow"))     # 3-5 ctrs
+         uva_cols("yellow"))    
 
 # create the tree map 
 treemap::treemap(df, 
         index="repos", 
         vSize="totals",
         palette = pal, 
-        title="Number of repositories per contributor (All GitHub Data, 2008-19)",
+        title="Number of repositories per contributor (International Data, 2008-19)",
         fontsize.labels=c(12,1,1,1,1,1,1,1), 
         fontsize.title=15)
 
