@@ -199,7 +199,7 @@ final_counts$perc_classified[1] <- NA
 final_counts$perc_classified[2] <- NA
 final_counts
 
-positions <- c("business", "academic","houshold","government", "non-profit")
+positions <- c("business", "academic","household","government", "non-profit")
 
 sum(final_counts$totals) - 1706873 
 sum(final_counts$totals) - 1706873 - 261921
@@ -211,13 +211,18 @@ sum(final_counts$totals) - 1706873 - 261921
 ```
 
 ```{r, fig.height = 7, fig.width=12}
-select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+positions <- c("business", "academic","household","government", "non-profit")
+final_counts <- data.frame(sector = as.factor(c("business", "academic",
+                                                 "household","government", "non-profit")),
                            totals = as.numeric(c("115105", "51980", "4093", "2687", "748")),
                            percentages = as.numeric(c("65.9", "29.8", "2.3", "1.5", "0.04")))
 
-ggplot(data=select_counts, aes(x=sector, y=totals)) +
+ggplot(data=final_counts, aes(x=sector, y=totals)) +
   geom_bar(stat="identity", fill = "#232D4B") +
   scale_x_discrete(limits = positions) +
+  geom_text(aes(label = str_c(percentages,'%'), y = totals),
+              position = position_dodge(width = 0.9),
+              vjust = -0.5, size=5) +
   theme_minimal() +
   theme(plot.title = element_text(size=23, hjust = 0.45),
         plot.subtitle = element_text(size=15, hjust = 0.45),
@@ -227,11 +232,11 @@ ggplot(data=select_counts, aes(x=sector, y=totals)) +
         axis.title.x=element_blank()) +
   labs(y = "Total GitHub Users within Sector",
        subtitle = "Using GHTorrent Data") +
-  ggtitle("GitHub Users Classified by Economic Sector")
+  ggtitle("GitHub Users Classified by Economic Sector") 
 ```
 
 ```{r, fig.height = 7, fig.width=12}
-select_counts <- data.frame(sector = as.factor(c("business", "academic","houshold","government", "nonprofit")),
+select_counts <- data.frame(sector = as.factor(c("business", "academic","household","government", "nonprofit")),
                            totals = as.numeric(c("115105", "51980", "4093", "2687", "748")),
                            percentages = as.numeric(c("65.9", "29.8", "2.3", "1.5", "0.04")))
 

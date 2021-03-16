@@ -1,5 +1,8 @@
 
 
+# ~/git/oss-2020/src/05_github-networks/02_international-networks/02_contributor-networks/04_intl_ctr_nets_cum_supplement
+# 06_intl-ctr-powerlaw.slurm
+
 #######################################################################################  load libraries & data
 
 test_if_power_law <- function(analysis_year){
@@ -7,7 +10,7 @@ test_if_power_law <- function(analysis_year){
   #rm(list = ls())
   #analysis_year <- "08"
   # load packages
-  for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate")) {library(pkg, character.only = TRUE)}
+  for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate", "poweRlaw")) {library(pkg, character.only = TRUE)}
 
   # connect to postgresql to get data (in rivanna)
   conn <- dbConnect(drv = PostgreSQL(),
@@ -19,7 +22,7 @@ test_if_power_law <- function(analysis_year){
 
   # query the bipartite edgelist data from github data
   ctr_edgelist <- dbGetQuery(conn, str_c("SELECT ctr1, ctr2, repo_wts
-                                         FROM gh_sna.sna_intl_ctr_edgelist_",analysis_year,";"))
+                                         FROM gh_sna.sna_intl_ctr_edgelist_dd_lchn_",analysis_year,";"))
 
   # disconnect from postgresql
   dbDisconnect(conn)
@@ -36,6 +39,7 @@ test_if_power_law <- function(analysis_year){
 
   login_network <- graph.data.frame(ctr_edgelist, directed = FALSE)
   login_network <- simplify(login_network, remove.loops = TRUE)
+  is_weighted(login_network)
 
   #######################################################################################  fit the power law
 
@@ -45,7 +49,7 @@ test_if_power_law <- function(analysis_year){
 
   # fit the power law to see its distribution
   data_dist <- data.frame(k=0:max(data), p_k=degree_distribution(login_network))
-  data_dist <- data.dist[data_dist$p_k>0,]
+  data_dist <- data_dist[data_dist$p_k>0,]
 
   # run initial estimation
   m_pl <- displ$new(data)
@@ -81,7 +85,8 @@ test_if_power_law <- function(analysis_year){
 
   # bootstrapping process
   threads_detected = parallel::detectCores() - 1
-  bs_pl <- bootstrap_p(m_pl, no_of_sims=1000, threads=threads_detected, seed = 123)
+  bs_pl <- bootstrap_p(m_pl, no_of_sims=1000,
+                       threads=threads_detected, seed = 123)
   df_bs_pl <- bs_pl$bootstraps
 
   setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
@@ -114,19 +119,27 @@ test_if_power_law <- function(analysis_year){
   xmin_sd <- sd(bs_pl$bootstraps$xmin)
   gof <- bs_pl$gof
   pvalue <- bs_pl$p
-  power_law_data <- as.data.frame(cbind(year, alpha, alpha_sd, xmin, xmin_sd, pvalue, gof))
+  power_law_data <- as.data.frame(cbind(analysis_year, alpha, alpha_sd, xmin, xmin_sd, pvalue, gof))
 
   setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
-  saveRDS(power_law_data, str_c("power_law_data_",year,".rds"))
+  saveRDS(power_law_data, str_c("power_law_data_",analysis_year,".rds"))
 
 } # end function
 
 ##################################################################################### for loop of all years
 
 for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
-  #for (year in c("0817", "0818", "0819")) {
   test_if_power_law(year)
 }
+
+##################################################################################### aggregate
+
+setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
+
+# percentages for all sets
+all_power_law_data <- list.files(pattern="power_law_data_*") %>%
+  map_df(~read_rds(.))
+write_rds(all_power_law_data, "power_law_data_allyears.rds")
 
 ##################################################################################### references
 
