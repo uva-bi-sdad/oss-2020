@@ -8,9 +8,9 @@
 test_if_power_law <- function(analysis_year){
 
   #rm(list = ls())
-  #analysis_year <- "08"
+  #analysis_year <- "0809"
   # load packages
-  for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate", "poweRlaw")) {library(pkg, character.only = TRUE)}
+  for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate", "parallel", "poweRlaw")) {library(pkg, character.only = TRUE)}
 
   # connect to postgresql to get data (in rivanna)
   conn <- dbConnect(drv = PostgreSQL(),
@@ -46,10 +46,8 @@ test_if_power_law <- function(analysis_year){
   # get the degree of all nodes, remove all of the degree < 0
   data <- degree(login_network)
   data <- data[data>0]
-
-  # fit the power law to see its distribution
-  data_dist <- data.frame(k=0:max(data), p_k=degree_distribution(login_network))
-  data_dist <- data_dist[data_dist$p_k>0,]
+  data.dist <- data.frame(k=0:max(data),p_k=degree_distribution(login_network))
+  data.dist <- data.dist[data.dist$p_k>0,]
 
   # run initial estimation
   m_pl <- displ$new(data)
@@ -77,7 +75,7 @@ test_if_power_law <- function(analysis_year){
   }
 
   setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
-  saveRDS(d_est, "d_est_0819.rds")
+  saveRDS(d_est, str_c("d_est_",analysis_year,".rds"))
 
   m_pl$setXmin(est_pl)
   plot.data <- plot(m_pl, draw = F)
@@ -85,12 +83,11 @@ test_if_power_law <- function(analysis_year){
 
   # bootstrapping process
   threads_detected = parallel::detectCores() - 1
-  bs_pl <- bootstrap_p(m_pl, no_of_sims=1000,
-                       threads=threads_detected, seed = 123)
+  bs_pl <- bootstrap_p(m_pl, no_of_sims=1000, threads=threads_detected, seed = 123)
   df_bs_pl <- bs_pl$bootstraps
 
   setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
-  saveRDS(bs_pl, "bs_pl_0819.rds")
+  saveRDS(bs_pl, "bs_pl_",analysis_year,".rds")
 
   K.min_D.min <- d_est[which.min(d_est$D), 1]
   df_bs_pl <- bs_pl$bootstraps
@@ -121,6 +118,12 @@ test_if_power_law <- function(analysis_year){
   pvalue <- bs_pl$p
   power_law_data <- as.data.frame(cbind(analysis_year, alpha, alpha_sd, xmin, xmin_sd, pvalue, gof))
 
+  # interpretating the p-value to reject or accept the power law test
+  # Calculate the goodness-of-fit between the data and the power law using the
+  # method described in section 4. If the resulting p-value is greater than 0.1, the
+  # power law is a plausible hypothesis for the data, otherwise it is rejected.
+  # found on page 663 of the clauset et al. 2009 paper
+
   setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
   saveRDS(power_law_data, str_c("power_law_data_",analysis_year,".rds"))
 
@@ -128,7 +131,8 @@ test_if_power_law <- function(analysis_year){
 
 ##################################################################################### for loop of all years
 
-for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
+#for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
+for (year in c("0819")) {
   test_if_power_law(year)
 }
 
@@ -138,7 +142,11 @@ setwd("~/git/oss-2020/data/network-analysis/intl-ctr-nets-cum/wisos-lchn/")
 
 # percentages for all sets
 all_power_law_data <- list.files(pattern="power_law_data_*") %>%
-  map_df(~read_rds(.))
+  map_df(~read_rds(.)) %>%
+  mutate_at(vars(alpha:gof), as.character) %>%
+  mutate_at(vars(alpha:gof), as.numeric) %>%
+  mutate_at(vars(alpha:gof), round, 3)
+
 write_rds(all_power_law_data, "power_law_data_allyears.rds")
 
 ##################################################################################### references

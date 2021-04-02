@@ -21,11 +21,11 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 sna_intl_ctry_nodelist <- dbGetQuery(conn, "SELECT country, users, repos, commits, additions, deletions
-                                            FROM gh.sna_intl_ctry_nodelist_full")
+                                            FROM gh_sna.sna_intl_ctry_summary")
 
 # query the bipartite edgelist data from github data  
 sna_intl_ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, ctrycode1, ctrycode2, repo_wts
-                                            FROM gh.sna_intl_ctry_edgelist_0819")
+                                            FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_0819")
 
 # disconnect from postgresql
 dbDisconnect(conn)
