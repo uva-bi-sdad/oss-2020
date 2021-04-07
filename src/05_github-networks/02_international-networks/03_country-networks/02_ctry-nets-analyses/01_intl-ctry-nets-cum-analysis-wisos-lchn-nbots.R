@@ -9,7 +9,7 @@ install.packages("sna", repos = "https://mirror.las.iastate.edu/CRAN/")
 analyze_ctry_network <- function(analysis_year){
 
   #rm(list = ls())
-  #analysis_year <- "08"
+  #analysis_year <- "0819"
   analysis_path <- "~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/"
 
   # load packages
@@ -24,7 +24,7 @@ analyze_ctry_network <- function(analysis_year){
                     password = Sys.getenv("db_pwd"))
 
   # query the bipartite edgelist data from github data
-  edgelist <- dbGetQuery(conn, str_c("SELECT country1, country2, repo_wts
+  edgelist <- dbGetQuery(conn, str_c("SELECT country1, country2, repo_wts AS weight
                                       FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_", analysis_year, ";"))
 
   # disconnect from postgresql
@@ -32,15 +32,15 @@ analyze_ctry_network <- function(analysis_year){
 
   ################################################################################## convert edgelist to network
 
-  edgelist <- edgelist %>%
-    select(country1, country2, repo_wts) %>%
-    rename(from = country1, to = country2, weight = repo_wts) %>%
-    group_by(from, to) %>%
-    summarize(weight = sum(weight)) %>%
-    arrange(-weight)
+  #edgelist <- edgelist %>%
+  #  select(country1, country2, repo_wts) %>%
+  #  rename(from = country1, to = country2, weight = repo_wts) %>%
+  #  group_by(from, to) %>%
+  #  summarize(weight = sum(weight)) %>%
+  #  arrange(-weight)
 
   login_network <- graph.data.frame(edgelist, directed = FALSE)
-  login_network <- simplify(login_network, remove.loops = TRUE)
+  login_network <- simplify(login_network, remove.loops = FALSE)
   is_weighted(login_network)
 
   ######################################################################################## full network analyses
@@ -56,7 +56,7 @@ analyze_ctry_network <- function(analysis_year){
 
   # isolates (added trids as well)
   network_stats$isolates <- sum(degree(simplify(login_network))==0)
-  oss_triads <- triad.census(login_network)
+  oss_triads <- triad_census(login_network)
   network_stats$triads_003 <- oss_triads[1]
   network_stats$triads_102 <- oss_triads[3]
   network_stats$triads_201 <- oss_triads[11]
@@ -76,7 +76,7 @@ analyze_ctry_network <- function(analysis_year){
 
   # analyze centralization trends
   network_stats$centr_deg <- centr_degree(login_network)$centralization
-  network_stats$centr_clo <- centr_clo(login_network, mode = "all")$centralization
+  #network_stats$centr_clo <- centr_clo(login_network, mode = "all")$centralization
   network_stats$centr_btw <- centr_betw(login_network, directed = FALSE)$centralization
   network_stats$centr_eigen <- centr_eigen(login_network, directed = FALSE)$centralization
 
@@ -125,7 +125,7 @@ analyze_ctry_network <- function(analysis_year){
 
   # added for country-level network
   nodelist$btw_cent <- round(sna::betweenness(intergraph::asNetwork(login_network), cmode="undirected"), 4)
-  nodelist$close_cent <- closeness(login_network, mode = "all")
+  #nodelist$close_cent <- closeness(login_network, mode = "all")
   nodelist$alpha_cent <- alpha_centrality(login_network)
   nodelist$power_cent <- power_centrality(login_network)
   nodelist$load_cent <- sna::loadcent(get.adjacency(login_network,sparse=F))

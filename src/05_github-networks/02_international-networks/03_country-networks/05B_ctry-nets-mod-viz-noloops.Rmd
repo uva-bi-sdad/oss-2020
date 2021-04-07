@@ -33,7 +33,7 @@ dbDisconnect(conn)
 intl_ctry_network <- simplify(graph.data.frame(sna_intl_ctry_edgelist, 
                                                directed = FALSE), 
                               edge.attr.comb = igraph_opt("edge.attr.comb"),
-                              remove.loops = FALSE)
+                              remove.loops = TRUE)
 
 # let's take a look at the full network with loops 
 plot(intl_ctry_network, 
@@ -74,7 +74,7 @@ intl_ctry_nodelist_gephi <- intl_ctry_nodelist_gephi %>%
 
 # regroup all of the isolates over 26
 intl_ctry_nodelist_gephi <- intl_ctry_nodelist_gephi %>% 
-  mutate(fstgrdy_comm = if_else(fstgrdy_comm <= 25, fstgrdy_comm, 26)) %>% 
+  mutate(fstgrdy_comm = if_else(fstgrdy_comm <= 4, fstgrdy_comm, 4)) %>% 
   arrange(fstgrdy_comm) %>% 
   mutate(fstgrdy_comm = as.factor(fstgrdy_comm)) 
 
@@ -91,6 +91,9 @@ community_summary
 ```
 
 ```{r}
+
+
+
 # graph the communities on the world map to see if they need consolidating
 map_data("world") %>% 
   mutate(country_code = countrycode(region, 
@@ -105,44 +108,10 @@ map_data("world") %>%
                    group = group)) + 
   coord_fixed(1.2) +
   guides(fill=FALSE) + 
-  scale_fill_manual(values = c("#990000", # canada - 8th largest     
-                               "#D3D3D3", # 
-                               "#D3D3D3", #  
-                               "#0AA18C", #   china (), 3rd largest 
-                               "#FFFFFF",  # 
-                               
-                               "#FFFFFF",     
-                               "#5BC21C", # france/benelux - 7th largest 
-                               "#cd6700", #   usa - largest group  
-                               "#0E879C", #   russia (9), 6th largest 
-                               "#D3D3D3",  # 
-                               
-                               "#D3D3D3",     
-                               "#232D4B", #   large sprawling group (12), 2nd largest 
-                               "#628ed8", #  germany - 4th largest 
-                               "#D3D3D3", # 
-                               "#89cff0",  # uk - 5th largest 
-                               
-                               "#D3D3D3",     
-                               "#D3D3D3", #
-                               "#EAAA31", #  south american group (18), 17th largest 
-                               "#D3D3D3", # 
-                               "#D3D3D3",  # 
-                               
-                               "#D9E12B", # nordic countries    
-                               "#E6CE3A", # slovak countries 
-                               "#355e3b", #  australia - 10th largest 
-                               "#D3D3D3", # 
-                               "#D3D3D3",  # 
-                                "#D3D3D3"
-                               
-                               #"#E57200", # orange   
-                               #"#628ed8", # light blue
-                               #"#990000", # dark red 
-                               #"#232D4B", # dark blue
-                               #"#eaaa31",  # yellow
-                               
-                               )) +
+  scale_fill_manual(values = c("#232D4B", #    
+                               "#628ed8", # 
+                               "#cd6700", #  
+                               "#EAAA31")) +
   #scale_color_gradientn(colours = rainbow(26)) +
   theme(plot.title = element_text(size = 13, hjust = 0.5), 
         plot.subtitle = element_text(size = 10, hjust = 0.5),
@@ -150,8 +119,8 @@ map_data("world") %>%
         axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(), axis.title.y=element_blank()) +
-  labs(title= " Modularity Groupings for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
-       subtitle="Communities Calculated Using Domestic and International Collaborations")
+  labs(title= " Detected Communities for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
+       subtitle="Communities Calculated Using International But Not Domestic Collaborations")
 
 ```
 

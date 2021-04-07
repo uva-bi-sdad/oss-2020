@@ -138,7 +138,54 @@ weighted <- as_tibble(c(sum(full_nodelist$wtd_deg_cent08, na.rm = TRUE), sum(ful
             sum(full_nodelist$wtd_deg_cent0818, na.rm = TRUE), sum(full_nodelist$wtd_deg_cent0819, na.rm = TRUE))) 
 colnames(weighted) <- "wtd_edge_count"
 
-global_netstats_cum <- cbind(global_netstats_cum, mean_deg, mean_btw, mean_eigen, mean_page, weighted) 
+louvain_comms <- full_nodelist %>% select(country, starts_with("louvain")) 
+louvain_comms <- as_tibble(c(n_distinct(louvain_comms$louvain_comm08, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0809, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0810, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0811, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0812, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0813, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0814, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0815, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0816, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0817, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0818, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain_comm0819, na.rm = FALSE))) 
+colnames(louvain_comms) <- "louvain_comms"
+
+fstgrdy_comms <- full_nodelist %>% select(country, starts_with("fstgrdy")) 
+fstgrdy_comms <- as_tibble(c(n_distinct(fstgrdy_comms$fstgrdy_comm08, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0809, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0810, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0811, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0812, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0813, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0814, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0815, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0816, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0817, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0818, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy_comm0819, na.rm = FALSE))) 
+colnames(fstgrdy_comms) <- "fstgrdy_comms"
+
+components <- full_nodelist %>% select(country, starts_with("component")) 
+components <- as_tibble(c(n_distinct(components$component08, na.rm = FALSE),
+                              n_distinct(components$component0809, na.rm = FALSE),
+                              n_distinct(components$component0810, na.rm = FALSE),
+                              n_distinct(components$component0811, na.rm = FALSE),
+                              n_distinct(components$component0812, na.rm = FALSE),
+                              n_distinct(components$component0813, na.rm = FALSE),
+                              n_distinct(components$component0814, na.rm = FALSE),
+                              n_distinct(components$component0815, na.rm = FALSE),
+                              n_distinct(components$component0816, na.rm = FALSE),
+                              n_distinct(components$component0817, na.rm = FALSE),
+                              n_distinct(components$component0818, na.rm = FALSE),
+                              n_distinct(components$component0819, na.rm = FALSE))) 
+colnames(components) <- "components"
+
+
+global_netstats_cum <- cbind(global_netstats_cum, mean_deg, mean_btw, mean_eigen, mean_page, 
+                                     weighted, louvain_comms, fstgrdy_comms, components) 
 global_netstats_cum <- global_netstats_cum %>% 
   select(year, node_count, edge_count, wtd_edge_count, everything()) 
 

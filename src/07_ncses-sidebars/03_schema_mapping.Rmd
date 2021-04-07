@@ -1,0 +1,89 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# devtools::install_github("bergant/datamodelr")
+
+library(datamodelr)
+library(DiagrammeR)
+library(RPostgreSQL)
+library(tidyverse)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+ghost_commits <- dbGetQuery(conn, "SELECT * FROM gh.commits_dd LIMIT 100")
+ctrs_data <- dbGetQuery(conn, "SELECT login, country_code, location, city, email, company FROM gh.ctrs_extra LIMIT 100;")
+academic_data <- dbGetQuery(conn, "SELECT login, institution, country, is_academic FROM gh.sna_ctr_academic LIMIT 100;")
+country_edgelist <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_ctr_edgelist_yxy LIMIT 100;")
+ctr_ctrycode_data <- dbGetQuery(conn, "SELECT login, country_name, country_code, country_code_vis FROM gh_sna.sna_ctr_ctry_codes LIMIT 100;")
+country_emails <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/government/email_to_country_code.csv")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+dm_f <- dm_from_data_frames(ghost_commits, ctrs_data, academic_data, 
+                            country_emails, country_edgelist,ctr_ctrycode_data)
+graph <- dm_create_graph(dm_f, rankdir = "BT", col_attr = c("column", "type"))
+
+```
+
+```{r}
+dm_render_graph(graph)
+```
+
+```{r}
+
+dm_f <- dm_add_references(
+  dm_f,
+  
+  ctrs_data$login == ghost_commits$login,
+  ctrs_data$email == country_emails$country_code,
+  ctrs_data$country_code == academic_data$country,
+  ctrs_data$login == country_edgelist$ctr1,
+  ctrs_data$login == country_edgelist$ctr2,
+  ctrs_data$login == ctr_ctrycode_data$login,
+  country_emails$country_code == ctr_ctrycode_data$country_code,
+  academic_data$country == ctr_ctrycode_data$country
+)
+graph <- dm_create_graph(dm_f, rankdir = "BT", col_attr = c("column", "type"))
+dm_render_graph(graph)
+object.size(country_emails)
+```
+
+# size of tables 
+
+```{sql}
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."commits_dd"')); -- 110GB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."ctrs_extra"')); -- 190MB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."sna_ctr_academic"')); -- 5768kB
+SELECT pg_size_pretty(pg_total_relation_size('"gh_sna"."sna_ctr_edgelist_yxy"')); -- 19GB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh_sna"."sna_ctr_ctry_codes"')); -- 47MB 
+-- object.size(country_emails) = 53808 bytes
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

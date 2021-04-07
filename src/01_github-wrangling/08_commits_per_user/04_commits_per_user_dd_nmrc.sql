@@ -5,6 +5,7 @@ CREATE MATERIALIZED VIEW gh_cost.commits_per_user_dd_nmrc AS (
 WITH A AS (
 	SELECT login, slug, EXTRACT(YEAR FROM committed_date)::int AS year
 	FROM gh.commits_dd_nmrc
+	WHERE login IS NOT NULL AND login != 'null'
 ), B AS (
 	SELECT slug, year, login, COUNT(*) AS commits
 	FROM A

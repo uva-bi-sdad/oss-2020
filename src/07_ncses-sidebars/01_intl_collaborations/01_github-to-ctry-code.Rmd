@@ -25,7 +25,6 @@ conn <- dbConnect(drv = PostgreSQL(),
 # query the users_gh data (table of all github users) 
 oss_data <- dbGetQuery(conn, "SELECT login, country_code, location, city, long, lat, email, company FROM gh.ctrs_extra")
 academic_data <- dbGetQuery(conn, "SELECT login, institution, country, is_academic FROM gh.sna_ctr_academic;")
-city_codes <- dbGetQuery(conn, "SELECT * FROM gh.sna_ctr_city_codes;")
 
 # disconnect from postgresql database 
 dbDisconnect(conn)

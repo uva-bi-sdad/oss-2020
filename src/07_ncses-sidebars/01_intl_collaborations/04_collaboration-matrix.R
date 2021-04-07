@@ -15,7 +15,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # pulls in contributor collaboration edgelist for one year
 # note: bots, loops and nulls have already been filtered out in the previous stage
-ctr_edgelist <- dbGetQuery(conn, "SELECT * FROM gh.sna_intl_ctry_edgelist_yxy;")
+ctr_edgelist <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_intl_ctry_edgelist_yxy_lchn;")
 
 # disconnects from database
 dbDisconnect(conn)

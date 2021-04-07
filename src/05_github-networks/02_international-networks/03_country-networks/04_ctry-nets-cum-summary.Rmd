@@ -14,15 +14,15 @@ for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "extrafont",
               "R.utils", "RPostgreSQL", "cowplot", "maditr", "lubridate", 
               "poweRlaw", "plotly","gridExtra", "rmarkdown", 
               "grid")) {library(pkg, character.only = TRUE)}
-
+  
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
 full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
 kcore_data <- read_rds("kcore_data_cum.rds")
 decomp_data <- read_rds("decomp_data_cum.rds")
 
-global_netstats_cum <- global_netstats_cum %>% 
-  mutate_at(vars(node_count:kmax), round, 1)
+#global_netstats_cum <- global_netstats_cum %>% 
+#  mutate_at(vars(node_count:kmax), round, 3)
 ```
 
 ```{r bar_graphs_by_cum, fig.width=9.5, fig.height=8, echo=FALSE}
@@ -81,11 +81,12 @@ network_nodes <- global_netstats_cum %>%
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019)) +
   scale_y_continuous(breaks = c(0,  50, 100, 150, 200, 250), 
-                                labels = c(0, 50, 100, 150, 200, 250))
+                                labels = c(0, 50, 100, 150, 200, 250)) + 
+  ggtitle('A') + theme(plot.title = element_text(margin = margin(t = 10, b = -20), hjust=0.05))
 
 network_edges <- global_netstats_cum %>% 
   ggplot( aes(time, edge_count), y=edge_count) +
-  geom_bar(stat="identity", fill = "#628ed8", width = 0.6) + 
+  geom_bar(stat="identity", fill = "#EAAA31", width = 0.6) + 
   theme_minimal() + 
   theme(axis.title.x = element_blank()
                           #axis.text=element_text(size=12, family="Arial"),
@@ -95,7 +96,8 @@ network_edges <- global_netstats_cum %>%
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019)) +
   scale_y_continuous(breaks = c(0, 2500, 5000, 7500, 10000, 12500), 
-                                labels = c(0, 2.5, 5.0, 7.5, 10.0, 12.5))
+                                labels = c(0, 2.5, 5.0, 7.5, 10.0, 12.5)) + 
+  ggtitle('B') + theme(plot.title = element_text(margin = margin(t = 10, b = -20), hjust=0.05))
 
 network_commits <- global_netstats_cum %>% 
   ggplot( aes(time, commits), y=commits) +
@@ -109,10 +111,26 @@ network_commits <- global_netstats_cum %>%
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
                      labels = c(2008,"","","","",2013,"","","","","",2019)) +
   scale_y_continuous(breaks = c(0, 5000000, 10000000, 15000000, 20000000, 25000000, 30000000, 35000000), 
-                                labels = c(0, 5, 10, 15, 20, 25, 30, 35))
+                                labels = c(0, 5, 10, 15, 20, 25, 30, 35)) + 
+  ggtitle('C') + theme(plot.title = element_text(margin = margin(t = 10, b = -20), hjust=0.05))
 
-figure <- grid.arrange(network_nodes, network_edges, network_commits, 
-             nrow=1, ncol=3, top=
+network_communities <- global_netstats_cum %>% 
+  ggplot( aes(time, fstgrdy_comms), y=fstgrdy_comms) +
+  geom_bar(stat="identity", fill = "#628ed8", width = 0.6) + 
+  theme_minimal() + 
+  theme(axis.title.x = element_blank()
+        #axis.text=element_text(size=12, family="Arial"),
+        #axis.title=element_text(size=16, family="Arial")
+        ) +
+  labs(y = "Communities") +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) +
+  scale_y_continuous(breaks = c(0, 10, 20, 30, 40, 50), 
+                                labels = c(0, 10, 20, 30, 40, 50)) + 
+  ggtitle('D') + theme(plot.title = element_text(margin = margin(t = 10, b = -20), hjust=0.05))
+
+figure <- grid.arrange(network_nodes, network_edges, network_commits, network_communities,
+             nrow=1, ncol=4, top=
              #textGrob("Figure X. Cumulative Growth in Node, Edge and Commit Counts for GitHub Country Networks (2008-2019)",
             #            gp=gpar(fontsize=16, family="Arial"))
              )
@@ -221,60 +239,64 @@ density_cum<-ggplot(global_netstats_cum) +
   labs(y = "Density", x = "Year", colour = "#990000") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('E') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
 transitivity_cum<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=transitivity, group=1), size=1.5) + 
   labs(y = "Transitivity", x = "Year", colour = "#D96403") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('F') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.95))
 fstgrdy_cum_logged<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=fstgrdy_logged, group=1), size=1.5) + 
   labs(y = "Modularity (Logged)", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('G') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
 dist_cum<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=mean_distance, group=1), size=1.5) + 
   labs(y = "Mean Distance", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('H') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
 
-grid.arrange(density_cum, dist_cum, transitivity_cum, fstgrdy_cum_logged, nrow=1, ncol=4)
+grid.arrange(density_cum, transitivity_cum, fstgrdy_cum_logged, dist_cum,  nrow=1, ncol=4)
 ```
 ```{r, fig.width=11, fig.height=2.2, echo=FALSE, layout="l-body-outset"}
-mean_btw<-ggplot(global_netstats_cum) + 
-  geom_line(aes(x=time, y=mean_btw,group=1), size=1.5) + 
-  labs(y = "Density", x = "Year", colour = "#990000") + 
-  theme_minimal() + theme(axis.title.x = element_blank()) +
-  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
-
 centr_deg<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=centr_deg, group=1), size=1.5) + 
   labs(y = "Graph Deg Centralization", x = "Year", colour = "#D96403") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('I') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
+
 centr_btw<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=centr_btw, group=1), size=1.5) + 
   labs(y = "Graph Btw Centralization", x = "Year", colour = "#D96403") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
-mean_btw<-ggplot(global_netstats_cum) + 
-  geom_line(aes(x=time, y=mean_btw, group=1), size=1.5) + 
-  labs(y = "Avg Btw Centrality", x = "Year", colour = "#600080") + 
-  theme_minimal() + theme(axis.title.x = element_blank()) +
-  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019))  + 
+  ggtitle('J') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.95))
+
 mean_deg<-ggplot(global_netstats_cum) + 
   geom_line(aes(x=time, y=mean_deg, group=1), size=1.5) + 
   labs(y = "Avg Deg Centrality", x = "Year", colour = "#600080") + 
   theme_minimal() + theme(axis.title.x = element_blank()) +
   scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
-                     labels = c(2008,"","","","",2013,"","","","","",2019))
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('K') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
+
+mean_btw<-ggplot(global_netstats_cum) + 
+  geom_line(aes(x=time, y=mean_btw, group=1), size=1.5) + 
+  labs(y = "Avg Btw Centrality", x = "Year", colour = "#600080") + 
+  theme_minimal() + theme(axis.title.x = element_blank()) +
+  scale_x_discrete(breaks = c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2008,"","","","",2013,"","","","","",2019)) + 
+  ggtitle('L') + theme(plot.title = element_text(margin = margin(t = 5, b = -20), hjust=0.05))
 
 grid.arrange(centr_deg, centr_btw, mean_deg, mean_btw, nrow=1, ncol=4)
 ```
@@ -395,6 +417,32 @@ decomp_graph <- decomp_data %>%
   labs(title = "Decomposition Tendencies for Cumulative GitHub Networks") + 
   theme_minimal() + theme(axis.title.x = element_blank()) + theme(legend.position = c(0.85,0.8)); ggplotly()
 ```
+
+```{r}
+
+full_nodelist_cum %>% 
+  select(country, starts_with("fstgrdy")) %>% 
+  count(fstgrdy_comm08)
+
+full_nodelist_cum %>% 
+  select(country, starts_with("fstgrdy")) %>% 
+  group_by(fstgrdy_comm0819) %>% 
+  count()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r}
 library(data.table)
