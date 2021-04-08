@@ -219,9 +219,54 @@ weighted <- as_tibble(c(sum(full_nodelist$wtddeg08, na.rm = TRUE), sum(full_node
             sum(full_nodelist$wtddeg0814, na.rm = TRUE), sum(full_nodelist$wtddeg0815, na.rm = TRUE),
             sum(full_nodelist$wtddeg0816, na.rm = TRUE), sum(full_nodelist$wtddeg0817, na.rm = TRUE), 
             sum(full_nodelist$wtddeg0818, na.rm = TRUE), sum(full_nodelist$wtddeg0819, na.rm = TRUE))) 
-
 colnames(weighted) <- "wtd_edge_count"
-global_netstats_cum <- cbind(global_netstats_cum, weighted) 
+
+louvain_comms <- full_nodelist %>% select(login, starts_with("louvain")) 
+louvain_comms <- as_tibble(c(n_distinct(louvain_comms$louvain08, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0809, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0810, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0811, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0812, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0813, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0814, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0815, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0816, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0817, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0818, na.rm = FALSE),
+                              n_distinct(louvain_comms$louvain0819, na.rm = FALSE))) 
+colnames(louvain_comms) <- "louvain_comms"
+
+fstgrdy_comms <- full_nodelist %>% select(login, starts_with("fstgrdy")) 
+fstgrdy_comms <- as_tibble(c(n_distinct(fstgrdy_comms$fstgrdy08, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0809, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0810, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0811, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0812, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0813, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0814, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0815, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0816, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0817, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0818, na.rm = FALSE),
+                              n_distinct(fstgrdy_comms$fstgrdy0819, na.rm = FALSE))) 
+colnames(fstgrdy_comms) <- "fstgrdy_comms"
+
+components <- full_nodelist %>% select(login, starts_with("comp")) 
+components <- as_tibble(c(n_distinct(components$comp08, na.rm = FALSE),
+                              n_distinct(components$comp0809, na.rm = FALSE),
+                              n_distinct(components$comp0810, na.rm = FALSE),
+                              n_distinct(components$comp0811, na.rm = FALSE),
+                              n_distinct(components$comp0812, na.rm = FALSE),
+                              n_distinct(components$comp0813, na.rm = FALSE),
+                              n_distinct(components$comp0814, na.rm = FALSE),
+                              n_distinct(components$comp0815, na.rm = FALSE),
+                              n_distinct(components$comp0816, na.rm = FALSE),
+                              n_distinct(components$comp0817, na.rm = FALSE),
+                              n_distinct(components$comp0818, na.rm = FALSE),
+                              n_distinct(components$comp0819, na.rm = FALSE))) 
+colnames(components) <- "components"
+
+global_netstats_cum <- cbind(global_netstats_cum, weighted, louvain_comms, fstgrdy_comms, components) 
 global_netstats_cum <- global_netstats_cum %>% 
   select(time, year, node_count, edge_count, wtd_edge_count, everything()) 
 

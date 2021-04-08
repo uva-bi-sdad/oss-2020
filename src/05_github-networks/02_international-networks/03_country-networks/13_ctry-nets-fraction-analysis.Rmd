@@ -22,7 +22,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_08")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_08")
 
 analysis_year <- "08"
 
@@ -99,7 +99,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0809")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0809")
 
 analysis_year <- "0809"
 
@@ -177,7 +177,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0810")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0810")
 
 analysis_year <- "0810"
 
@@ -254,7 +254,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0811")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0811")
 
 analysis_year <- "0811"
 
@@ -331,7 +331,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0812")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0812")
 
 analysis_year <- "0812"
 
@@ -408,7 +408,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0813")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0813")
 
 analysis_year <- "0813"
 
@@ -485,7 +485,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0814")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0814")
 
 analysis_year <- "0814"
 
@@ -562,7 +562,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0815")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0815")
 
 analysis_year <- "0815"
 
@@ -639,7 +639,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0816")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0816")
 
 analysis_year <- "0816"
 
@@ -716,7 +716,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0817")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0817")
 
 analysis_year <- "0817"
 
@@ -793,7 +793,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0818")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0818")
 
 analysis_year <- "0818"
 
@@ -870,7 +870,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # query the bipartite edgelist data from github data  
 ctry_edgelist <- dbGetQuery(conn, "SELECT country1, country2, repo_wts
-                                   FROM gh.sna_intl_ctry_edgelist_0819")
+                                   FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0819")
 
 analysis_year <- "0819"
 

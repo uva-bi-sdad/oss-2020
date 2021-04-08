@@ -8,7 +8,7 @@
 test_if_power_law <- function(analysis_year){
 
   #rm(list = ls())
-  #analysis_year <- "0809"
+  #analysis_year <- "0819"
   # load packages
   for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate", "parallel", "poweRlaw")) {library(pkg, character.only = TRUE)}
 

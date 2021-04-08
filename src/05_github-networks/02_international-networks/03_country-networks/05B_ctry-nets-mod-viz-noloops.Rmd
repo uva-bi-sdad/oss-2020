@@ -110,7 +110,7 @@ map_data("world") %>%
   guides(fill=FALSE) + 
   scale_fill_manual(values = c("#232D4B", #    
                                "#628ed8", # 
-                               "#cd6700", #  
+                               "#ff7f00", #  
                                "#EAAA31")) +
   #scale_color_gradientn(colours = rainbow(26)) +
   theme(plot.title = element_text(size = 13, hjust = 0.5), 
@@ -119,7 +119,7 @@ map_data("world") %>%
         axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(), axis.title.y=element_blank()) +
-  labs(title= " Detected Communities for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
+  labs(title= " Figure 3A. Detected Communities for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
        subtitle="Communities Calculated Using International But Not Domestic Collaborations")
 
 ```

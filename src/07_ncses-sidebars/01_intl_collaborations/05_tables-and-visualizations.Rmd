@@ -15,8 +15,7 @@ library("janitor")
 
 analysis_year <- "2019"
 
-raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_",
-                                    analysis_year,".csv"), sep=";")
+raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_", analysis_year,".csv"), sep=";")
 
 # calculate total collaborations 
 total_collaboration_counts <- raw_collab_matrix %>%
@@ -72,13 +71,13 @@ collab_df <- total_collaboration_counts %>%
          prc_non_us = round(num_non_us / num_collabs * 100, 2)) %>% 
   select(country, starts_with("prc_"), everything()) 
 
-collab_df <- cbind(country_names, collab_df) %>% select(-country) %>% rename(country = Country)
+collab_df <- cbind(country_names, collab_df) %>% select(-country) %>% 
+  rename(country = Country) %>% 
+  mutate(year = analysis_year) %>% 
+  select(country, year, everything()) %>% 
+  arrange(prc_foreign)
 
-# need to figure this one out 
-collab_df <- collab_df %>% 
-  mutate(num_non_us = if_else(num_non_us == 25999896, num_foreign, num_non_us))
-
-collab_df %>% arrange(prc_foreign)
+collab_df #%>% arrange(-num_foreign)
 
 ```
 
@@ -86,9 +85,8 @@ Step 2: Write the data to CSV
 
 ```{r}
 output_df <- collab_df %>% 
-  select(country, num_collabs, num_domestic, num_foreign, num_us, prc_domestic, prc_foreign, prc_us) %>% 
-  rename(total_collabs = num_collabs, us_collabs = num_us, 
-         forgn_collabs = num_foreign, dom_collabs = num_domestic, prc_frgn = prc_foreign) 
+  select(country, year, num_collabs, num_domestic, num_foreign, num_us, prc_domestic, prc_foreign, prc_us) %>% 
+  rename(total_collabs = num_collabs, us_collabs = num_us, forgn_collabs = num_foreign, dom_collabs = num_domestic, prc_frgn = prc_foreign) 
 
 output_df %>% arrange(-total_collabs)
 
@@ -134,7 +132,7 @@ intl_collabs_figure1 <- collab_df %>%
          x = "Country", y = "Number of GitHub Collaborations Per Country") +
     scale_y_continuous(breaks=c(0,500000,1000000,1500000,2000000,2500000), 
                      labels=c("0", "500k", "1m", "1.5m", "2m", "2.5m")) +
-    scale_fill_manual(name = "", values = c("#EAAA31","#232D4B"),
+    scale_fill_manual(name = "", values = c("#ff7f00","#232D4B"),
     #scale_fill_manual(name = "", values = c("#d62828","#457b9d"), 
                       labels = c("Domestic Collaborations", "International Collaborations"))
 
@@ -177,11 +175,11 @@ intl_collabs_figure2 <- collab_df %>%
         title =element_text(size=10, hjust = 1),
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 35, hjust = 0.9)) +
-  labs(title = str_c("International Collaborations on GitHub for Top-15 Countries Based on Total Collaborations from 2008-", analysis_year), 
+  labs(title = str_c("International Collaborations on GitHub for Top-15 Countries Based on Total Collaborations from ", analysis_year), 
        x = "Country", y = "Number of GitHub Collaborations Per Country (in Millions)") +
    scale_y_continuous(breaks=c(0,500000,1000000,1500000,2000000,2500000), 
                      labels=c("0", "0.5", "1.0", "1.5", "2.0", "2.5")) +
-  scale_fill_manual(name = "", values = c("#EAAA31","#232D4B", "#628ED8"), # uva version
+  scale_fill_manual(name = "", values = c("#ff7f00","#232D4B", "#628ED8"), # uva version
                     #name = "", values = c("#d62828","#457b9d", "#ffb703"), # ncses version
                     labels = c("Domestic Collaborations", 
                                "Non-US International Collaborations", 

@@ -113,7 +113,7 @@ map_data("world") %>%
                                
                                "#FFFFFF",     
                                "#5BC21C", # france/benelux - 7th largest 
-                               "#cd6700", #   usa - largest group  
+                               "#ff7f00", #   usa - largest group  
                                "#0E879C", #   russia (9), 6th largest 
                                "#D3D3D3",  # 
                                
@@ -150,7 +150,7 @@ map_data("world") %>%
         axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(), axis.title.y=element_blank()) +
-  labs(title= " Modularity Groupings for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
+  labs(title= " Figure 3B. Modularity Groupings for Country-Level \n Collaboration Networks (Full GitHub Network, 2008-2019)",
        subtitle="Communities Calculated Using Domestic and International Collaborations")
 
 ```
