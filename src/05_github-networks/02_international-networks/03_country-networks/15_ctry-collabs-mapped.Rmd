@@ -1,0 +1,131 @@
+---
+title: "Untitled"
+author: "Brandon L. Kramer"
+date: "4/8/2021"
+output: html_document
+---
+
+```{r}
+library(assertthat)
+library(tidyverse)
+library(purrr)
+library(igraph)
+library(ggplot2)
+library(ggraph)
+library(ggmap)
+library(reshape2)
+library(RPostgreSQL)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(),
+                  dbname = "sdad",
+                  host = "10.250.124.195",
+                  port = 5432,
+                  user = Sys.getenv("db_userid"),
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data
+edges <- dbGetQuery(conn, str_c("SELECT * FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_0819;"))
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+## rework edges 
+edges <- edges %>% 
+  rename(from = country1, to = country2, weight = repo_wts)
+tmp_network <- simplify(graph.data.frame(edges, directed = FALSE), 
+                        remove.loops = FALSE,
+                        edge.attr.comb = igraph_opt("edge.attr.comb"))
+is_weighted(tmp_network)
+tmp_matrix <- as.matrix(as_adjacency_matrix(tmp_network, type = "lower", attr = "weight", sparse = T))
+edges <- melt(tmp_matrix)
+edges <- edges %>% 
+  rename(from = Var1, to = Var2, weight = value) %>% 
+  filter(from != to) %>% 
+  mutate(category = ifelse(from %in% c("United States"), "United States", 
+                           ifelse(to %in% c("United States"), "United States", 
+                                  ifelse(from %in% c("China"), "China",
+                                         ifelse(to %in% c("China"), "China", "Other"))))) %>% 
+  arrange(-weight) %>%  
+  filter(weight > 10000) 
+
+# rework nodes 
+nodes <- read_csv("~/git/oss-2020/data/misc-data/geocoded_countries.csv") 
+tmp_network <- graph.data.frame(edges, directed = FALSE)
+tmp <- data.frame(id = c(1:(igraph::vcount(tmp_network))), 
+                  name = igraph::V(tmp_network)$name)
+tmp$name <- as.character(tmp$name)
+nodes <- tmp %>% 
+  left_join(nodes, by = "name") %>% 
+  rename(lat = latitude, lon = longitude) %>% 
+  select(-id)
+nodes <- nodes %>% 
+  mutate(name_label = ifelse(str_detect(name, 
+         "\\b(United States|^China|United Kingdom|Russia|Canada|France|Germany|India|Japan|Australia|Netherlands)\\b"), yes = name, no = NA))  
+
+# convert to graph 
+g <- graph_from_data_frame(edges, vertices = nodes, directed = FALSE)
+
+# edges for plot 
+edges_for_plot <- edges %>%
+  inner_join(nodes %>% select(name, lon, lat), 
+             by = c('from' = 'name')) %>%
+  rename(x = lon, y = lat) %>%
+  inner_join(nodes %>% select(name, lon, lat), 
+             by = c('to' = 'name')) %>%
+  rename(xend = lon, yend = lat)
+assert_that(nrow(edges_for_plot) == nrow(edges))
+nodes$weight = degree(g)
+
+```
+
+```{r}
+# map theme 
+maptheme <- theme(panel.grid = element_blank()) +
+  theme(axis.text = element_blank()) +
+  theme(axis.ticks = element_blank()) +
+  theme(axis.title = element_blank()) +
+  theme(legend.position = "none") +
+  theme(panel.grid = element_blank()) +
+  theme(panel.background = element_rect(fill = "#FFFFFF")) +
+  #theme(panel.background = element_rect(fill = "#596673")) +
+  theme(plot.margin = unit(c(0, 0, 0.5, 0), 'cm'))
+country_shapes <- geom_polygon(aes(x = long, y = lat, group = group),
+                               data = map_data('world'),
+                               fill = "#FFFFFF", color = "#515151",
+                               #fill = "#CECECE", color = "#515151",
+                               size = 0.15)
+mapcoords <- coord_fixed(xlim = c(-150, 180), ylim = c(-55, 80))
+
+ggplot(nodes) + 
+  country_shapes +
+  geom_curve(aes(x = x, y = y, xend = xend, yend = yend, color = category, size = weight), 
+             data = edges_for_plot, curvature = 0.33, alpha = 0.25) +
+  scale_size_continuous(guide = FALSE, range = c(1, 6)) + # scale for edge widths
+  #geom_point(aes(x = lon, y = lat, size = weight),           # draw nodes
+  #           shape = 21, fill = 'black', color = 'black', stroke = 0.1) +
+  scale_size_continuous(guide = FALSE, range = c(1, 2)) +    # scale for node size
+  #geom_text(aes(x = lon, y = lat, label = name_label),             # draw text labels
+  #          hjust = 0, nudge_x = 1, nudge_y = 4,
+  #          size = 3, color = "white" , fontface = "bold"
+  #          ) +
+  scale_color_manual(values=c("#ff7f00", "#628ed8", "#000058")) + # #EAAA31
+  mapcoords + maptheme
+```
+
+# references 
+
+https://www.r-bloggers.com/2018/05/three-ways-of-visualizing-a-graph-on-a-map/ 
+
+
+
+
+
+
+
+
+
+
+
+
+
