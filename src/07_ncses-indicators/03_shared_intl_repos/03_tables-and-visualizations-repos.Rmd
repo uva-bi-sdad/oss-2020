@@ -1,0 +1,154 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "igraph", "data.table", "R.utils", "RPostgreSQL", "countrycode", "tidytable",
+              "cowplot", "lubridate", "igraph")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+repo_counts <- dbGetQuery(conn, "SELECT * FROM gh.shared_intl_repos")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+# this table includes bots - check with gizem that this is correct 
+repo_counts
+```
+
+```{r}
+ctry_counts = repo_counts %>% 
+  group_by(slug, year) %>% 
+  count() %>% 
+  rename(ctry_count = n) %>% 
+  arrange(-ctry_count)
+
+domestic_repos = ctry_counts %>% 
+  filter(ctry_count == 1) %>% 
+  mutate(domestic = 1)
+
+bifuracted_df <- repo_counts %>% 
+  left_join(domestic_repos %>% 
+              select(-ctry_count), by = c("slug", "year")) %>% 
+  mutate(domestic = replace_na(domestic, 0)) 
+
+domestic_counts = bifuracted_df %>%
+  filter(domestic == 1) %>% 
+  group_by(country, year) %>% 
+  count() %>% 
+  rename(count = n) %>% 
+  mutate(category = "domestic")
+
+intl_counts = bifuracted_df %>%
+  filter(domestic == 0) %>% 
+  group_by(country, year) %>% 
+  count() %>% 
+  rename(count = n) %>% 
+  mutate(category = "international")
+
+final_counts = domestic_counts %>% 
+  bind_rows(intl_counts) %>% 
+  select(country, category, year, count) %>% 
+  arrange(country, year)
+
+final_counts %>% arrange(-count)
+```
+
+```{r}
+joined_counts = domestic_counts %>% 
+  left_join(intl_counts, by = c("country", "year")) %>% 
+  rename(dom_counts = "count.x", intl_counts = "count.y") %>% 
+  mutate(prop_intl = round(intl_counts / (dom_counts + intl_counts) * 100, 2))
+joined_counts %>% filter(year == "2019") %>% arrange(prop_intl)
+```
+
+```{r, fig.width=10, fig.height=5}
+
+analysis_year = "2018"
+
+top_15_countries <- c("United States", "Germany", "United Kingdom", "France", "China", "Canada", "India", 
+                        "Netherlands", "Russia", "Brazil", "Australia",  "Japan", "Spain", "Switzerland", "Sweden")
+
+to_graph <- final_counts %>% 
+  filter(country %in% top_15_countries & year == analysis_year) %>% 
+  arrange(-count) 
+
+to_graph$country = fct_relevel(to_graph$country, "United States", "Germany", "United Kingdom", "France", "China", "Canada", "India", 
+                        "Netherlands", "Russia", "Brazil", "Australia",  "Japan", "Spain", "Switzerland", "Sweden")
+
+to_graph %>% 
+  ggplot(., aes(fill=category, y=count, x=country)) + 
+    geom_bar(position="stack", stat="identity", width = 0.6) +
+    #geom_text(aes(label = prc_domestic), vjust = -1.5) +
+    theme_minimal() + 
+    theme(#legend.position="bottom", 
+          legend.position = c(0.85, 0.9), 
+          #legend.direction = "horizontal",
+          title =element_text(size=10, hjust = 1),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 35, hjust = 0.9)) +
+    labs(title = str_c("International collaborations on GitHub repositories, for top-15 countries by GitHub repos: ", analysis_year), 
+         x = "Country", y = "GitHub Repositories") +
+    scale_y_continuous(breaks=c(0,20000,40000,60000,80000,100000,120000), 
+                     labels=c("0", "20,000", "40,000", "60,000", "80,000", "100,000", "120,000")) +
+    #scale_fill_manual(name = "", values = c("#ff7f00","#232D4B"),
+    scale_fill_manual(name = "", values = c("#d62828","#457b9d"), 
+                      labels = c("Domestic Collaborations", "International Collaborations"))
+
+```
+
+```{r}
+domestic_rates <- final_counts %>% 
+  filter(year > 2008) %>% 
+  group_by(country, year) %>% 
+  summarise(annual_repos = sum(count)) %>% 
+  arrange(country, year) %>% 
+  left_join(final_counts, by = c("country", "year")) %>% 
+  rename(cat_repos = count) %>% 
+  select(country, category, year, cat_repos, annual_repos) %>% 
+  mutate(prc = cat_repos / annual_repos) %>% 
+  filter(category != "international" & year == "2018") 
+domestic_rates
+mean(domestic_rates$prc)
+median(domestic_rates$prc)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

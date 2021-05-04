@@ -15,7 +15,7 @@ conn <- dbConnect(drv = PostgreSQL(),
 
 # pulls in contributor collaboration edgelist for one year
 # note: bots, loops and nulls have already been filtered out in the previous stage
-ctr_edgelist <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_intl_ctry_edgelist_yxy_lchn;")
+ctry_edgelist <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_intl_ctry_edgelist_yxy_refined;")
 
 # disconnects from database
 dbDisconnect(conn)
@@ -33,7 +33,7 @@ collaboration_matrix <- function(wtd_edgelist, analysis_year){
   }
 
   wtd_edgelist <- wtd_edgelist %>%
-    rename(from = country1, to = country2, weight = repo_wts) %>%
+    rename(from = country1, to = country2, weight = collaborations) %>%
     filter(year == analysis_year) %>% select(-year)
 
   directed_graph <- graph.data.frame(wtd_edgelist, directed = TRUE)
@@ -51,18 +51,18 @@ collaboration_matrix <- function(wtd_edgelist, analysis_year){
 
 # create collaboration matrices for all years
 
-oss_intl_collaborations_matrix_2008 <- collaboration_matrix(ctr_edgelist, "2008")
-oss_intl_collaborations_matrix_2009 <- collaboration_matrix(ctr_edgelist, "2009")
-oss_intl_collaborations_matrix_2010 <- collaboration_matrix(ctr_edgelist, "2010")
-oss_intl_collaborations_matrix_2011 <- collaboration_matrix(ctr_edgelist, "2011")
-oss_intl_collaborations_matrix_2012 <- collaboration_matrix(ctr_edgelist, "2012")
-oss_intl_collaborations_matrix_2013 <- collaboration_matrix(ctr_edgelist, "2013")
-oss_intl_collaborations_matrix_2014 <- collaboration_matrix(ctr_edgelist, "2014")
-oss_intl_collaborations_matrix_2015 <- collaboration_matrix(ctr_edgelist, "2015")
-oss_intl_collaborations_matrix_2016 <- collaboration_matrix(ctr_edgelist, "2016")
-oss_intl_collaborations_matrix_2017 <- collaboration_matrix(ctr_edgelist, "2017")
-oss_intl_collaborations_matrix_2018 <- collaboration_matrix(ctr_edgelist, "2018")
-oss_intl_collaborations_matrix_2019 <- collaboration_matrix(ctr_edgelist, "2019")
+oss_intl_collaborations_matrix_2008 <- collaboration_matrix(ctry_edgelist, "2008")
+oss_intl_collaborations_matrix_2009 <- collaboration_matrix(ctry_edgelist, "2009")
+oss_intl_collaborations_matrix_2010 <- collaboration_matrix(ctry_edgelist, "2010")
+oss_intl_collaborations_matrix_2011 <- collaboration_matrix(ctry_edgelist, "2011")
+oss_intl_collaborations_matrix_2012 <- collaboration_matrix(ctry_edgelist, "2012")
+oss_intl_collaborations_matrix_2013 <- collaboration_matrix(ctry_edgelist, "2013")
+oss_intl_collaborations_matrix_2014 <- collaboration_matrix(ctry_edgelist, "2014")
+oss_intl_collaborations_matrix_2015 <- collaboration_matrix(ctry_edgelist, "2015")
+oss_intl_collaborations_matrix_2016 <- collaboration_matrix(ctry_edgelist, "2016")
+oss_intl_collaborations_matrix_2017 <- collaboration_matrix(ctry_edgelist, "2017")
+oss_intl_collaborations_matrix_2018 <- collaboration_matrix(ctry_edgelist, "2018")
+oss_intl_collaborations_matrix_2019 <- collaboration_matrix(ctry_edgelist, "2019")
 
 # output data to data_folder
 

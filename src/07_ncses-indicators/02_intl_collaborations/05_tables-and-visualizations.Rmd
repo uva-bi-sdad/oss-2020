@@ -13,9 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("janitor")
 
-analysis_year <- "2019"
+analysis_year <- "2008"
 
-raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_", analysis_year,".csv"), sep=";")
+raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_", 
+                                    analysis_year,".csv"), sep=";", stringsAsFactors=FALSE)
 
 # calculate total collaborations 
 total_collaboration_counts <- raw_collab_matrix %>%
@@ -54,7 +55,8 @@ wo_us_matrix <- raw_collab_matrix %>%
   t %>% as.data.frame %>% 
   rownames_to_column() %>% 
   rename(country = rowname, num_us = V1)
-wo_us_matrix
+wo_us_matrix %>% 
+  filter(country == "united_states")
 
 # we want the nice names names in the country col, not the var.names()
 country_names <- raw_collab_matrix %>% select(Country)
@@ -71,27 +73,20 @@ collab_df <- total_collaboration_counts %>%
          prc_non_us = round(num_non_us / num_collabs * 100, 2)) %>% 
   select(country, starts_with("prc_"), everything()) 
 
-collab_df <- cbind(country_names, collab_df) %>% select(-country) %>% 
+collab_df <- cbind(country_names, collab_df) %>% 
+  select(-country) %>% 
   rename(country = Country) %>% 
   mutate(year = analysis_year) %>% 
   select(country, year, everything()) %>% 
   arrange(prc_foreign)
 
-collab_df #%>% arrange(-num_foreign)
+# correct the us total that is off bc of the calculation above  
+collab_df <- collab_df %>% 
+  mutate(num_non_us = if_else(country == "United States", num_collabs - num_domestic, num_non_us)) 
 
-```
+collab_df %>% 
+  arrange(-num_foreign)
 
-Step 2: Write the data to CSV 
-
-```{r}
-output_df <- collab_df %>% 
-  select(country, year, num_collabs, num_domestic, num_foreign, num_us, prc_domestic, prc_foreign, prc_us) %>% 
-  rename(total_collabs = num_collabs, us_collabs = num_us, forgn_collabs = num_foreign, dom_collabs = num_domestic, prc_frgn = prc_foreign) 
-
-output_df %>% arrange(-total_collabs)
-
-write_csv(output_df, str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_",
-                           analysis_year,"_tograph.csv"))
 ```
 
 Figure 1: Domestic-Foreign Collaborations (Simple)
@@ -100,6 +95,9 @@ Figure 1: Domestic-Foreign Collaborations (Simple)
 top_15_by_commits <- c("United States", "Germany", "United Kingdom", "China", 
                        "Canada", "France", "Netherlands", "Australia", "Sweden", 
                        "Japan", "India", "Switzerland", "Spain", "Russia", "Brazil")
+
+top_15_by_collabs <- collab_df %>% arrange(-num_collabs) %>% top_n(15, num_collabs)
+top_15_by_collabs <- as.character(top_15_by_collabs$country)
   
 prcs <- collab_df  %>% 
   mutate(collaborations = "num_foreign") %>% 
@@ -107,20 +105,20 @@ prcs <- collab_df  %>%
 
 intl_collabs_figure1 <- collab_df %>% 
   #slice_max(num_collabs, n = 15) %>% 
-  filter(country %in% top_15_by_commits) %>% 
+  filter(country %in% top_15_by_collabs) %>% 
   select(country, num_domestic, num_foreign) %>% 
   pivot_longer(!country, names_to = "collaborations", values_to = "count") %>% 
   left_join(prcs, by = c("country", "collaborations")) %>% 
   mutate(prc_domestic = round(prc_domestic, 2)) %>% 
   mutate(country = as.factor(country), country = fct_relevel(country, 
-                               top_15_by_commits[1], top_15_by_commits[2], top_15_by_commits[3],
-                               top_15_by_commits[4], top_15_by_commits[5], top_15_by_commits[6],
-                               top_15_by_commits[7], top_15_by_commits[8], top_15_by_commits[9],
-                               top_15_by_commits[10], top_15_by_commits[11], top_15_by_commits[12],
-                               top_15_by_commits[13], top_15_by_commits[14], top_15_by_commits[15])) %>%
+                               top_15_by_collabs[1], top_15_by_collabs[2], top_15_by_collabs[3],
+                               top_15_by_collabs[4], top_15_by_collabs[5], top_15_by_collabs[6],
+                               top_15_by_collabs[7], top_15_by_collabs[8], top_15_by_collabs[9],
+                               top_15_by_collabs[10], top_15_by_collabs[11], top_15_by_collabs[12],
+                               top_15_by_collabs[13], top_15_by_collabs[14], top_15_by_collabs[15])) %>% 
   ggplot(., aes(fill=collaborations, y=count, x=country)) + 
     geom_bar(position="stack", stat="identity", width = 0.6) +
-    geom_text(aes(label = prc_domestic), vjust = -1.5) +
+    #geom_text(aes(label = prc_domestic), vjust = -1.5) +
     theme_minimal() + 
     theme(#legend.position="bottom", 
           legend.position = c(0.85, 0.9), 
@@ -128,16 +126,16 @@ intl_collabs_figure1 <- collab_df %>%
           title =element_text(size=10, hjust = 1),
           axis.title.x = element_blank(),
           axis.text.x = element_text(angle = 35, hjust = 0.9)) +
-    labs(title = str_c("International collaborations on GitHub, for top-15 countries by GitHub commits: 2008-", analysis_year), 
+    labs(title = str_c("International collaborations on GitHub, for top-15 countries by GitHub commits: ", analysis_year), 
          x = "Country", y = "Number of GitHub Collaborations Per Country") +
     scale_y_continuous(breaks=c(0,500000,1000000,1500000,2000000,2500000), 
                      labels=c("0", "500k", "1m", "1.5m", "2m", "2.5m")) +
-    scale_fill_manual(name = "", values = c("#ff7f00","#232D4B"),
-    #scale_fill_manual(name = "", values = c("#d62828","#457b9d"), 
+    #scale_fill_manual(name = "", values = c("#ff7f00","#232D4B"),
+    scale_fill_manual(name = "", values = c("#d62828","#457b9d"), 
                       labels = c("Domestic Collaborations", "International Collaborations"))
 
-#png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_fig1_",
-#               analysis_year,".png"), width=600, height=350); intl_collabs_figure1; dev.off()
+png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_fig1_",
+               analysis_year,".png"), width=600, height=350); intl_collabs_figure1; dev.off()
 
 intl_collabs_figure1
 ```
@@ -151,7 +149,9 @@ top_15_by_collabs <- as.character(top_15_by_collabs$country)
 prcs <- collab_df  %>% 
   mutate(collaborations = "num_foreign") %>% 
   select(country, collaborations, prc_domestic)
+
 mean(collab_df$prc_us)
+
 intl_collabs_figure2 <- collab_df %>% 
   filter(country %in% top_15_by_collabs) %>% 
   select(country, num_domestic, num_us, num_non_us) %>% 
@@ -179,8 +179,8 @@ intl_collabs_figure2 <- collab_df %>%
        x = "Country", y = "Number of GitHub Collaborations Per Country (in Millions)") +
    scale_y_continuous(breaks=c(0,500000,1000000,1500000,2000000,2500000), 
                      labels=c("0", "0.5", "1.0", "1.5", "2.0", "2.5")) +
-  scale_fill_manual(name = "", values = c("#ff7f00","#232D4B", "#628ED8"), # uva version
-                    #name = "", values = c("#d62828","#457b9d", "#ffb703"), # ncses version
+  scale_fill_manual(#name = "", values = c("#ff7f00","#232D4B", "#628ED8"), # uva version
+                    name = "", values = c("#d62828","#457b9d", "#ffb703"), # ncses version
                     labels = c("Domestic Collaborations", 
                                "Non-US International Collaborations", 
                                "US-Based International Collaborations"))
@@ -189,6 +189,29 @@ png(file=str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaboration
                analysis_year,".png"), width=600, height=350); intl_collabs_figure2; dev.off()
 
 intl_collabs_figure2
+```
+
+# Output Raw Data for NCSES to make these in Excel 
+
+```{r}
+output_df <- collab_df %>% 
+  rename(
+    total_collaborations = num_collabs, domestic_collaborations = num_domestic, foreign_collaborations = num_foreign, 
+    collaborations_with_usa = num_us, collaborations_non_usa = num_non_us, 
+    percent_domestic = prc_domestic, percent_foreign = prc_foreign, percent_usa = prc_us, percent_non_usa = prc_non_us
+    ) %>% 
+  select(country, year, total_collaborations, foreign_collaborations, domestic_collaborations, 
+         collaborations_with_usa, collaborations_non_usa, percent_domestic, percent_foreign, percent_usa,  percent_non_usa) %>% 
+  arrange(-total_collaborations); output_df
+
+write_csv(output_df, str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_data_", analysis_year,".csv"))
+```
+
+```{r}
+setwd("~/git/oss-2020/data/intl-indicator-output/")
+all_years <- list.files(pattern="oss_intl_collaborations_data_*") %>% map_df(~read_csv(.))
+all_years %>% filter(country == "United States")
+write_csv(all_years, "oss_intl_collaborations_data_2008_2019.csv")
 ```
 
 # Other statistics 
@@ -206,7 +229,3 @@ raw_collab_matrix %>%
          fraction = round(United.States / us_total$total, 4) * 100) %>% 
   arrange(-fraction)
 ```
-
-TODO (1-25-2020)
-
-Gizem wants this to match the NCSES indicator that shows the fractions based on the total number of repos 

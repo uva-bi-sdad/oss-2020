@@ -13,10 +13,10 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919;")                # original_table
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_0919;")             # deduplicated_table
+#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_0919;")             # deduplicated_table
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nbots_0919;")       # no bots
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nmrc_0919;")        # no multi-repo commits
-#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_dd_nmrc_nbots_0919;")  # nmrc + nbots
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")  # jbsc
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -43,7 +43,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   user = Sys.getenv("db_userid"),
                   password = Sys.getenv("db_pwd"))
 
-cost_academic_geo <- dbGetQuery(conn, "SELECT * FROM gh.cost_academic_geo_0919;")
+cost_academic_geo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_academic_geo_0919_jbsc;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -90,6 +90,14 @@ costs_by_country <- costs_by_country %>%
 
 sum(costs_by_country$geo_adds_w_gross)
 sum(costs_by_country$geo_adds_wo_gross)
+
+us_cost <- costs_by_country %>% filter(inst_country == "United States")
+
+
+us_cost$geo_adds_w_gross / sum(costs_by_country$geo_adds_w_gross)
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/07_cost_dd_nmrc_jbsc_nbots")
+write_csv(costs_by_country, "academic_costs_by_country.csv")
 
 ####
 

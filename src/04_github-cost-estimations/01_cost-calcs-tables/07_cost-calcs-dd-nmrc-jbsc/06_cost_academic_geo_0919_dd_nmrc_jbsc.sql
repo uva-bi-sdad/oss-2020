@@ -1,7 +1,7 @@
 
 ---- cost by academic/nonacademic sector and then by country
 
-CREATE MATERIALIZED VIEW gh_cost.cost_academic_geo_0919_raw AS (
+CREATE MATERIALIZED VIEW gh_cost.cost_academic_geo_0919_jbsc AS (
 
 WITH table_join AS (
 SELECT slug, C.login, REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(sector, 'null/missing'),
@@ -9,7 +9,7 @@ SELECT slug, C.login, REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(sector, '
 			 'non-profit', 'non-academic'), 'not classified', 'non-academic') AS sector,
 		COALESCE(country, 'Missing') AS inst_country,
 		additions, deletions, EXTRACT(YEAR FROM committed_date)::int AS year
-FROM gh.commits_raw AS C
+FROM gh.commits_dd_nmrc_jbsc AS C
 LEFT JOIN (SELECT A.login, A.sector, B.country
 FROM gh_cost.cost_logins_w_sector_info AS A
 LEFT JOIN gh.sna_ctr_academic AS B
@@ -26,4 +26,4 @@ GROUP BY slug, sector, inst_country
 ORDER BY slug, sector, inst_country
 );
 
-GRANT ALL PRIVILEGES ON TABLE gh.cost_academic_geo_0919_raw TO ncses_oss;
+GRANT ALL PRIVILEGES ON TABLE gh.cost_academic_geo_0919_jbsc TO ncses_oss;

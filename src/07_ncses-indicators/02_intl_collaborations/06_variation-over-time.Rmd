@@ -1,0 +1,110 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r, fig.width=7, fig.height=5}
+collabs_0819 <- read_csv("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_data_2008_2019.csv")
+
+top_10_by_collabs <- collabs_0819 %>%
+  filter(year == "2019") %>% 
+  arrange(-num_collabs) %>% 
+  top_n(10, num_collabs)
+top_10_by_collabs <- as.character(top_10_by_collabs$country)
+
+collabs_0819 %>% 
+  filter(country %in% top_10_by_collabs) %>% 
+  ggplot() + 
+  geom_line(aes(y = prc_domestic, x = year, colour = country), size = 1, stat="identity") + 
+  theme_minimal() + 
+  labs(title = " Change in Percentage of Domestic Collaborations \n for Top-10 Countries Over Time (GitHub, 2008-2019)", 
+       color =  "Country") + 
+  ylab("Percentage of All Collaborations") +
+  theme(axis.title.x = element_blank(), 
+        legend.position = "bottom",
+        legend.title = element_text(size = 10, hjust = 0.5, face="bold"),
+        plot.title = element_text(size=13, hjust = 0.5)) +
+  scale_color_manual(labels=c("Canada", "China",   "France",  "Germany", "India",   "Japan", "Netherlands","Russia","United Kingdom", "United States"),
+                     values=c("#990000","#0AA18C", "#5BC21C", "#628ed8", "#232D4B", "#E6CE3A",  "#D9E12B", "#0E879C", "#89cff0",     "#ff7f00")) +
+  scale_x_continuous(limits = c(2008, 2019),
+                     breaks = c(2008, 2010, 2013, 2016, 2019))
+
+```
+
+```{r}
+collabs_0819 %>%
+  select(country, year, prc_domestic) %>% 
+  pivot_wider(names_from = year, values_from = prc_domestic) %>% 
+  mutate(diff = `2019` - `2008`) %>% 
+  select(country, diff, `2008`, `2019`, everything()) %>%
+  arrange(-diff)
+```
+
+```{r}
+
+diff_0819 = collabs_0819 %>%
+  select(country, year, prc_us) %>% 
+  pivot_wider(names_from = year, values_from = prc_us) %>% 
+  mutate(diff_0819 = `2019` - `2008`) %>% 
+  select(country, diff_0819, `2008`, `2019`) %>%
+  arrange(-diff_0819)
+
+mean(diff_0819$diff_0819, na.rm = TRUE)
+
+diff_0918 = collabs_0819 %>%
+  select(country, year, prc_us) %>% 
+  pivot_wider(names_from = year, values_from = prc_us) %>% 
+  mutate(diff_0918 = `2018` - `2009`) %>% 
+  select(country, diff_0918, `2009`, `2018`) %>%
+  arrange(-diff_0918)
+
+top_25_by_collabs <- collabs_0819 %>%
+  filter(year == "2019") %>% 
+  arrange(-num_collabs) %>% 
+  top_n(25, num_collabs)
+top_25_by_collabs <- as.character(top_25_by_collabs$country)
+
+diff_0819 %>% 
+  left_join(diff_0918, by = "country") %>% 
+  select(country, starts_with("diff")) %>% 
+  mutate(total_diff = diff_0918 + diff_0819) %>% 
+  arrange(-diff_0819) %>% 
+  filter(country %in% top_25_by_collabs) %>% 
+  mutate(country = as.factor(country), country = fct_relevel(country, 
+                                       "China", "Japan", "Czechia", "Switzerland", "India", "United States",
+                                       "Spain", "Finland", "Germany", "Ireland", "Canada", "Brazil",
+                                       "France", "Norway", "Sweden", "Italy", "Russia", "Australia",
+                                       "Ukraine", "Belgium", "United Kingdom", "Poland", "Netherlands", 
+                                       "Denmark", "Austria")) %>%
+  ggplot(., aes(y=diff_0819, x=country)) + 
+  geom_bar(position="stack", stat="identity", width = 0.6) +
+  theme_minimal() +
+  theme(legend.position = c(0.85, 0.9), 
+          #legend.direction = "horizontal",
+        plot.title = element_text(size=12, hjust = 0.5),
+          #title =element_text(size=10, hjust = 0.5),
+          axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 35, hjust = 0.9)) +
+    labs(title = "Percentage Change in Collaborations with the USA \n from 2008-2019 for Top-25 Countries Based on Collaborations", y = "Percent Change in Collaborations with USA")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

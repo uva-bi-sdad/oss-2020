@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# devtools::install_github("bergant/datamodelr")
+
+library(datamodelr)
+library(DiagrammeR)
+library(RPostgreSQL)
+library(tidyverse)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+licenses_data <- dbGetQuery(conn, "SELECT * FROM gh.licenses LIMIT 10")
+repos_data <- dbGetQuery(conn, "SELECT slug, spdx, created, as_of FROM gh.repos LIMIT 10")
+repos_data <- repos_data %>% mutate(created = as.Date(created), as_of = as.Date(as_of))
+commits_data <- dbGetQuery(conn, "SELECT * FROM gh.commits_dd LIMIT 100")
+commits_data <- commits_data %>% mutate(committed_date = as.Date(committed_date))
+ctr_data_raw <- dbGetQuery(conn, "SELECT login, country_code, location, city, email, company FROM gh.ctrs_extra LIMIT 10;")
+academic_institutions <- dbGetQuery(conn, "SELECT login, institution, country AS country_code, is_academic FROM gh.sna_ctr_academic LIMIT 10;")
+country_email_domains <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/government/email_to_country_code.csv")
+ctr_data_final <- dbGetQuery(conn, "SELECT login, login AS ctr1, login AS ctr2, country_name, country_code FROM gh_sna.sna_ctr_ctry_codes LIMIT 100;")
+ctr_collaborations <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_ctr_edgelist_yxy LIMIT 100;")
+country_collaborations <- dbGetQuery(conn, "SELECT * FROM gh_sna.sna_intl_ctry_edgelist_yxy LIMIT 100;")
+shared_intl_repos <- dbGetQuery(conn, "SELECT * FROM gh.shared_intl_repos LIMIT 10")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+
+```
+
+```{r}
+dm_f <- dm_from_data_frames(#commits_data, ctr_data_raw, 
+                            licenses_data, repos_data,
+                            shared_intl_repos, 
+                            #academic_institutions, country_email_domains, ctr_data_final 
+                            ctr_collaborations, country_collaborations
+                            )
+graph <- dm_create_graph(dm_f, rankdir = "BT", col_attr = c("column", "type"))
+dm_render_graph(graph)
+```
+
+```{r}
+#commits_data, ctr_data_raw, academic_institutions, country_email_domains, ctr_data_final, ctr_collaborations, country_collaborations
+
+dm_f <- dm_add_references(
+  dm_f,
+  ctr_data_raw$login == commits_data$login,
+  ctr_data_raw$email == country_email_domains$country_code,
+  ctr_data_raw$country_code == academic_institutions$country_code,
+  ctr_data_raw$login == ctr_data_final$login,
+  country_email_domains$country_code == ctr_data_final$country_code,
+  academic_institutions$country_code == ctr_data_final$country_code
+  #ctr_data_final$country_name == country_collaborations$country1,
+  #ctr_data_final$country_name == country_collaborations$country2
+)
+graph <- dm_create_graph(dm_f, rankdir = "BT", col_attr = c("column", "type"))
+dm_render_graph(graph)
+#object.size(country_emails)
+```
+
+# size of tables 
+
+```{sql}
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."commits_dd"')); -- 110GB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."ctrs_extra"')); -- 190MB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh"."sna_ctr_academic"')); -- 5768kB
+SELECT pg_size_pretty(pg_total_relation_size('"gh_sna"."sna_ctr_edgelist_yxy"')); -- 19GB 
+SELECT pg_size_pretty(pg_total_relation_size('"gh_sna"."sna_ctr_ctry_codes"')); -- 47MB 
+-- object.size(country_emails) = 53808 bytes
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

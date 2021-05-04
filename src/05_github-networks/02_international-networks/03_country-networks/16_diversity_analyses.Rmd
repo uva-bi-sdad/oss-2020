@@ -1,0 +1,273 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+
+# thanks to Richard Paquin Morel for this function (https://ramorel.github.io/network-range/) 
+netrange <- function(net, attr, directed = TRUE){
+  require(reshape2)
+  if (class(net) == "igraph") {
+      net <- as_adjacency_matrix(net, sparse = F)
+    }
+  else {
+    if(class(net) == "network") {
+        net <- as.matrix.network(net)
+      }
+    else {
+        net <- as.matrix(net)
+      }
+    }
+  if(nrow(net) != length(attr)) {
+    stop("Number of nodes must match length of attributes vector")
+   }
+  else {
+    if (directed == TRUE){
+      ns <- colnames(net)
+      el <- melt(net, varnames=c("ego", "alter"), value.name = "weight")
+      df <- cbind(rownames(net), attr)
+      el$ego_grp <- df[match(el[,1], df[,1]), 2]
+      el$alter_grp <- df[match(el[,2], df[,1]), 2]
+      
+      #FINDING p_k, the strength of ties within each group
+      # z_iq = sum of strength of ties from nodes in group _k_ to all other alters
+      # z_ij = sum of strength of ties from nodes in group _k_ to alters in group _k_
+      
+      z_iq <- sapply(unique(attr), function(x) {
+        sum(el[which(el$ego_grp==x), "weight"])
+      })
+      z_ij <- sapply(unique(attr), function(x) {
+        sum(el[which(el$ego_grp==x & el$alter_grp==x), "weight"])
+      })
+      p_k <- z_ij / z_iq
+      p_k[is.na(p_k)] <- 0
+      
+      #FINDING p_ik, the strength of connection from person i to group k
+      # x_iq = sum of strength of ties for _i_ to alters in group _k_
+      # x_ij = sum of strength of ties for _i_ to all alters
+      
+      x_ij <- sapply(colnames(net), function(x) {
+        sum(el[which(el$ego==x), "weight"])
+      }
+      )
+      x_iq <- list(NULL)
+      for(i in colnames(net)) {
+        x_iq[[i]] <- sapply(unique(attr), function(x) {
+          sum(el[which(el$ego==i & el$alter_grp==x), "weight"])
+        }
+        )
+      }
+      x_iq <- x_iq[-c(1)] #x_iq is now a list where each elements is a vector of node _i_ summed strength of tie to group _k_
+      
+      p_ik <- lapply(1:length(x_iq), 
+                     function(x) x_iq[[x]] / x_ij[x])
+      
+      # FINDING nd_i, the network diversity score for node _i_
+      
+      nd_i <- sapply(1:length(p_ik), 
+                     function(x) 1 - sum(p_k*p_ik[[x]]^2, na.rm = F)
+      )
+    }
+    else {
+    ns <- colnames(net)
+    el <- melt(net, varnames=c("ego", "alter"), value.name = "weight")
+    dup <- data.frame(t(apply(el[,1:2],1,sort)))
+    el <- el[!duplicated(dup),]
+    df <- cbind(rownames(net), attr)
+    el$ego_grp <- df[match(el[,1], df[,1]), 2]
+    el$alter_grp <- df[match(el[,2], df[,1]), 2]
+    
+    #FINDING p_k, the strength of ties within each group
+    # z_iq = sum of strength of ties from nodes in group _k_ to all other alters
+    # z_ij = sum of strength of ties from nodes in group _k_ to alters in group _k_
+    
+    z_iq <- sapply(unique(attr), function(x) {
+      sum(el[which(el$ego_grp==x | el$alter_grp==x), "weight"])
+    })
+    z_ij <- sapply(unique(attr), function(x) {
+      sum(el[which(el$ego_grp==x & el$alter_grp==x), "weight"])
+    })
+    p_k <- z_ij / z_iq
+    p_k[is.na(p_k)] <- 0
+    
+    #FINDING p_ik, the strength of connection from person i to group k
+    # x_iq = sum of strength of ties for _i_ to alters in group _k_
+    # x_ij = sum of strength of ties for _i_ to all alters
+    
+    x_ij <- sapply(colnames(net), function(x) {
+      sum(el[which(el$ego==x | el$alter==x), "weight"])
+    }
+    )
+    x_iq <- list(NULL)
+    for(i in colnames(net)) {
+      x_iq[[i]] <- sapply(unique(attr), function(x) {
+        sum(el[which(el$ego==i & el$alter_grp==x), "weight"],
+            el[which(el$alter==i & el$ego_grp==x), "weight"])
+      }
+      )
+    }
+    x_iq <- x_iq[-c(1)] #x_iq is now a list where each elements is a vector of node _i_ summed strength of tie to group _k_
+    
+    p_ik <- lapply(1:length(x_iq), 
+                   function(x) x_iq[[x]] / x_ij[x])
+    
+    
+    # FINDING nd_i, the network diversity score for node _i_
+    
+    nd_i <- sapply(1:length(p_ik), 
+                   function(x) 1 - sum(p_k*p_ik[[x]]^2, na.rm = F)
+    )
+    }
+    return(nd_i)
+  }
+}
+```
+
+```{r}
+network_diversity_over_time <- function(analysis_year){
+  
+  # load packages
+  for (pkg in c("tidyverse", "igraph", "RPostgreSQL", "lubridate")) {library(pkg, character.only = TRUE)}
+  
+  # rm(list = ls())
+  # analysis_year <- "08"
+  
+  # connect to postgresql to get data (in rivanna)
+  conn <- dbConnect(drv = PostgreSQL(),
+                    dbname = "sdad",
+                    host = "10.250.124.195",
+                    port = 5432,
+                    user = Sys.getenv("db_userid"),
+                    password = Sys.getenv("db_pwd"))
+
+  # query the bipartite edgelist data from github data
+  edgelist <- dbGetQuery(conn, str_c("SELECT country1 AS from, country2 AS to, repo_wts AS weight 
+                                     FROM gh_sna.sna_intl_ctry_edgelist_dd_lchn_nbots_", analysis_year, ";"))
+
+  # disconnect from postgresql
+  dbDisconnect(conn)
+
+  ################################################################################## convert edgelist to network
+
+  network = igraph::simplify(graph.data.frame(edgelist, directed = FALSE), 
+                             remove.multiple = TRUE, remove.loops = FALSE,
+                             edge.attr.comb = igraph_opt("edge.attr.comb"))
+  is_weighted(network)
+
+  ################################################################################### network diversity measures 
+
+  # construct a nodelist
+  nodelist <- data.frame(id = c(1:(igraph::vcount(network))), country = igraph::V(network)$name)
+  nodelist$year <- analysis_year
+  nodelist$diversity <- igraph::diversity(network)
+
+  detach("package:igraph", unload=TRUE)
+  library("statnet")
+  library("intergraph")
+  
+  net_work <- intergraph::asNetwork(network)
+  net_work %v% "louvain_comm" <- igraph::cluster_louvain(network)$membership
+  net_work %v% "fstgrdy_comm" <- igraph::cluster_fast_greedy(network)$membership
+  
+  louvain_range <- netrange(net_work, net_work %v% "louvain_comm", directed = TRUE)
+  fstgrdy_range <- netrange(net_work, net_work %v% "fstgrdy_comm", directed = TRUE)
+  
+  net_ranges <- data.frame(country = net_work %v% "vertex.names",
+                            louvain_comm = net_work %v% "louvain_comm",
+                            fstgrdy_comm = net_work %v% "fstgrdy_comm",
+                            louvain_range = louvain_range,
+                            fstgrdy_range = fstgrdy_range,
+                            stringsAsFactors = F)
+  
+  nodelist <- nodelist %>% left_join(net_ranges, by = "country")
+  
+  detach("package:statnet", unload=TRUE)
+
+  # cache the results
+  setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
+  saveRDS(nodelist, str_c("ctry_diversity_",analysis_year,".rds"))
+
+} # end function
+
+##################################################################################### for loop of all years
+
+for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819")) {
+  network_diversity_over_time(year)
+}
+
+setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
+all_diversity_analyses <- list.files(pattern="ctry_diversity_*") %>% 
+  map_df(~read_rds(.))
+write_rds(all_diversity_analyses, "ctry_diversity_cum.rds")
+
+```
+
+load data 
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(janitor)
+
+setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
+all_diversity_analyses = read_rds("ctry_diversity_cum.rds")
+all_diversity_analyses
+
+setwd("~/git/oss-2020/data/wdi-data/")
+wdi_data = read_csv("WDIData.csv")
+dai_data <- read_excel("DAIforweb.xlsx")
+
+
+wdi_data %>% 
+  clean_names() %>% 
+  select(country_name, indicator_name) %>% 
+  filter(!grepl("^A|^B|^C|^D|^E|^F|^G|^H|^I|^J|^K|^L|^M|^N|^O|^P|^Q", indicator_name))
+
+```
+
+### References 
+
+https://ramorel.github.io/network-range/
+
+https://cran.r-project.org/web/packages/intergraph/vignettes/howto.html
+
+### World Technology Data 
+
+https://datacatalog.worldbank.org/dataset/world-development-indicators
+
+https://www.worldbank.org/en/publication/wdr2016/Digital-Adoption-Index
+
+https://www.nber.org/research/data/historical-cross-country-technology-adoption-hccta-dataset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -23,8 +23,9 @@ ctr_nodelist <- dbGetQuery(conn, "SELECT login, country_code
                                   FROM gh_sna.sna_ctr_ctry_codes")
 
 # query the bipartite edgelist data from github data  
+# this filters bots again, but they should already be omitted 
 ctr_edgelist <- dbGetQuery(conn, "SELECT ctr1, ctr2, year, repo_wts 
-                                  FROM gh_sna.sna_ctr_edgelist_yxy_lchn
+                                  FROM gh_sna.sna_ctr_edgelist_yxy_refined
                                   WHERE ctr1 NOT SIMILAR TO '(%bot|%-bot)' AND ctr1 NOT LIKE '%[bot]%' AND
                                         ctr2 NOT SIMILAR TO '(%bot|%-bot)' AND ctr2 NOT LIKE '%[bot]%' AND 
                                         year > 2007 AND year < 2020")
@@ -38,11 +39,7 @@ dbDisconnect(conn)
 ctr_edgelist <- ctr_edgelist %>%
   filter(!ctr1 %in% known_bots$login & !ctr2 %in% known_bots$login)
 ctr_edgelist <- ctr_edgelist %>% filter(ctr1 != ctr2)
-
-```
-
-```{r}
-intl_ctr_edgelist %>% filter(is.na(ctrycode2))
+ctr_edgelist
 ```
 
 ```{r}
@@ -103,10 +100,10 @@ sna_intl_ctr_edgelist <- intl_ctr_edgelist %>%
 sna_intl_ctry_edgelist <- intl_ctr_edgelist %>% 
   select(country1, country2, year, repo_wts) %>% 
   group_by(country1, country2, year) %>% 
-  summarize(repo_wts = sum(repo_wts))
+  summarize(collaborations = sum(repo_wts)) # updated this 4/26/21
 
 sna_intl_ctry_edgelist %>% 
-  arrange(-repo_wts) 
+  arrange(-collaborations) 
 
 ```
 
@@ -123,7 +120,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # write the edgelist to the database
-dbWriteTable(conn, name = c(schema = "gh_sna" , name = "sna_intl_ctry_edgelist_yxy_lchn"), 
+dbWriteTable(conn, name = c(schema = "gh_sna" , name = "sna_intl_ctry_edgelist_yxy_refined"), 
              value = sna_intl_ctry_edgelist, row.names = FALSE, temporary = TRUE)
 
 # disconnect from postgresql

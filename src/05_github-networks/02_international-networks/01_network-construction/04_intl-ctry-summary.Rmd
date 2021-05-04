@@ -35,7 +35,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 ctrs_by_ctry <- dbGetQuery(conn, "SELECT login, country_code, country_code_di, country_code_vis
-                                  FROM gh.sna_ctr_ctry_codes
+                                  FROM gh_sna.sna_ctr_ctry_codes
                                   WHERE country_code IS NOT NULL")
 
 # disconnect from postgresql

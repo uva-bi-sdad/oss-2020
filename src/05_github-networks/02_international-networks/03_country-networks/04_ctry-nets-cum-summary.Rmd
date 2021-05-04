@@ -590,6 +590,20 @@ data <- data.frame(time, value, group)
 test_data
 ```
 
+```{r}
+full_nodelist_cum %>% 
+  select(country, deg_cent0819) %>% 
+  arrange(-deg_cent0819)
+
+
+```
+
+```{r}
+full_nodelist_cum %>% 
+  select(country, btw_cent0819) %>% 
+  arrange(-btw_cent0819)
+```
+
 
 
 

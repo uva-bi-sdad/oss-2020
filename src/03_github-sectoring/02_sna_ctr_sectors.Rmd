@@ -231,7 +231,7 @@ ggplot(data=final_counts, aes(x=sector, y=totals)) +
         axis.title =element_text(size=18),
         axis.title.x=element_blank()) +
   labs(y = "Total GitHub Users within Sector",
-       subtitle = "Using GHTorrent Data") +
+       subtitle = "Based on 20.4% of GitHub Users Classified into Sectors") +
   ggtitle("GitHub Users Classified by Economic Sector") 
 ```
 
@@ -246,6 +246,7 @@ ggplot(data=select_counts, aes(x=sector, y=percentages)) +
   theme_minimal() +
   theme(plot.title = element_text(size=23, hjust = 0.45),
         plot.subtitle = element_text(size=15, hjust = 0.45),
+        plot.caption = (element_text(colour="#232D4B", size = 10)),
         axis.text.y = element_text(size = 16),
         axis.text.x = element_text(size = 16),
         axis.title =element_text(size=18),
