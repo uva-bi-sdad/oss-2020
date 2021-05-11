@@ -212,18 +212,131 @@ library(readxl)
 library(janitor)
 
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
-all_diversity_analyses = read_rds("ctry_diversity_cum.rds")
+all_diversity_analyses = read_rds("ctry_diversity_cum.rds") %>% 
+  rename(country_name = country, net_diversity = diversity) %>% 
+  mutate(year = recode(year, `08` = "2008", `0809` = "2009", `0810` = "2010", 
+                       `0811` = "2011", `0812` = "2012", `0813` = "2013",
+                       `0814` = "2014", `0815` = "2015", `0816` = "2016", 
+                       `0817` = "2017", `0818` = "2018", `0819` = "2019"),
+         year = as.numeric(year)) %>% 
+  distinct(id, country_name, year, net_diversity, louvain_comm, 
+           fstgrdy_comm, louvain_range, fstgrdy_range)
 all_diversity_analyses
 
 setwd("~/git/oss-2020/data/wdi-data/")
 wdi_data = read_csv("WDIData.csv")
 dai_data <- read_excel("DAIforweb.xlsx")
 
+filtered_variables = "CPIA trade rating|Trademark applications, resident, by count|Computer, communications and other services|High-technology exports % of manufactured exports|Investment in ICT with private participation|GDP per capita constant 2010 US|CPIA policies for social inclusion/equity cluster average|CPIA gender equality rating|Gini index World Bank estimate|Research and development expenditure % of GDP|Researchers in R&D per million people|Technicians in R&D per million people|Human capital index HCI scale 0-1|Individuals using the Internet % of population|Secure Internet servers per 1 million people"
 
-wdi_data %>% 
+filtered_df = wdi_data %>% 
   clean_names() %>% 
-  select(country_name, indicator_name) %>% 
-  filter(!grepl("^A|^B|^C|^D|^E|^F|^G|^H|^I|^J|^K|^L|^M|^N|^O|^P|^Q", indicator_name))
+  select(country_name, country_code, indicator_name, x2008:x2019) %>% 
+  mutate(indicator_name = str_replace(indicator_name, "\\(", ""),
+         indicator_name = str_replace(indicator_name, "\\)", ""),
+         indicator_name = str_replace(indicator_name, "\\$", ""),
+         indicator_name = str_replace(indicator_name, "\\(scale 0-1\\)", "scale 0-1")) %>% 
+  filter(grepl(filtered_variables, indicator_name))
+
+filtered_df = filtered_df %>% 
+  select(country_name, indicator_name, x2008:x2019) %>% 
+  pivot_longer(cols = starts_with("x"), names_to = "year", values_to = "count") %>% 
+  mutate(year = str_replace(year, "x", ""),
+         year = as.numeric(year),
+         country_name = str_replace(country_name, " and ", " & ")) %>% 
+  mutate(country_name = ifelse(test = str_detect(string = country_name, pattern = "Bahamas, The"), "Bahamas", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Rep."), "Congo - Brazzaville", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Dem. Rep."), "Congo - Kinshasa", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cote d'Ivoire"), "Côte d’Ivoire", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Brunei Darussalam"), "Brunei", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cabo Verde"), "Cape Verde", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Czech Republic"), "Czechia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Egypt, Arab Rep."), "Egypt", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Gambia, The"), "Gambia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Hong Kong SAR, China"), "Hong Kong SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Iran, Islamic Rep."), "Iran", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Dem. People’s Rep."), "North Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Rep."), "South Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Kyrgyz Republic"), "Kyrgyzstan", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Lao PDR"), "Laos", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macao SAR, China"), "Macau SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Micronesia, Fed. Sts."), "Micronesia (Federated States of)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Myanmar"), "Myanmar (Burma)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Russian Federation"), "Russia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sao Tome & Principe"), "São Tomé & Príncipe", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sint Maarten (Dutch part)"), "Sint Maarten", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Slovak Republic"), "Slovakia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "St. Vincent & Grenadines"), "St. Vincent & the Grenadines", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Syrian Arab Republic"), "Syria", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Venezuela, RB"), "Venezuela", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Yemen, Rep."), "Yemen", no = country_name)) 
+
+widened_df = filtered_df %>% 
+  inner_join(all_diversity_analyses %>% distinct(country_name), by = "country_name") %>%
+  mutate(indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Computer, communications and other services % of commercial service exports"), "prc_comp_exports", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Computer, communications and other services % of commercial service imports"), "prc_comp_imports", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "CPIA gender equality rating 1=low to 6=high"), "gender_equality", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "CPIA policies for social inclusion/equity cluster average 1=low to 6=high"), "social_equality", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "CPIA trade rating 1=low to 6=high"), "trade_rating", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "GDP per capita constant 2010 US"), "gpd_per_capita", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Gini index World Bank estimate"), "gini_index", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "High-technology exports % of manufactured exports"), "high_tech_exports", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Human capital index HCI scale 0-1"), "human_capital_index", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Individuals using the Internet % of population"), "prc_internet", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Investment in ICT with private participation current US$"), "ict_investment", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Research and development expenditure % of GDP"), "prc_rnd_expnd", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Researchers in R&D per million people"), "rnd_rchrs_permil", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Technicians in R&D per million people"), "rnd_techs_permil", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Secure Internet servers per 1 million people"), "servers_permil", no = indicator_name),
+         indicator_name = ifelse(test = str_detect(string = indicator_name, 
+          pattern = "Trademark applications, resident, by count"), "trademark_apps", no = indicator_name)) %>%
+  pivot_wider(names_from = indicator_name, values_from = count) %>% 
+  left_join(all_diversity_analyses, by = c("country_name", "year")) %>% 
+  select(country_name, year, net_diversity, louvain_range, fstgrdy_range, everything(), -louvain_comm, -fstgrdy_comm, -id)
+
+widened_df
+```
+
+```{r}
+
+# connect to postgresql to get data (in rivanna)
+  conn <- dbConnect(drv = PostgreSQL(),
+                    dbname = "sdad",
+                    host = "10.250.124.195",
+                    port = 5432,
+                    user = Sys.getenv("db_userid"),
+                    password = Sys.getenv("db_pwd"))
+
+  # query the bipartite edgelist data from github data
+  edgelist <- dbGetQuery(conn, str_c("SELECT * FROM gh.desc_intl_ctry_annual_sum")) # pick up here! 
+
+  # disconnect from postgresql
+  dbDisconnect(conn)
+
+```
+
+
+
+
+
+```{r}
+na_removed_df = widened_df %>% drop_na(net_diversity) %>% select(-country_name, -year)
+cor(na.omit(na_removed_df), method = "pearson")
 
 ```
 

@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("janitor")
 
-analysis_year <- "2008"
+analysis_year <- 2018
 
 raw_collab_matrix <- read.csv(str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_matrix_", 
                                     analysis_year,".csv"), sep=";", stringsAsFactors=FALSE)
@@ -55,6 +55,7 @@ wo_us_matrix <- raw_collab_matrix %>%
   t %>% as.data.frame %>% 
   rownames_to_column() %>% 
   rename(country = rowname, num_us = V1)
+
 wo_us_matrix %>% 
   filter(country == "united_states")
 
@@ -87,6 +88,11 @@ collab_df <- collab_df %>%
 collab_df %>% 
   arrange(-num_foreign)
 
+```
+
+```{r}
+mean(collab_df$prc_foreign)
+median(collab_df$prc_foreign)
 ```
 
 Figure 1: Domestic-Foreign Collaborations (Simple)
@@ -197,22 +203,74 @@ intl_collabs_figure2
 output_df <- collab_df %>% 
   rename(
     total_collaborations = num_collabs, domestic_collaborations = num_domestic, foreign_collaborations = num_foreign, 
-    collaborations_with_usa = num_us, collaborations_non_usa = num_non_us, 
-    percent_domestic = prc_domestic, percent_foreign = prc_foreign, percent_usa = prc_us, percent_non_usa = prc_non_us
+    us_collaborations = num_us, non_us_collaborations = num_non_us, 
+    domestic_share = prc_domestic, foreign_share = prc_foreign, us_share = prc_us, non_us_share = prc_non_us
     ) %>% 
   select(country, year, total_collaborations, foreign_collaborations, domestic_collaborations, 
-         collaborations_with_usa, collaborations_non_usa, percent_domestic, percent_foreign, percent_usa,  percent_non_usa) %>% 
+         us_collaborations, non_us_collaborations, 
+         domestic_share, foreign_share, us_share, non_us_share) %>% 
   arrange(-total_collaborations); output_df
 
 write_csv(output_df, str_c("~/git/oss-2020/data/intl-indicator-output/oss_intl_collaborations_data_", analysis_year,".csv"))
 ```
 
+Additional Table for US Collaborations in Indicator Publication 
+
+```{r}
+#setwd("~/git/oss-2020/data/intl-indicator-output/")
+#output_df <- read_csv(str_c("oss_intl_collaborations_data_",analysis_year,".csv"))
+
+us_share_from_intl_df <- output_df %>% 
+  mutate(us_share_from_intl = (us_collaborations / foreign_collaborations * 100)) %>% 
+  select(country, us_share, us_share_from_intl)
+
+us_share_from_intl_df <- us_share_from_intl_df %>% 
+  mutate(country = str_replace(country, "United States", "World")) %>% 
+  mutate(us_share = if_else(country == "World", mean(us_share_from_intl_df$us_share, na.rm=TRUE), us_share),
+         us_share = round(us_share, 2),
+         us_share_from_intl = if_else(country == "World", mean(us_share_from_intl_df$us_share_from_intl, na.rm=TRUE), us_share_from_intl),
+         us_share_from_intl = round(us_share_from_intl, 2)) %>% 
+  rename(us_share = us_share)
+
+share_of_us_intl <- imputed_collab_matrix %>% 
+  select(Country, United.States) %>% 
+  clean_names() %>% 
+  arrange(-united_states) %>% 
+  mutate(all_intl_collaborations = sum(imputed_collab_matrix$United.States),
+         share_of_us_intl = round((united_states / all_intl_collaborations * 100), 2 )) %>% 
+  select(country, share_of_us_intl)
+
+summary_table_for_us <- us_share_from_intl_df %>% 
+  left_join(share_of_us_intl, by = "country") %>% 
+  mutate(year = analysis_year) %>% 
+  select(country, us_share_from_intl, share_of_us_intl, year)
+summary_table_for_us
+
+setwd("~/git/oss-2020/data/intl-indicator-output/")
+write_csv(summary_table_for_us, str_c("oss_usa_collaborations_data_",analysis_year,".csv"))
+```
+
+```{r}
+select_shares <- summary_table_for_us %>% filter(country %in% c("Germany", "India", "United Kingdom", "Canada", "China")) 
+sum(select_shares$share_of_us_intl)
+```
+
+Aggregation of All Years 
+
 ```{r}
 setwd("~/git/oss-2020/data/intl-indicator-output/")
 all_years <- list.files(pattern="oss_intl_collaborations_data_*") %>% map_df(~read_csv(.))
 all_years %>% filter(country == "United States")
-write_csv(all_years, "oss_intl_collaborations_data_2008_2019.csv")
+write_csv(all_years, "oss_all_intl_collaborations_data_2008_2019.csv")
 ```
+
+```{r}
+setwd("~/git/oss-2020/data/intl-indicator-output/")
+all_years_usa <- list.files(pattern="oss_usa_collaborations_data_*") %>% map_df(~read_csv(.))
+all_years_usa
+write_csv(all_years_usa, "oss_usa_collaborations_data_2008_2019.csv")
+```
+
 
 # Other statistics 
 
