@@ -199,7 +199,10 @@ for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "08
 
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
 all_diversity_analyses <- list.files(pattern="ctry_diversity_*") %>% 
-  map_df(~read_rds(.))
+  map_df(~read_rds(.)) %>% 
+  rename(net_diversity = diversity, country_name = country) %>% 
+  distinct(id, country_name, year, net_diversity, 
+           louvain_comm, fstgrdy_comm, louvain_range, fstgrdy_range)
 write_rds(all_diversity_analyses, "ctry_diversity_cum.rds")
 
 ```
@@ -210,6 +213,22 @@ load data
 library(tidyverse)
 library(readxl)
 library(janitor)
+library(RPostgreSQL)
+library(naniar)
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(),
+                    dbname = "sdad",
+                    host = "10.250.124.195",
+                    port = 5432,
+                    user = Sys.getenv("db_userid"),
+                    password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data
+ctry_github_activity <- dbGetQuery(conn, str_c("SELECT * FROM gh_sna.desc_intl_ctry_annual_sum"))  
+
+# disconnect from postgresql
+dbDisconnect(conn)
 
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
 all_diversity_analyses = read_rds("ctry_diversity_cum.rds") %>% 
@@ -219,13 +238,65 @@ all_diversity_analyses = read_rds("ctry_diversity_cum.rds") %>%
                        `0814` = "2014", `0815` = "2015", `0816` = "2016", 
                        `0817` = "2017", `0818` = "2018", `0819` = "2019"),
          year = as.numeric(year)) %>% 
-  distinct(id, country_name, year, net_diversity, louvain_comm, 
-           fstgrdy_comm, louvain_range, fstgrdy_range)
+  distinct(id, country_name, year, net_diversity, 
+           louvain_comm, fstgrdy_comm, louvain_range, fstgrdy_range)
 all_diversity_analyses
+
+setwd("~/git/oss-2020/data/intl-indicator-output/")
+collaborations_data <- read_csv("oss_all_intl_collaborations_data_2008_2019.csv") %>% 
+  rename(country_name = country)
+collaborations_data
+
+# join the activity and collaborations data 
+ctry_github_joined = ctry_github_activity %>% 
+  filter(year > 2007) %>% 
+  left_join(collaborations_data, by = c("country_name", "year")) %>% 
+  replace(is.na(.), 0)
+ctry_github_joined
+```
+
+```{r}
 
 setwd("~/git/oss-2020/data/wdi-data/")
 wdi_data = read_csv("WDIData.csv")
 dai_data <- read_excel("DAIforweb.xlsx")
+population_estimates <- read_csv("Population-EstimatesData.csv")
+
+population_cleaned <- population_estimates %>% 
+  clean_names() %>% 
+  filter(indicator_name == "Population, total") %>% 
+  select(country_name, x2008:x2019) %>% 
+  pivot_longer(cols = starts_with("x"), names_to = "year", values_to = "population") %>% 
+  mutate(year = str_replace(year, "x", ""),
+         year = as.numeric(year),
+         country_name = str_replace(country_name, " and ", " & ")) %>% 
+  mutate(country_name = ifelse(test = str_detect(string = country_name, pattern = "Bahamas, The"), "Bahamas", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Rep."), "Congo - Brazzaville", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Dem. Rep."), "Congo - Kinshasa", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cote d'Ivoire"), "Côte d’Ivoire", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Brunei Darussalam"), "Brunei", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cabo Verde"), "Cape Verde", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Czech Republic"), "Czechia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Egypt, Arab Rep."), "Egypt", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Gambia, The"), "Gambia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Hong Kong SAR, China"), "Hong Kong SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Iran, Islamic Rep."), "Iran", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Dem. People’s Rep."), "North Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Rep."), "South Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Kyrgyz Republic"), "Kyrgyzstan", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Lao PDR"), "Laos", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macao SAR, China"), "Macau SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macedonia, FYR"), "Macedonia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Micronesia, Fed. Sts."), "Micronesia (Federated States of)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Myanmar"), "Myanmar (Burma)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Russian Federation"), "Russia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sao Tome & Principe"), "São Tomé & Príncipe", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sint Maarten (Dutch part)"), "Sint Maarten", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Slovak Republic"), "Slovakia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "St. Vincent & Grenadines"), "St. Vincent & the Grenadines", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Syrian Arab Republic"), "Syria", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Venezuela, RB"), "Venezuela", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Yemen, Rep."), "Yemen", no = country_name))
 
 filtered_variables = "CPIA trade rating|Trademark applications, resident, by count|Computer, communications and other services|High-technology exports % of manufactured exports|Investment in ICT with private participation|GDP per capita constant 2010 US|CPIA policies for social inclusion/equity cluster average|CPIA gender equality rating|Gini index World Bank estimate|Research and development expenditure % of GDP|Researchers in R&D per million people|Technicians in R&D per million people|Human capital index HCI scale 0-1|Individuals using the Internet % of population|Secure Internet servers per 1 million people"
 
@@ -260,6 +331,7 @@ filtered_df = filtered_df %>%
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Kyrgyz Republic"), "Kyrgyzstan", no = country_name),
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Lao PDR"), "Laos", no = country_name),
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Macao SAR, China"), "Macau SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macedonia, FYR"), "Macedonia", no = country_name),
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Micronesia, Fed. Sts."), "Micronesia (Federated States of)", no = country_name),
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Myanmar"), "Myanmar (Burma)", no = country_name),
          country_name = ifelse(test = str_detect(string = country_name, pattern = "Russian Federation"), "Russia", no = country_name),
@@ -284,7 +356,7 @@ widened_df = filtered_df %>%
          indicator_name = ifelse(test = str_detect(string = indicator_name, 
           pattern = "CPIA trade rating 1=low to 6=high"), "trade_rating", no = indicator_name),
          indicator_name = ifelse(test = str_detect(string = indicator_name, 
-          pattern = "GDP per capita constant 2010 US"), "gpd_per_capita", no = indicator_name),
+          pattern = "GDP per capita constant 2010 US"), "gdp_per_capita", no = indicator_name),
          indicator_name = ifelse(test = str_detect(string = indicator_name, 
           pattern = "Gini index World Bank estimate"), "gini_index", no = indicator_name),
          indicator_name = ifelse(test = str_detect(string = indicator_name, 
@@ -310,28 +382,88 @@ widened_df = filtered_df %>%
   select(country_name, year, net_diversity, louvain_range, fstgrdy_range, everything(), -louvain_comm, -fstgrdy_comm, -id)
 
 widened_df
+
+dai_cleaned = dai_data %>% 
+  clean_names() %>% 
+  rename(country_name = country) %>% 
+  mutate(year = str_replace(year, "x", ""),
+         year = as.numeric(year),
+         country_name = str_replace(country_name, " and ", " & ")) %>% 
+  mutate(country_name = ifelse(test = str_detect(string = country_name, pattern = "Bahamas, The"), "Bahamas", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Rep."), "Congo - Brazzaville", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Congo, Dem. Rep."), "Congo - Kinshasa", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cote d'Ivoire"), "Côte d’Ivoire", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Brunei Darussalam"), "Brunei", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Cabo Verde"), "Cape Verde", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Czech Republic"), "Czechia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Egypt, Arab Rep."), "Egypt", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Gambia, The"), "Gambia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Hong Kong SAR, China"), "Hong Kong SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Iran, Islamic Rep."), "Iran", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Dem. People’s Rep."), "North Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Korea, Rep."), "South Korea", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Kyrgyz Republic"), "Kyrgyzstan", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Lao PDR"), "Laos", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macedonia, FYR"), "Macedonia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Macao SAR, China"), "Macau SAR China", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Micronesia, Fed. Sts."), "Micronesia (Federated States of)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Myanmar"), "Myanmar (Burma)", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Russian Federation"), "Russia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sao Tome & Principe"), "São Tomé & Príncipe", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Sint Maarten (Dutch part)"), "Sint Maarten", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Slovak Republic"), "Slovakia", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "St. Vincent & Grenadines"), "St. Vincent & the Grenadines", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Syrian Arab Republic"), "Syria", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Venezuela, RB"), "Venezuela", no = country_name),
+         country_name = ifelse(test = str_detect(string = country_name, pattern = "Yemen, Rep."), "Yemen", no = country_name)) 
+
+widened_with_pop_df = widened_df %>% 
+  left_join(population_cleaned, by = c("country_name", "year"))
+widened_with_pop_df
+
+widened_dai_df = widened_with_pop_df %>% 
+  left_join(dai_cleaned, by = c("country_name", "year"))
+widened_dai_df
+
+wdi_github_joined = ctry_github_joined %>% 
+  left_join(widened_dai_df, by = c("country_name", "year")) %>% 
+  drop_na(net_diversity) %>% 
+  mutate(
+    users_per_capita = users / population, 
+    collabs_per_capita = total_collaborations / population, 
+    dom_collabs_per_capita = domestic_collaborations / population ) %>% 
+  select(country_name, year, population, everything())
+
+wdi_github_joined
+
+```
+
+```{r, fig.width=11}
+vis_miss(wdi_github_joined %>% 
+           #filter(year == 2016) %>% 
+           select(country_name, year, gdp_per_capita, servers_permil, prc_internet, prc_comp_exports, prc_comp_imports, high_tech_exports, 
+                  trademark_apps, prc_rnd_expnd, rnd_rchrs_permil, rnd_techs_permil, gini_index, everything(), -users:-fstgrdy_range))
+```
+```{r}
+# notes 
+# country_name, year, population, all the network measures full there
+# gdp_per_capita, servers, prc_internet, prc_computers_imp + exp all less than 15% missing over time 
+# looks like HCI is only available for 2017 + 2018 (some have 2010)
+# dai and digital adoption is only available for 2014 + 2016 
+# gender and social inequality is only available for certain countries 
+# prc_rnd_expnd is there for all years (up to 2017/18) for major countries, but lots of missing for random countries 
 ```
 
 ```{r}
-
-# connect to postgresql to get data (in rivanna)
-  conn <- dbConnect(drv = PostgreSQL(),
-                    dbname = "sdad",
-                    host = "10.250.124.195",
-                    port = 5432,
-                    user = Sys.getenv("db_userid"),
-                    password = Sys.getenv("db_pwd"))
-
-  # query the bipartite edgelist data from github data
-  edgelist <- dbGetQuery(conn, str_c("SELECT * FROM gh.desc_intl_ctry_annual_sum")) # pick up here! 
-
-  # disconnect from postgresql
-  dbDisconnect(conn)
-
+test <- wdi_github_joined %>% 
+  select(country_name, year, trademark_apps) %>% 
+  drop_na(trademark_apps)
 ```
 
-
-
+```{r}
+filtered_df %>% 
+  filter(grepl("Population estimates", indicator_name))
+```
 
 
 ```{r}
