@@ -12,8 +12,7 @@ rm(list = ls())
 # load packages 
 for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "extrafont",
               "R.utils", "RPostgreSQL", "cowplot", "maditr", "lubridate", 
-              "poweRlaw", "plotly","gridExtra", "rmarkdown", 
-              "grid")) {library(pkg, character.only = TRUE)}
+              "poweRlaw", "plotly","gridExtra", "readr", "grid")) {library(pkg, character.only = TRUE)}
   
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
 global_netstats_cum <- read_rds("global_netstats_cum.rds")
