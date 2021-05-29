@@ -15,13 +15,13 @@
 
 
 
-  <link crossorigin="anonymous" media="all" integrity="sha512-hcN7jIRLOi6fUmQ9rgL+GH14ELQxOgnU/2lFZMM2wxFTGkch1FEaGuKMIn46nVxzLcoWG65x8JslZxWl2DL0Pw==" rel="stylesheet" href="https://github.githubassets.com/assets/frameworks-85c37b8c844b3a2e9f52643dae02fe18.css" />
+  <link crossorigin="anonymous" media="all" integrity="sha512-hsKC3ypJkUX/imnakufPNinmC1hvlGtwN80bcJ9eo6idrtk/bKAiSmsjspBviwNrFmFlEsjycjUAtT4Ae+x0rQ==" rel="stylesheet" href="https://github.githubassets.com/assets/frameworks-86c282df2a499145ff8a69da92e7cf36.css" />
   
-    <link crossorigin="anonymous" media="all" integrity="sha512-IEI4SkusvrScXJ/HFJDTDON4/SaMjYEuLKShbaeNd3ary+aUE5EsIzvx7WVSIcUh7ZALgeBT74jeI32o85UiFw==" rel="stylesheet" href="https://github.githubassets.com/assets/behaviors-2042384a4bacbeb49c5c9fc71490d30c.css" />
+    <link crossorigin="anonymous" media="all" integrity="sha512-ODG6mt8VrPLP1iF4673MMcI5N2uyooaJ910iorfWKXm6F/XCsJMunCed2+SV1sWVbNRIchvkDmFGDXRP9WJHRg==" rel="stylesheet" href="https://github.githubassets.com/assets/behaviors-3831ba9adf15acf2cfd62178ebbdcc31.css" />
     
     
     
-    <link crossorigin="anonymous" media="all" integrity="sha512-bkKXDs5PA6j0NFJObX/bzUNIq2IlbhUJR1CGwZgdpmtKn+YSYk/0INGGFkgZdIzusyEzteiA59sv6Tn46MQxtA==" rel="stylesheet" href="https://github.githubassets.com/assets/github-6e42970ece4f03a8f434524e6d7fdbcd.css" />
+    <link crossorigin="anonymous" media="all" integrity="sha512-NpmcUIol6GZRLcrXcYJt7BmmvaqxxvLz3aOWvsigXGxmIrXrFBHzEU/Vt8Sdtl6S7PQGGl7et4VDxOIMqCGXYQ==" rel="stylesheet" href="https://github.githubassets.com/assets/github-36999c508a25e866512dcad771826dec.css" />
 
   <script crossorigin="anonymous" defer="defer" integrity="sha512-CzeY4A6TiG4fGZSWZU8FxmzFFmcQFoPpArF0hkH0/J/S7UL4eed/LKEXMQXfTwiG5yEJBI+9BdKG8KQJNbhcIQ==" type="application/javascript" src="https://github.githubassets.com/assets/environment-0b3798e0.js"></script>
     <script crossorigin="anonymous" defer="defer" integrity="sha512-hj4gBCzfBV2jwA/7yKXddRVpCFofKW+wQVTp2TGzxjcPDvfVMXOnYo+yUjupKswUmrxEZps+xX+JM+xzO4RYaA==" type="application/javascript" src="https://github.githubassets.com/assets/chunk-frameworks-863e2004.js"></script>
@@ -65,8 +65,8 @@
   <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
   <meta property="fb:app_id" content="1401488693436528">
   <meta name="apple-itunes-app" content="app-id=1477376905" />
-    <meta name="twitter:image:src" content="https://opengraph.githubassets.com/7cf2bc9d656390e2c2708bd01671d03886f69547e6b45bc26a89df5b8e8f1f06/uva-bi-sdad/oss-2020" /><meta name="twitter:site" content="@github" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="uva-bi-sdad/oss-2020" /><meta name="twitter:description" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" />
-    <meta property="og:image" content="https://opengraph.githubassets.com/7cf2bc9d656390e2c2708bd01671d03886f69547e6b45bc26a89df5b8e8f1f06/uva-bi-sdad/oss-2020" /><meta property="og:image:alt" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="600" /><meta property="og:site_name" content="GitHub" /><meta property="og:type" content="object" /><meta property="og:title" content="uva-bi-sdad/oss-2020" /><meta property="og:url" content="https://github.com/uva-bi-sdad/oss-2020" /><meta property="og:description" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" />
+    <meta name="twitter:image:src" content="https://opengraph.githubassets.com/b9b2cadda53e612ddd0c49678955b6a23c6ea3f7a96923dab34591981c7837dc/uva-bi-sdad/oss-2020" /><meta name="twitter:site" content="@github" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="uva-bi-sdad/oss-2020" /><meta name="twitter:description" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" />
+    <meta property="og:image" content="https://opengraph.githubassets.com/b9b2cadda53e612ddd0c49678955b6a23c6ea3f7a96923dab34591981c7837dc/uva-bi-sdad/oss-2020" /><meta property="og:image:alt" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="600" /><meta property="og:site_name" content="GitHub" /><meta property="og:type" content="object" /><meta property="og:title" content="uva-bi-sdad/oss-2020" /><meta property="og:url" content="https://github.com/uva-bi-sdad/oss-2020" /><meta property="og:description" content="This contains the work of the academic year 2019-2020 - uva-bi-sdad/oss-2020" />
 
 
 
@@ -75,7 +75,7 @@
   <link rel="assets" href="https://github.githubassets.com/">
   
 
-  <meta name="request-id" content="B61C:5393:6BA34:A09B2:60AFC364" data-pjax-transient="true"/><meta name="html-safe-nonce" content="fdce4c480c0ab16ec784dd39a503e239a047ebd27028e7e929cbe3dccf498c41" data-pjax-transient="true"/><meta name="visitor-payload" content="eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiJCNjFDOjUzOTM6NkJBMzQ6QTA5QjI6NjBBRkMzNjQiLCJ2aXNpdG9yX2lkIjoiMzA0NTc0NzI4MzI5OTY0ODM1NiIsInJlZ2lvbl9lZGdlIjoiaWFkIiwicmVnaW9uX3JlbmRlciI6ImlhZCJ9" data-pjax-transient="true"/><meta name="visitor-hmac" content="eb61c510cc8acdbd841ed0e8d34b33fcf31f29c5f8afc53d36774f496552633c" data-pjax-transient="true"/>
+  <meta name="request-id" content="7EE2:471C:E98BE:38EDCC:60B12E30" data-pjax-transient="true"/><meta name="html-safe-nonce" content="16c28a07a9df994999caa4412d738a37de99135917d463bd0aa7a41a6c29495b" data-pjax-transient="true"/><meta name="visitor-payload" content="eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiI3RUUyOjQ3MUM6RTk4QkU6MzhFRENDOjYwQjEyRTMwIiwidmlzaXRvcl9pZCI6IjQwOTA1MjYwOTU4Mzg1MzEwNCIsInJlZ2lvbl9lZGdlIjoiaWFkIiwicmVnaW9uX3JlbmRlciI6ImlhZCJ9" data-pjax-transient="true"/><meta name="visitor-hmac" content="3d49f54be160c0bad0247df6108affc4f5be4bc2f5aaa6a5565954f81bbfa6fd" data-pjax-transient="true"/>
 
     <meta name="hovercard-subject-tag" content="repository:212428571" data-pjax-transient>
 
@@ -117,7 +117,7 @@
 
     <meta name="enabled-features" content="MARKETPLACE_PENDING_INSTALLATIONS,AUTOCOMPLETE_EMOJIS_IN_MARKDOWN_EDITOR,ACTIONS_CONCURRENCY_UI">
 
-  <meta http-equiv="x-pjax-version" content="ecbd011fd6347aa1fa36d7790c6c8603a6f6d8ce51b06dbb1198da8bd7495f08">
+  <meta http-equiv="x-pjax-version" content="5168be8b1c50e20f9c59233e4e96c7c8429417d4a23cde356d690b5f69deb1c3">
   
 
     
@@ -334,7 +334,7 @@
             spellcheck="false"
             autocomplete="off"
           >
-          <input type="hidden" data-csrf="true" class="js-data-jump-to-suggestions-path-csrf" value="IEcu5dR3iwJ2CXtHQVaVBF9gKYkr7U1DtlcKR2qnACr/sFFb2Epp/sTzb7/s6I82AF+tz7IjBH+L9kwTo61CDQ==" />
+          <input type="hidden" data-csrf="true" class="js-data-jump-to-suggestions-path-csrf" value="YPJsayZJmYE31iV829rKM3z4ggtQt/HPENHj91O7tH4/0w0nNol3Iyy4A3TuoWuRZlY6SueU9Y5mkX+jk1qXZw==" />
           <input type="hidden" class="js-site-search-type-field" name="type" >
             <img src="https://github.githubassets.com/images/search-key-slash.svg" alt="" class="mr-2 header-search-key-slash">
 
@@ -1133,73 +1133,10 @@
   <div class="Box-header Box-header--blue position-relative">
     <h2 class="sr-only">Latest commit</h2>
     <div class="js-details-container Details d-flex rounded-top-1 flex-items-center flex-wrap" data-issue-and-pr-hovercards-enabled>
-      
-  <div class="flex-shrink-0 ml-n1 mr-n1 mt-n1 mb-n1 hx_avatar_stack_commit" >
-    
-<div class="AvatarStack flex-self-start  " >
-  <div class="AvatarStack-body" aria-label="brandonleekramer" >
-      <a class="avatar avatar-user" style="width:24px;height:24px;" data-skip-pjax="true" data-test-selector="commits-avatar-stack-avatar-link" data-hovercard-type="user" data-hovercard-url="/users/brandonleekramer/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/brandonleekramer">
-        <img data-test-selector="commits-avatar-stack-avatar-image" src="https://avatars.githubusercontent.com/u/35709701?s=48&amp;v=4" width="24" height="24" alt="@brandonleekramer" class=" avatar-user" />
-</a>  </div>
-</div>
-
-  </div>
-  <div class="flex-1 d-flex flex-items-center ml-3 min-width-0">
-    <div class="css-truncate css-truncate-overflow color-text-secondary" >
-      
-      <a href="/uva-bi-sdad/oss-2020/commits?author=brandonleekramer"
-     class="commit-author user-mention"
-     title="View all commits by brandonleekramer">brandonleekramer</a>
-
-
-  
-
-        <span class="d-none d-sm-inline">
-            <a data-pjax="true" data-test-selector="commit-tease-commit-message" title="foundations of the README scrape" class="Link--primary markdown-title" href="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f">foundations of the README scrape</a>
-        </span>
-    </div>
-    <span
-      class="hidden-text-expander ml-2 d-inline-block d-inline-block d-lg-none"
-      
-    >
-      <button
-        type="button"
-        class="hx_bg-black-fade-15 color-text-primary ellipsis-expander js-details-target"
-        aria-expanded="false"
-        
-      >
-        &hellip;
-      </button>
-    </span>
-    <div class="d-flex flex-auto flex-justify-end ml-3 flex-items-baseline">
-        <include-fragment accept="text/fragment+html" src="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f/rollup?direction=sw" class="d-inline"></include-fragment>
-      <a
-        href="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f"
-        class="f6 Link--secondary text-mono ml-2 d-none d-lg-inline"
-        data-pjax
-        
-      >
-        a8a67c0
-      </a>
-      <a
-        href="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f"
-        class="Link--secondary ml-2"
-        data-pjax
-        
-      >
-        <relative-time datetime="2021-05-25T21:14:09Z" class="no-wrap">May 25, 2021</relative-time>
-      </a>
-    </div>
-  </div>
-  <div class="pl-0 pl-md-5 flex-order-1 width-full Details-content--hidden">
-      <div class="mt-2">
-        <a data-pjax="true" data-test-selector="commit-tease-commit-message" class="Link--primary text-bold" href="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f">foundations of the README scrape</a>
-      </div>
-    <div class="d-flex flex-items-center">
-      <span class="color-text-primary text-mono d-lg-none hx_bg-black-fade-15 px-1 rounded-1 text-small mt-2">a8a67c0</span>
-    </div>
-  </div>
-      <div class="flex-shrink-0">
+      <include-fragment src="/uva-bi-sdad/oss-2020/tree-commit/a760d51390db383e181a032d677fd9f4bd75b394" class="d-flex flex-auto flex-items-center" aria-busy="true" aria-label="Loading latest commit">
+        <div class="Skeleton avatar avatar-user flex-shrink-0 ml-n1 mr-n1 mt-n1 mb-n1" style="width:24px;height:24px;"></div>
+        <div class="Skeleton Skeleton--text col-5 ml-3">&nbsp;</div>
+</include-fragment>      <div class="flex-shrink-0">
         <h2 class="sr-only">Git stats</h2>
         <ul class="list-style-none d-flex">
           <li class="ml-0 ml-md-3">
@@ -1208,7 +1145,7 @@
     <path fill-rule="evenodd" d="M1.643 3.143L.427 1.927A.25.25 0 000 2.104V5.75c0 .138.112.25.25.25h3.646a.25.25 0 00.177-.427L2.715 4.215a6.5 6.5 0 11-1.18 4.458.75.75 0 10-1.493.154 8.001 8.001 0 101.6-5.684zM7.75 4a.75.75 0 01.75.75v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.75.75 0 017 8.25v-3.5A.75.75 0 017.75 4z"></path>
 </svg>
               <span class="d-none d-sm-inline">
-                    <strong>172</strong>
+                    <strong>173</strong>
                     <span aria-label="Commits on master" class="color-text-secondary d-none d-lg-inline">
                       commits
                     </span>
@@ -1223,7 +1160,8 @@
   
 
 
-    <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/uva-bi-sdad/oss-2020/tree/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f">Permalink</a>
+  <include-fragment src="/uva-bi-sdad/oss-2020/file-list/master">
+      <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/uva-bi-sdad/oss-2020/tree/a760d51390db383e181a032d677fd9f4bd75b394">Permalink</a>
 
   <div data-view-component="true" class="include-fragment-error flash flash-error flash-full py-2">
   <svg aria-hidden="true" viewBox="0 0 16 16" version="1.1" data-view-component="true" height="16" width="16" class="octicon octicon-alert">
@@ -1255,13 +1193,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="importing notebooks-2d" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/bf28c6cd84dd461568fa504e2f5c5ffdd419cecf">importing notebooks-2d</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-10-14T19:04:35Z" data-view-component="true" class="no-wrap">Oct 14, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1277,13 +1213,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="Re-documented the OSS repo" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/c3cf91e2aa255e63d63e0b5394a71d8a52ec28a5">Re-documented the OSS repo</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-11-10T23:26:00Z" data-view-component="true" class="no-wrap">Nov 10, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1299,13 +1233,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates made to intl descriptives" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/8510329c7cf69589755e49c98593fcb6db7a8d2c">updates made to intl descriptives</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-03-12T20:38:38Z" data-view-component="true" class="no-wrap">Mar 12, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1321,13 +1253,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updating paper for netecon" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/196a3ba04906d5519f1aa5b16012fb144f15b377">updating paper for netecon</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-03-25T12:50:36Z" data-view-component="true" class="no-wrap">Mar 25, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1343,13 +1273,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="full network comparisons based on data reduction strategies" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/0face027ac78af3d8e42b049cd5d848395bb446f">full network comparisons based on data reduction strategies</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-02-02T20:30:48Z" data-view-component="true" class="no-wrap">Feb 2, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1365,13 +1293,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="foundations of the README scrape" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/a8a67c0489669bce68fd4a6e04ac4dd16c9a573f">foundations of the README scrape</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-25T21:14:09Z" data-view-component="true" class="no-wrap">May 25, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1387,13 +1313,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="cost estimates" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/5fe79b8fadc44b852333dca18d7c601e6b91e7b4">cost estimates</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-10-29T23:30:08Z" data-view-component="true" class="no-wrap">Oct 29, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1409,13 +1333,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="completed cost calcs by country, added license" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/521139f184f642548da895f273f2f4ecec916c8f">completed cost calcs by country, added license</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-02-24T15:03:58Z" data-view-component="true" class="no-wrap">Feb 24, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1431,13 +1353,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="README updates" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/ae531680cafd8caed88ac32a5fed21ff996801b3">README updates</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-02-17T03:04:58Z" data-view-component="true" class="no-wrap">Feb 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1453,13 +1373,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="BEGINNING" class="Link--secondary" href="/uva-bi-sdad/oss-2020/commit/7bdf046542ca737ee52c0975be4c5637049c6f0d">BEGINNING</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2019-10-02T20:37:04Z" data-view-component="true" class="no-wrap">Oct 2, 2019</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1471,7 +1389,7 @@
     </div>
   </div>
 
-
+</include-fragment>
 
 
 </div>
@@ -1738,46 +1656,26 @@
 </a></h2>
 
 
-    
-  <ul class="list-style-none ">
-      <li class="mb-2 d-flex">
-        <a class="mr-2" data-hovercard-type="user" data-hovercard-url="/users/brandonleekramer/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/brandonleekramer">
-          <img class="d-block avatar-user" src="https://avatars.githubusercontent.com/u/35709701?s=64&amp;v=4" width="32" height="32" alt="@brandonleekramer" />
-</a>          <span class="flex-self-center flex-auto min-width-0 css-truncate css-truncate-target width-fit">
-            <a class="Link--primary no-underline flex-self-center" href="/brandonleekramer">
-              <strong>brandonleekramer</strong>
-              <span class="color-text-secondary">Brandon Kramer</span>
-</a>          </span>
-      </li>
-      <li class="mb-2 d-flex">
-        <a class="mr-2" data-hovercard-type="user" data-hovercard-url="/users/Behnaz-m/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/Behnaz-m">
-          <img class="d-block avatar-user" src="https://avatars.githubusercontent.com/u/58396350?s=64&amp;v=4" width="32" height="32" alt="@Behnaz-m" />
-</a>          <span class="flex-self-center flex-auto min-width-0 css-truncate css-truncate-target width-fit">
-            <a class="Link--primary no-underline flex-self-center" href="/Behnaz-m">
-              <strong>Behnaz-m</strong>
-              
-</a>          </span>
-      </li>
-      <li class="mb-2 d-flex">
-        <a class="mr-2" data-hovercard-type="user" data-hovercard-url="/users/Nosferican/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/Nosferican">
-          <img class="d-block avatar-user" src="https://avatars.githubusercontent.com/u/2529329?s=64&amp;v=4" width="32" height="32" alt="@Nosferican" />
-</a>          <span class="flex-self-center flex-auto min-width-0 css-truncate css-truncate-target width-fit">
-            <a class="Link--primary no-underline flex-self-center" href="/Nosferican">
-              <strong>Nosferican</strong>
-              <span class="color-text-secondary">José Bayoán Santiago Calderón, PhD</span>
-</a>          </span>
-      </li>
-      <li class="mb-2 d-flex">
-        <a class="mr-2" data-hovercard-type="user" data-hovercard-url="/users/gkorkmaz/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/gkorkmaz">
-          <img class="d-block avatar-user" src="https://avatars.githubusercontent.com/u/2130629?s=64&amp;v=4" width="32" height="32" alt="@gkorkmaz" />
-</a>          <span class="flex-self-center flex-auto min-width-0 css-truncate css-truncate-target width-fit">
-            <a class="Link--primary no-underline flex-self-center" href="/gkorkmaz">
-              <strong>gkorkmaz</strong>
-              <span class="color-text-secondary">Gizem Korkmaz</span>
-</a>          </span>
-      </li>
-  </ul>
-
+    <include-fragment src="/uva-bi-sdad/oss-2020/contributors_list?count=4&amp;current_repository=oss-2020&amp;items_to_show=4" aria-busy="true" aria-label="Loading contributors">
+      <ul class="list-style-none ">
+          <li class="mb-2 d-flex">
+            <div class="Skeleton avatar avatar-user mr-2" style="width:32px;height:32px;"></div>
+              <div class="Skeleton Skeleton--text flex-1 flex-self-center f4">&nbsp;</div>
+          </li>
+          <li class="mb-2 d-flex">
+            <div class="Skeleton avatar avatar-user mr-2" style="width:32px;height:32px;"></div>
+              <div class="Skeleton Skeleton--text flex-1 flex-self-center f4">&nbsp;</div>
+          </li>
+          <li class="mb-2 d-flex">
+            <div class="Skeleton avatar avatar-user mr-2" style="width:32px;height:32px;"></div>
+              <div class="Skeleton Skeleton--text flex-1 flex-self-center f4">&nbsp;</div>
+          </li>
+          <li class="mb-2 d-flex">
+            <div class="Skeleton avatar avatar-user mr-2" style="width:32px;height:32px;"></div>
+              <div class="Skeleton Skeleton--text flex-1 flex-self-center f4">&nbsp;</div>
+          </li>
+      </ul>
+</include-fragment>
 
 
             </div>
@@ -1787,9 +1685,9 @@
               <h2 class="h4 mb-3">Languages</h2>
 <div class="mb-2">
   <span data-view-component="true" class="Progress">
-    <span itemprop="keywords" aria-label="HTML 70.1" style="background-color: #e34c26;width: 70.1%;" data-view-component="true" class="Progress-item"></span>
+    <span itemprop="keywords" aria-label="HTML 70.0" style="background-color: #e34c26;width: 70.0%;" data-view-component="true" class="Progress-item"></span>
     <span itemprop="keywords" aria-label="Jupyter Notebook 26.6" style="background-color: #DA5B0B;width: 26.6%;" data-view-component="true" class="Progress-item"></span>
-    <span itemprop="keywords" aria-label="R 3.2" style="background-color: #198CE7;width: 3.2%;" data-view-component="true" class="Progress-item"></span>
+    <span itemprop="keywords" aria-label="R 3.3" style="background-color: #198CE7;width: 3.3%;" data-view-component="true" class="Progress-item"></span>
     <span itemprop="keywords" aria-label="Other 0.1" style="background-color: #ededed;width: 0.1%;" data-view-component="true" class="Progress-item"></span>
 </span></div>
 <ul class="list-style-none">
@@ -1797,7 +1695,7 @@
       <a class="d-inline-flex flex-items-center flex-nowrap Link--secondary no-underline text-small mr-3" href="/uva-bi-sdad/oss-2020/search?l=html"  data-ga-click="Repository, language stats search click, location:repo overview">
         <svg class="octicon octicon-dot-fill mr-2" style="color:#e34c26;" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8z"></path></svg>
         <span class="color-text-primary text-bold mr-1">HTML</span>
-        <span>70.1%</span>
+        <span>70.0%</span>
       </a>
     </li>
     <li class="d-inline">
@@ -1811,7 +1709,7 @@
       <a class="d-inline-flex flex-items-center flex-nowrap Link--secondary no-underline text-small mr-3" href="/uva-bi-sdad/oss-2020/search?l=r"  data-ga-click="Repository, language stats search click, location:repo overview">
         <svg class="octicon octicon-dot-fill mr-2" style="color:#198CE7;" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8z"></path></svg>
         <span class="color-text-primary text-bold mr-1">R</span>
-        <span>3.2%</span>
+        <span>3.3%</span>
       </a>
     </li>
     <li class="d-inline">

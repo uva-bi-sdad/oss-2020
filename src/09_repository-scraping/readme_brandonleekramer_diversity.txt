@@ -15,13 +15,13 @@
 
 
 
-  <link crossorigin="anonymous" media="all" integrity="sha512-hcN7jIRLOi6fUmQ9rgL+GH14ELQxOgnU/2lFZMM2wxFTGkch1FEaGuKMIn46nVxzLcoWG65x8JslZxWl2DL0Pw==" rel="stylesheet" href="https://github.githubassets.com/assets/frameworks-85c37b8c844b3a2e9f52643dae02fe18.css" />
+  <link crossorigin="anonymous" media="all" integrity="sha512-hsKC3ypJkUX/imnakufPNinmC1hvlGtwN80bcJ9eo6idrtk/bKAiSmsjspBviwNrFmFlEsjycjUAtT4Ae+x0rQ==" rel="stylesheet" href="https://github.githubassets.com/assets/frameworks-86c282df2a499145ff8a69da92e7cf36.css" />
   
-    <link crossorigin="anonymous" media="all" integrity="sha512-IEI4SkusvrScXJ/HFJDTDON4/SaMjYEuLKShbaeNd3ary+aUE5EsIzvx7WVSIcUh7ZALgeBT74jeI32o85UiFw==" rel="stylesheet" href="https://github.githubassets.com/assets/behaviors-2042384a4bacbeb49c5c9fc71490d30c.css" />
+    <link crossorigin="anonymous" media="all" integrity="sha512-ODG6mt8VrPLP1iF4673MMcI5N2uyooaJ910iorfWKXm6F/XCsJMunCed2+SV1sWVbNRIchvkDmFGDXRP9WJHRg==" rel="stylesheet" href="https://github.githubassets.com/assets/behaviors-3831ba9adf15acf2cfd62178ebbdcc31.css" />
     
     
     
-    <link crossorigin="anonymous" media="all" integrity="sha512-bkKXDs5PA6j0NFJObX/bzUNIq2IlbhUJR1CGwZgdpmtKn+YSYk/0INGGFkgZdIzusyEzteiA59sv6Tn46MQxtA==" rel="stylesheet" href="https://github.githubassets.com/assets/github-6e42970ece4f03a8f434524e6d7fdbcd.css" />
+    <link crossorigin="anonymous" media="all" integrity="sha512-NpmcUIol6GZRLcrXcYJt7BmmvaqxxvLz3aOWvsigXGxmIrXrFBHzEU/Vt8Sdtl6S7PQGGl7et4VDxOIMqCGXYQ==" rel="stylesheet" href="https://github.githubassets.com/assets/github-36999c508a25e866512dcad771826dec.css" />
 
   <script crossorigin="anonymous" defer="defer" integrity="sha512-CzeY4A6TiG4fGZSWZU8FxmzFFmcQFoPpArF0hkH0/J/S7UL4eed/LKEXMQXfTwiG5yEJBI+9BdKG8KQJNbhcIQ==" type="application/javascript" src="https://github.githubassets.com/assets/environment-0b3798e0.js"></script>
     <script crossorigin="anonymous" defer="defer" integrity="sha512-hj4gBCzfBV2jwA/7yKXddRVpCFofKW+wQVTp2TGzxjcPDvfVMXOnYo+yUjupKswUmrxEZps+xX+JM+xzO4RYaA==" type="application/javascript" src="https://github.githubassets.com/assets/chunk-frameworks-863e2004.js"></script>
@@ -75,7 +75,7 @@
   <link rel="assets" href="https://github.githubassets.com/">
   
 
-  <meta name="request-id" content="8FB5:5378:48DAF:789AF:60AFC363" data-pjax-transient="true"/><meta name="html-safe-nonce" content="14fcfa6db97461a2c65ef9cda389d475de7ad1ecfc028faaca1af1247ab3e747" data-pjax-transient="true"/><meta name="visitor-payload" content="eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiI4RkI1OjUzNzg6NDhEQUY6Nzg5QUY6NjBBRkMzNjMiLCJ2aXNpdG9yX2lkIjoiMTU2NzA2ODIxNTk4NjYwMjg1MSIsInJlZ2lvbl9lZGdlIjoiaWFkIiwicmVnaW9uX3JlbmRlciI6ImlhZCJ9" data-pjax-transient="true"/><meta name="visitor-hmac" content="74a5c95f7222c7543e7e2c995a07cb8a91dbccf30cab056d52aecac724cb2f1c" data-pjax-transient="true"/>
+  <meta name="request-id" content="8263:3ACF:21933F:5279CF:60B12E2F" data-pjax-transient="true"/><meta name="html-safe-nonce" content="b81d2c25a6c267ba00bd4063e1168c7b0bd06679d7f390e805b8f42871951a15" data-pjax-transient="true"/><meta name="visitor-payload" content="eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiI4MjYzOjNBQ0Y6MjE5MzNGOjUyNzlDRjo2MEIxMkUyRiIsInZpc2l0b3JfaWQiOiI4OTI3OTQ4MjQwNjQ0NTUwMTkxIiwicmVnaW9uX2VkZ2UiOiJpYWQiLCJyZWdpb25fcmVuZGVyIjoiaWFkIn0=" data-pjax-transient="true"/><meta name="visitor-hmac" content="bd7e086aa309f8ec7dfa00adf2144f65e98d2af83ee94659a4d4d08dc2aa0875" data-pjax-transient="true"/>
 
     <meta name="hovercard-subject-tag" content="repository:202599624" data-pjax-transient>
 
@@ -117,7 +117,7 @@
 
     <meta name="enabled-features" content="MARKETPLACE_PENDING_INSTALLATIONS,AUTOCOMPLETE_EMOJIS_IN_MARKDOWN_EDITOR,ACTIONS_CONCURRENCY_UI">
 
-  <meta http-equiv="x-pjax-version" content="ecbd011fd6347aa1fa36d7790c6c8603a6f6d8ce51b06dbb1198da8bd7495f08">
+  <meta http-equiv="x-pjax-version" content="5168be8b1c50e20f9c59233e4e96c7c8429417d4a23cde356d690b5f69deb1c3">
   
 
     
@@ -334,7 +334,7 @@
             spellcheck="false"
             autocomplete="off"
           >
-          <input type="hidden" data-csrf="true" class="js-data-jump-to-suggestions-path-csrf" value="aPTPcUTwvGTWtNnKs8Wns5MJ50rU71ATq7UKPUoFrjE8vvTwPvtYV8xkh5RJUMuJjWfjC3YkfBcr10Unmwg00A==" />
+          <input type="hidden" data-csrf="true" class="js-data-jump-to-suggestions-path-csrf" value="et7ZYgs1mxSJ0/z+GequT6UA3gZg6UIfoOi0ToJIZ95ZGavmSAdyuXTKBD06WYYaksvrz64X18p+rAUR/4VOlg==" />
           <input type="hidden" class="js-site-search-type-field" name="type" >
             <img src="https://github.githubassets.com/images/search-key-slash.svg" alt="" class="mr-2 header-search-key-slash">
 
@@ -1130,73 +1130,10 @@
   <div class="Box-header Box-header--blue position-relative">
     <h2 class="sr-only">Latest commit</h2>
     <div class="js-details-container Details d-flex rounded-top-1 flex-items-center flex-wrap" data-issue-and-pr-hovercards-enabled>
-      
-  <div class="flex-shrink-0 ml-n1 mr-n1 mt-n1 mb-n1 hx_avatar_stack_commit" >
-    
-<div class="AvatarStack flex-self-start  " >
-  <div class="AvatarStack-body" aria-label="brandonleekramer" >
-      <a class="avatar avatar-user" style="width:24px;height:24px;" data-skip-pjax="true" data-test-selector="commits-avatar-stack-avatar-link" data-hovercard-type="user" data-hovercard-url="/users/brandonleekramer/hovercard" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self" href="/brandonleekramer">
-        <img data-test-selector="commits-avatar-stack-avatar-image" src="https://avatars.githubusercontent.com/u/35709701?s=48&amp;v=4" width="24" height="24" alt="@brandonleekramer" class=" avatar-user" />
-</a>  </div>
-</div>
-
-  </div>
-  <div class="flex-1 d-flex flex-items-center ml-3 min-width-0">
-    <div class="css-truncate css-truncate-overflow color-text-secondary" >
-      
-      <a href="/brandonleekramer/diversity/commits?author=brandonleekramer"
-     class="commit-author user-mention"
-     title="View all commits by brandonleekramer">brandonleekramer</a>
-
-
-  
-
-        <span class="d-none d-sm-inline">
-            <a data-pjax="true" data-test-selector="commit-tease-commit-message" title="another small update" class="Link--primary markdown-title" href="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f">another small update</a>
-        </span>
-    </div>
-    <span
-      class="hidden-text-expander ml-2 d-inline-block d-inline-block d-lg-none"
-      
-    >
-      <button
-        type="button"
-        class="hx_bg-black-fade-15 color-text-primary ellipsis-expander js-details-target"
-        aria-expanded="false"
-        
-      >
-        &hellip;
-      </button>
-    </span>
-    <div class="d-flex flex-auto flex-justify-end ml-3 flex-items-baseline">
-        <include-fragment accept="text/fragment+html" src="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f/rollup?direction=sw" class="d-inline"></include-fragment>
-      <a
-        href="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f"
-        class="f6 Link--secondary text-mono ml-2 d-none d-lg-inline"
-        data-pjax
-        
-      >
-        9de61c1
-      </a>
-      <a
-        href="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f"
-        class="Link--secondary ml-2"
-        data-pjax
-        
-      >
-        <relative-time datetime="2021-05-17T14:58:42Z" class="no-wrap">May 17, 2021</relative-time>
-      </a>
-    </div>
-  </div>
-  <div class="pl-0 pl-md-5 flex-order-1 width-full Details-content--hidden">
-      <div class="mt-2">
-        <a data-pjax="true" data-test-selector="commit-tease-commit-message" class="Link--primary text-bold" href="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f">another small update</a>
-      </div>
-    <div class="d-flex flex-items-center">
-      <span class="color-text-primary text-mono d-lg-none hx_bg-black-fade-15 px-1 rounded-1 text-small mt-2">9de61c1</span>
-    </div>
-  </div>
-      <div class="flex-shrink-0">
+      <include-fragment src="/brandonleekramer/diversity/tree-commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f" class="d-flex flex-auto flex-items-center" aria-busy="true" aria-label="Loading latest commit">
+        <div class="Skeleton avatar avatar-user flex-shrink-0 ml-n1 mr-n1 mt-n1 mb-n1" style="width:24px;height:24px;"></div>
+        <div class="Skeleton Skeleton--text col-5 ml-3">&nbsp;</div>
+</include-fragment>      <div class="flex-shrink-0">
         <h2 class="sr-only">Git stats</h2>
         <ul class="list-style-none d-flex">
           <li class="ml-0 ml-md-3">
@@ -1220,7 +1157,8 @@
   
 
 
-    <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/brandonleekramer/diversity/tree/9de61c189506d12d8fa8ba48a3f867a5a04ec73f">Permalink</a>
+  <include-fragment src="/brandonleekramer/diversity/file-list/master">
+      <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/brandonleekramer/diversity/tree/9de61c189506d12d8fa8ba48a3f867a5a04ec73f">Permalink</a>
 
   <div data-view-component="true" class="include-fragment-error flash flash-error flash-full py-2">
   <svg aria-hidden="true" viewBox="0 0 16 16" version="1.1" data-view-component="true" height="16" width="16" class="octicon octicon-alert">
@@ -1252,13 +1190,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to new w2v model" class="Link--secondary" href="/brandonleekramer/diversity/commit/e81600bf0041cdd54429f338c243898a6d2dd223">updates to new w2v model</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:35:23Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1274,13 +1210,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="initial commit of diversity website" class="Link--secondary" href="/brandonleekramer/diversity/commit/45ab6f1be7fcdb13e8405f32a36162f85089fa73">initial commit of diversity website</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-05-25T01:23:27Z" data-view-component="true" class="no-wrap">May 25, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1296,13 +1230,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to new w2v model" class="Link--secondary" href="/brandonleekramer/diversity/commit/e81600bf0041cdd54429f338c243898a6d2dd223">updates to new w2v model</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:35:23Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1318,13 +1250,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to new w2v model" class="Link--secondary" href="/brandonleekramer/diversity/commit/e81600bf0041cdd54429f338c243898a6d2dd223">updates to new w2v model</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:35:23Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1340,13 +1270,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates after dictionary expansion, consolidation of h2 &amp; h3, and knitting the site" class="Link--secondary" href="/brandonleekramer/diversity/commit/1ec19d3b61c71652882c033c50e7f02f8390e976">updates after dictionary expansion, consolidation of h2 &amp; h3, and kni…</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-07-20T03:24:12Z" data-view-component="true" class="no-wrap">Jul 20, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1362,13 +1290,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to new w2v model" class="Link--secondary" href="/brandonleekramer/diversity/commit/e81600bf0041cdd54429f338c243898a6d2dd223">updates to new w2v model</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:35:23Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1384,13 +1310,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="another small update" class="Link--secondary" href="/brandonleekramer/diversity/commit/9de61c189506d12d8fa8ba48a3f867a5a04ec73f">another small update</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:58:42Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1406,13 +1330,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to new w2v model" class="Link--secondary" href="/brandonleekramer/diversity/commit/e81600bf0041cdd54429f338c243898a6d2dd223">updates to new w2v model</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:35:23Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1428,13 +1350,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates after dictionary expansion, consolidation of h2 &amp; h3, and knitting the site" class="Link--secondary" href="/brandonleekramer/diversity/commit/1ec19d3b61c71652882c033c50e7f02f8390e976">updates after dictionary expansion, consolidation of h2 &amp; h3, and kni…</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-07-20T03:24:12Z" data-view-component="true" class="no-wrap">Jul 20, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1450,13 +1370,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="posting some prelim embeddings" class="Link--secondary" href="/brandonleekramer/diversity/commit/091a26786f11db3f7575088ef05b6de26a11327a">posting some prelim embeddings</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2020-12-31T20:05:30Z" data-view-component="true" class="no-wrap">Dec 31, 2020</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1472,13 +1390,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="update to gitignore" class="Link--secondary" href="/brandonleekramer/diversity/commit/3241bd8c9456831cb90d9eac5653f9f098d0f045">update to gitignore</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-03-29T20:38:16Z" data-view-component="true" class="no-wrap">Mar 29, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1494,13 +1410,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="adding license, updates to h2 visualizations" class="Link--secondary" href="/brandonleekramer/diversity/commit/8e7a5f0e80773e2bb5e51cc24404fb8c3d5ec4e2">adding license, updates to h2 visualizations</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-02-24T13:37:37Z" data-view-component="true" class="no-wrap">Feb 24, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1516,13 +1430,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="updates to README in src file" class="Link--secondary" href="/brandonleekramer/diversity/commit/53cc9a64d47c12a9b1db79e2b02aa8cbfca8d856">updates to README in src file</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-05-17T14:53:40Z" data-view-component="true" class="no-wrap">May 17, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1538,13 +1450,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="website updates: try 3" class="Link--secondary" href="/brandonleekramer/diversity/commit/d08033698733b6b4991806e9c9978c96c81434a4">website updates: try 3</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2021-03-29T20:38:01Z" data-view-component="true" class="no-wrap">Mar 29, 2021</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1560,13 +1470,11 @@
           </div>
 
           <div role="gridcell" class="flex-auto min-width-0 d-none d-md-block col-5 mr-3" >
-              <span class="css-truncate css-truncate-target d-block width-fit markdown-title">
-                    <a data-pjax="true" title="Finalized all graphs other than category recoding." class="Link--secondary" href="/brandonleekramer/diversity/commit/93b378b9c9f999fd7de33ee41a054ab5cd0d593c">Finalized all graphs other than category recoding.</a>
-              </span>
+              <div class="Skeleton Skeleton--text col-7">&nbsp;</div>
           </div>
 
           <div role="gridcell" class="color-text-tertiary text-right" style="width:100px;">
-              <time-ago datetime="2019-10-25T02:58:17Z" data-view-component="true" class="no-wrap">Oct 25, 2019</time-ago>
+              <div class="Skeleton Skeleton--text">&nbsp;</div>
           </div>
 
         </div>
@@ -1578,7 +1486,7 @@
     </div>
   </div>
 
-
+</include-fragment>
 
 
 </div>
