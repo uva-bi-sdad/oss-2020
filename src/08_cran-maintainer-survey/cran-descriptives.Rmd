@@ -25,6 +25,30 @@ cran_data <- dbGetQuery(conn, "SELECT * FROM cran.cran_maintainers")
 
 # disconnect from postgresql
 dbDisconnect(conn)
+
+# we want to order the survey questions about packages by date 
+# while dates are not available for all pkgs, we found two data sources 
+
+# lets order the packages by date 
+# pulled the data from here: http://cran.r-project.org/web/packages/packages.rds
+cran_by_dates <- as.data.frame(read_rds("/sfs/qumulo/qhome/kb7hp/oss-data/packages.rds")) %>% 
+  select(Package, Date) %>% 
+  rename(pkg_name = Package, pubdate = Date) 
+
+# this is some other date data that gizem had 
+old_cran_data <- read_csv("/sfs/qumulo/qhome/kb7hp/oss-data/cran.csv")
+old_cran_data <- old_cran_data %>% 
+  rename(pkg_name = Abrv, pubdate_old = `Published:`) %>% 
+  select(pkg_name, pubdate_old)
+
+cran_by_dates <- cran_by_dates %>% 
+  full_join(old_cran_data, by = "pkg_name") %>% 
+  filter(!is.na(pubdate) | !is.na(pubdate_old)) %>% 
+  mutate(pubdate = as.Date(pubdate)) %>% 
+  mutate(pubdate = if_else(is.na(pubdate), as.Date(pubdate_old), as.Date(pubdate))) %>% 
+  select(-pubdate_old)
+cran_by_dates
+
 ```
 
 We want to de-duplicate the data so that we are sending maintainers all the information in one email and at the most recent email 
@@ -32,6 +56,9 @@ Step 1: Fix the duplicate emails
 Step 2: Fix the discrepencies in slighly different names 
 
 ```{r}
+
+# this function manually cleans a few top developers 
+# (since this approach is unsustainable we decided to send the survey to all emails when multiple are listed with the exact same string name)
 fix_emails <- function(data_frame){
          data_frame %>% 
          mutate(email = trimws(email),
@@ -50,6 +77,7 @@ fix_emails <- function(data_frame){
              )
          }
 
+# clean up and count the emails 
 email_count <- cran_data %>% 
     mutate(email = trimws(email),
            email = tolower(email)) %>% 
@@ -57,16 +85,20 @@ email_count <- cran_data %>%
     group_by(email) %>% 
     count() %>% arrange(-n)
 
+# this cleans the names 
 totals <- cran_data %>%
   mutate(
+    # removes quotations, periods and commas
     maintainer = str_replace_all(maintainer, "\'", ""),
     maintainer = str_replace_all(maintainer, "\"", ""),
     maintainer = str_replace_all(maintainer, "\\.", ""),
     maintainer = str_replace_all(maintainer, "\\,", ""),
-    #maintainer = iconv(maintainer, to='ASCII//TRANSLIT'),
+    # trims white space and converts to lowercase 
     maintainer = trimws(maintainer),
     maintainer = tolower(maintainer),
+    # removes all of the single initials
     maintainer = str_replace_all(maintainer, " (a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z) ", " "),
+    # manually cleans variations in names - takes care of all the people with multiple spellings but the same email 
     maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(Gabor Csardi)\\b"), yes = "gábor csárdi", no = maintainer),
     maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(Jing Xu)\\b"), yes = "xu jing", no = maintainer),
     maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(a c del re|a del re)\\b"), yes = "ac del re", no = maintainer),
@@ -158,188 +190,93 @@ totals <- cran_data %>%
     maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(y foucher)\\b"), yes = "yohann foucher", no = maintainer), 
     maintainer = ifelse(test = str_detect(string = maintainer, pattern = "\\b(?i)(m binois)\\b"), yes = "mickael binois", no = maintainer)
          ) %>%
+  # function that fixes the emails from above 
   fix_emails() %>% 
+  # puts all the packages in one col for now 
   group_by(maintainer, email) %>% 
-  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
+  summarise(pkgs = paste(pkg, collapse = "; ")) %>% 
   select(maintainer, email, pkgs) %>% 
+  # joins the email count 
   full_join(email_count, by = "email") %>% 
   select(maintainer, email, n, pkgs) %>% 
-  arrange(-n) #%>% filter(n > 1) #) 25 & n > 7)
-# Artem Kelvtsov, 
+  arrange(-n) 
 
+# gets all the duplicate emails and takes the first name listed (good enough approach)
 deduped_names_df <- totals %>% 
   janitor::get_dupes(email, n) %>% 
   group_by(email, n) %>% 
-  summarise(pkgs = paste(pkgs, collapse = ", "),
+  summarise(pkgs = paste(pkgs, collapse = "; "),
             maintainer = paste(maintainer, collapse = "; ")) %>% 
   separate(col = maintainer, into = "maintainer", sep = ";", extra = "drop") %>% 
   select(maintainer, email, n, pkgs)
 deduped_names <- deduped_names_df %>% select(email) 
 
+# removes the duplicate emails and finds the tmp deduped_names_df back to the full df  
 totals_cleaned <- totals %>% 
   filter(!email %in% deduped_names$email) %>% 
   bind_rows(deduped_names_df) %>% 
   arrange(-n)
 
+# when multiple emails are listed with exact same name, puts the emails in the same col
 multiple_emails <- totals_cleaned %>% 
   janitor::get_dupes(maintainer, n) %>% 
   arrange(-n) %>% 
   group_by(maintainer) %>% 
   summarise(n = sum(n),
-            pkgs = paste(pkgs, collapse = ", "),
-            email = paste(email, collapse = ", ")) %>% 
+            pkgs = paste(pkgs, collapse = "; "),
+            email = paste(email, collapse = "; ")) %>% 
   select(maintainer, email, n, pkgs) %>% 
   arrange(-n) %>% 
   mutate(multiple_emails = 1)
 
+# this just pulls the list of users with multiple emails 
 multiple_emails_list <- totals_cleaned %>% 
   janitor::get_dupes(maintainer, n) %>% 
   arrange(-n) %>% 
   select(email)
 
+# filters those out and adds the cleaned tmp_df back to the full df 
 cran_all <- totals_cleaned %>% 
   filter(!email %in% multiple_emails_list$email) %>% 
   mutate(multiple_emails = 0) %>% 
   bind_rows(multiple_emails) %>% 
   arrange(-n)
 
+# this unnests all of the emails that were collapsed in one col bc we want to send the survey to all the emails 
+# (but we wanted all the packages listed next to both emails in case they click either but only one link)
 cran_dup_emails <- cran_all %>% 
   filter(multiple_emails == 1) %>% 
-  unnest(email = strsplit(email, ", "))
+  unnest(email = strsplit(email, "; "))
 
-cran_all_final <- cran_all %>% 
+# then we bind that back the full_df 
+cran_all_pkgsclpsed <- cran_all %>% 
   filter(multiple_emails == 0) %>%
   bind_rows(cran_dup_emails) %>% 
   arrange(-n)
-  
-# let's capitalize all of the names now 
-cran_all_final$maintainer <- str_to_title(cran_all_final$maintainer)
 
-# and get rid accents in case Qualtrics doesn't like those 
-cran_all_final$maintainer_asc <- iconv(cran_all_final$maintainer, to='ASCII//TRANSLIT')
-
-cran_all_final <- cran_all_final %>% select(maintainer, maintainer_asc, everything())
-
-write_csv(cran_all_final, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/cran_all_maintainers_final.csv")
+# join the date information and order the package by date
+cran_all_final <- cran_all_pkgsclpsed %>% 
+  unnest(pkg_name = strsplit(pkgs, "; ")) %>% 
+  select(-pkgs) %>% 
+  left_join(cran_by_dates, by = "pkg_name") %>% 
+  group_by(maintainer, email, n, multiple_emails) %>% 
+  arrange(-n, maintainer, email, pubdate) %>% 
+  select(-pubdate) %>% 
+  summarise(pkgs = paste(pkg_name, collapse = "; ")) %>% 
+  arrange(-n) %>% 
+  mutate(maintainer = str_to_title(maintainer),
+         maintainer_asc = iconv(maintainer, to='ASCII//TRANSLIT')) %>% 
+  rename(no_pkgs = n) %>% 
+  select(maintainer, maintainer_asc, email, multiple_emails, no_pkgs, everything()) %>% 
+  separate(pkgs, paste("pkg", seq(1:80), sep = ""), ";", extra = "drop") %>%  # 80 is the max packages 
+  drop_na(email) # one pesky NA email 
 
 ```
 
 ```{r}
-
-
-
-
-
-
-
-
-# testing 
-dedup <- totals %>% 
-  janitor::get_dupes(email, n) 
-
-dedup <- dedup %>% 
-  filter(grepl("alex", maintainer))
-
-choices <- dedup$maintainer
-word <- "alexis sarda"
-
-init_proc = FuzzUtils$new()      
-PROC = init_proc$Full_process    
-PROC1 = tolower                  
-
-init_scor = FuzzMatcher$new()    
-SCOR = init_scor$WRATIO          
-
-init <- FuzzExtract$new()        
-
-init$Extract(string = word, 
-             sequence_strings = choices, 
-             processor = PROC, 
-             scorer = SCOR)
-
-# deduplicate 
-test_dd <- init$Dedupe(contains_dupes = dedup$maintainer, threshold = 89L, scorer = SCOR)
-class(test_dd)
-
-
+write_csv(cran_all_final, "/sfs/qumulo/qhome/kb7hp/oss-data/cran_all_maintainers_final.csv")
+write_rds(cran_all_final, "/sfs/qumulo/qhome/kb7hp/oss-2020/data/cran_all_maintainers_final.rds")
 ```
-```{r}
-library(RecordLinkage)
-
-zotero<-data.frame(
-   Year=c(2016,2016,2010,2010,2010,2010),
-   Author=c("Jones, Erik","Hassner, Pierre;","Adams, Laura L.;","Tichý, Lukáš;","Tichý, Lukáš;","Tichy, L.;"),
-   Title=c("Book Reviews","Book Reviews","Book Reviews","Can Iran Reduce EU Dependence on Russian Gas?","Can Iran Reduce EU Dependence on Russian Gas?","can iran reduce eu dependence onrussian gas")
-)
- 
-# Converting the special characters
-zotero$Author_new <- iconv(zotero$Author, from = '', to = "ASCII//TRANSLIT")
-zotero$Author_new <- tolower(zotero$Author_new)
-zotero$Author_new <- gsub("[[:punct:]]", "", zotero$Author_new)
- 
-# Removing punctuation making it lowercase
-zotero$Title_new <- gsub("[[:punct:]]", "", zotero$Title)
-zotero$Title_new <- tolower(zotero$Title_new)
- 
-# Removing exact duplicates
-dups <- duplicated(zotero[,c("Title_new", "Author_new", "Year")])
-zotero <- zotero[!dups,]
-zotero
-
-zotero$Title_dist <- sapply(zotero$Title_new, function(x) sort(levenshteinDist(x, zotero$Title_new))[2])
-zotero$Author_dist <- sapply(zotero$Author_new, function(x) sort(levenshteinDist(x, zotero$Author_new))[2])
-
-check <- zotero %>%
-   group_by(Year) %>%
-   filter(!between(Title_dist, 1, 5) | 
-          !between(Author_dist, 1, 5))
-check
-
-### 
-
-# testing 
-dedup <- totals %>% 
-  janitor::get_dupes(email, n) 
-
-dedup <- dedup %>% 
-  filter(grepl("alex", maintainer))
-
-dedup$maintainer_dist <- sapply(dedup$maintainer, function(x) sort(levenshteinDist(x, dedup$maintainer))[2])
-dedup$email_dist <- sapply(dedup$email, function(x) sort(levenshteinDist(x, dedup$email))[2])
-
-dedup %>%
-   group_by(maintainer) %>%
-   filter(!between(maintainer_dist, 1, 10))
-zotero
-
-## 
-
-df1 <- data.frame(id = c(1, 2, 3, 4, 5, 6),
-              entry = c("Apple", 
-                        "I love apples", 
-                        "appls",
-                        "Bannanas",
-                        "banana", 
-                        "An apple a day keeps..."))
-df1$entry <- as.character(df1$entry)
-
-df2 <- data.frame(fruit=c("apple",
-                          "banana",
-                          "pineapple"),
-                  code=c(11, 12, 13))
-df2$fruit <- as.character(df2$fruit)
-
-library(dplyr)
-library(fuzzyjoin)
-
-df1 %>%
-  stringdist_left_join(df2, by=c(entry="fruit"), ignore_case=T, method="jw", distance_col="dist") %>%
-  group_by(entry) %>%
-  top_n(-1) 
-
-```
-
-
 
 ```{r}
 new_totals <- totals %>% 
@@ -348,91 +285,23 @@ new_totals <- totals %>%
   count() %>% 
   rename(no_of_maintainers = n) 
 
-sum(new_totals %>% filter(no_of_packages > 4)) 
-
 ggplot(new_totals, aes(no_of_packages, no_of_maintainers)) +
   geom_point() +
   #geom_bar(stat="identity") +
-  theme_minimal() 
-
-
-new_totals %>% 
-  ggplot(data=new_totals) +
-  geom_bar(stat="identity", aes(x=no_of_packages, y=no_of_maintainers)) +
-  scale_x_discrete(limits = positions) +
-  theme_minimal() 
-  theme(plot.title = element_text(size=23, hjust = 0.45),
-        axis.text.y = element_text(size = 16),
-        axis.text.x = element_text(size = 16),
-        axis.title =element_text(size=18),
-        axis.title.x=element_blank()) +
-  labs(y = "Number of GitHub Users") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=12, hjust = 0.45),
+        axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title =element_text(size=12)) +
+  labs(y = "Number of GitHub Users", x = "Number of Packages") +
   ggtitle("Total GitHub Users Classified by Economic Sector")
 
 ```
 
-```{r}
-cran_data
 
 
 
-mtr_emails_clpsd <- cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(maintainer, email) %>% 
-  summarise(emails = paste(email, collapse = ", ")) %>% 
-  arrange(maintainer) %>% 
-  select(maintainer, emails)
 
-mtr_pkgs_clpsd <- cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(maintainer, email) %>% 
-  summarise(pkgs = paste(pkg, collapse = ", ")) %>% 
-  arrange(maintainer) %>% 
-  select(maintainer, pkgs)
-
-mtr_pkgs_clpsd %>% 
-  group_by(maintainer) %>% 
-  count() %>% 
-  filter(n > 1) %>% 
-  arrange(-n)
-
-
-cran_data %>% 
-  mutate(maintainer = str_replace_all(maintainer, "\'", ""),
-         maintainer = str_replace_all(maintainer, "\"", ""),
-         maintainer = trimws(maintainer),
-         email = trimws(email)) %>%
-  group_by(email, maintainer)
-
-
-
-    
-cran_data %>% group_by(email) %>% count() %>% arrange(-n)
-```
-
-
-```{r}
-
-cran_downloads <- cran_stats(c("A3","aaSEA","AATtools","ABACUS","abbyyR","abc","abc.data","ABC.RAP","abcADM","ABCanalysis"))
-cran_downloads
-write_rds(cran_downloads, "cran_download_data.rds")
-
-
-x %>% 
-  
-  group_by(package) %>% 
-  summarize(total = sum(downloads)) %>% 
-  arrange(-total)
-
-?cran_stats
-
-```
 
 
 
