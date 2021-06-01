@@ -15,7 +15,7 @@ for (pkg in c("tidyverse", "igraph", "visNetwork", "data.table", "extrafont",
               "poweRlaw", "plotly","gridExtra", "rmarkdown", "grid")) {library(pkg, character.only = TRUE)}
 
 #setwd("~/Documents/OSS/Data")
-setwd("~/oss-data/full-ctr-nets-cum")
+setwd("~/git/oss-2020/data/network-analysis/full-ctr-nets-cum/")
 global_netstats_cum <- read_rds("full_all_global_stats.rds")
 #full_nodelist_cum <- read_rds("full_nodelist_cum.rds")
 #kcore_data <- read_rds("kcore_data_cum.rds")
@@ -516,37 +516,12 @@ kcore_trends <- ggplot(test, mapping = aes(x = time)) +
 
 ```
 
-
-
-
 ```{r}
-
-ggplot(global_netstats_cum, aes(x=node_count, y=louvain)) +
-    geom_point(shape=1) 
-
-ggplot(global_netstats_cum, aes(x=log(node_count), y=louvain)) +
-    geom_point(shape=1)
-
-cor(global_netstats_cum$node_count, global_netstats_cum$louvain)
-
-constant <- rep(0.5, 11)
-
-growth <- c(0.1, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9)
-decline <- c(0.9, 0.8, 0.7, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2, 0.1)
-growth_scaled <- growth / global_netstats_cum$node_count
-growth_logged <- growth / log(global_netstats_cum$node_count)
-decline_scaled <- decline / global_netstats_cum$node_count
-decline_logged <- decline / log(global_netstats_cum$node_count)
-time <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
-
-test_data <- as.data.frame(cbind(growth, decline,g_vector, g_logged, d_vector, d_logged, time))
-
-a <- ggplot(test_data, aes(x=time, y=growth_scaled)) + geom_line(shape=1)
-b <- ggplot(test_data, aes(x=time, y=growth_logged)) + geom_line(shape=1)
-c <- ggplot(test_data, aes(x=time, y=decline_scaled)) + geom_line(shape=1)
-d <- ggplot(test_data, aes(x=time, y=decline_logged)) + geom_line(shape=1)
-
-grid.arrange(a, b, c, d, nrow=2, ncol=2)
-
+global_netstats_cum %>% 
+  filter(network_type == "nisos-wbots" & year == 2019) %>% 
+  select(year, node_count, edge_count, commits, density, transitivity, avg_deg)
 ```
+
+
+
 
