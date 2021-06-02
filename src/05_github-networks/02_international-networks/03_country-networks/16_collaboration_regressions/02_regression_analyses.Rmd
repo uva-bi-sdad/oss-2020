@@ -16,6 +16,7 @@ First, we load our packages, the OSS data from the database, and the World Bank 
 # clear our env and load our packages 
 rm(list = ls())
 library(tidyverse)
+library(reshape2)
 library(readxl)
 library(janitor)
 library(RPostgreSQL)
@@ -23,6 +24,9 @@ library(naniar)
 library(mice)
 library(caret)
 library(VIM)
+library(e1071)
+library(psych)
+library(car)
 
 # next, lets pull in our oss summary data (users, repos, commits, additions, deletions)
 # connect to postgresql to get data (in rivanna)
@@ -249,14 +253,15 @@ wdi_github_joined = ctry_github_joined %>%
   left_join(widened_dai_df, by = c("country_name", "year")) %>% 
   drop_na(net_diversity) %>% 
   mutate(
-    users_per_capita = users / population, 
-    repos_per_capita = repos / population, 
-    commits_per_capita = commits / population, 
-    adds_per_capita = additions / population, 
-    dels_per_capita = deletions / population, 
-    collabs_per_capita = total_collaborations / population, 
-    dom_collabs_per_capita = domestic_collaborations / population,
-    us_collabs_per_capita = us_collaborations / population ) %>% 
+    users_per_capita = (users / population)*100000, 
+    repos_per_capita = (repos / population)*100000, 
+    commits_per_capita = (commits / population)*100000,
+    adds_per_capita = (additions / population)*100000,
+    dels_per_capita = (deletions / population)*100000,
+    collabs_per_capita = (total_collaborations / population)*100000,
+    dom_collabs_per_capita = (domestic_collaborations / population)*100000,
+    us_collabs_per_capita = (us_collaborations / population)*100000
+    ) %>% 
   select(country_name, year, population, everything()) %>% 
   arrange(year, country_name)
 
@@ -299,55 +304,77 @@ Next, we will see how much missing data looks like. The blue and red boxplots sh
 pbox(curated_data, pos = 2)
 ```
 
-#### Transforming Data 
+#### Imputing the missing data 
+
+Next, we are going to impute some of the missing data using the `MICE` package ([van Buuren 2011](https://cran.r-project.org/web/packages/mice/mice.pdf); [see also Alice 2018](https://datascienceplus.com/imputing-missing-data-with-r-mice-package/)). We decided to impute over 5 datasets and to use the classification and regression trees approach (`cart`) approach, which ensures that imputed values are plausible by allocating values that are deemed most appropriate based on what a regression line would fit. The predictive mean matching (`pmm`) approach was not viable here because of unbalanced classes. To do this, we used the `mice()` function, then add it back to the original data with `complete()`, and visualize our now non-missing data. 
+
+```{r, fig.width=11}
+tempData <- mice(curated_data, m=5, maxit=50, meth='cart', seed=500)
+summary(tempData)
+imputed_data <- complete(tempData,1)
+vis_miss(imputed_data)
+```
+
+#### Transforming and Scaling the Data 
 
 Ok, now let's look at the distributions of the variables. 
 
 ```{r}
-melted_data <- melt(curated_data)
+melted_data <- melt(imputed_data)
 ggplot(data = melted_data, aes(x = value)) + 
   stat_density() + 
   facet_wrap(~variable, scales = "free")
+```
+
+We can see that there are a lot of skewed distributions and that the majority of our data need to be transformed. 
+
+```{r}
+describe(imputed_data) %>% select(-vars, -n, -trimmed, -mad)
+```
+
+Indeed, the skewness and kurtosis are way off on almost all the variables. Let's apply a z-score standardization and some log transformations.
+
+```{r}
+normalize2 <- function(x, na.rm = T) (x - min(x, na.rm = T)  / max(x, na.rm = T - min(x, na.rm = T)))
+#normalize2 <- function(x, na.rm = T)(x - mean(x, na.rm = T)) / sd(x, na.rm = T)
+  
+transformed_data <- imputed_data %>% 
+  # transform the data first 
+  mutate(
+    users_per_capita = log(users_per_capita+1),
+    repos_per_capita = log(repos_per_capita+1), 
+    commits_per_capita = log(commits_per_capita+1), 
+    adds_per_capita = log(adds_per_capita+1), 
+    dels_per_capita = log(dels_per_capita+1), 
+    collabs_per_capita = log(collabs_per_capita+1), 
+    dom_collabs_per_capita = log(dom_collabs_per_capita+1), 
+    us_collabs_per_capita = log(us_collabs_per_capita+1),
+    gdp_per_capita = log(gdp_per_capita+1), 
+    servers_permil = log(servers_permil+1)  
+  ) %>% 
+  #mutate_at(vars(users_per_capita:prc_comp_imports), normalize2) %>% 
+  select(-fstgrdy_range)
+
+transformed_data
 ```
 
 ```{r}
-chk_data <- curated_data %>% 
-  mutate(
-    users_per_capita = log(users_per_capita),
-    repos_per_capita = log(repos_per_capita),
-    commits_per_capita = log(commits_per_capita),
-    adds_per_capita = log(adds_per_capita),
-    dels_per_capita = log(dels_per_capita),
-    collabs_per_capita = log(collabs_per_capita),
-    dom_collabs_per_capita = log(dom_collabs_per_capita),
-    us_collabs_per_capita = log(us_collabs_per_capita),
-    gdp_per_capita = log(gdp_per_capita),
-    servers_permil = log(servers_permil),
-    fstgrdy_range = log(fstgrdy_range)
-  )
-melted_data <- melt(chk_data)
+melted_data <- melt(transformed_data)
 ggplot(data = melted_data, aes(x = value)) + 
   stat_density() + 
-  facet_wrap(~variable, scales = "free")
+  facet_wrap(~variable, scales = "free") 
 ```
 
-
-#### Imputing the missing data 
-
-Next, we are going to impute some of the missing data using the `MICE` package ([van Buuren 2011](https://cran.r-project.org/web/packages/mice/mice.pdf); [see also Alice 2018](https://datascienceplus.com/imputing-missing-data-with-r-mice-package/)). We decided to impute over 5 datasets and to use the predictive mean matching (`pmm`) approach, which ensures that imputed values are plausible by allocating values that are deemed most appropriate based on what a regression line would fit. To do this, we used the `mice()` function, then add it back to the original data with `complete()`, and visualize our now non-missing data. 
-
-```{r, fig.width=11}
-tempData <- mice(curated_data, m=5, maxit=50, meth='pmm', seed=500)
-summary(tempData)
-tempData$imp$prc_internet
-completedData <- complete(tempData,1)
-vis_miss(completedData)
+```{r}
+describe(transformed_data) %>% select(-vars, -n, -trimmed, -mad)
 ```
+
+Looks like those transformations got almost everthing within the correct skewness (+/-1) and kurtosis (+/-3) ranges other than the network_range measure, which is so bimodal (0 or >0.8) that none of the common transformations helped convert it to anything close to a Gaussian distribution. We just won't use that variable.
 
 # Now, let's take a look at the correlation matrix of our variables and visualize that as a heatmap. 
 
 ```{r}
-cor_matrix <- as.data.frame(cor(na.omit(completedData %>% select(-country_name, -year) , method = "pearson")))
+cor_matrix <- as.data.frame(cor(na.omit(transformed_data %>% select(-country_name, -year) , method = "pearson")))
 cor_matrix <- cor_matrix %>% mutate(across(where(is.numeric), round, 3))
 cor_matrix
 ```
@@ -362,64 +389,119 @@ ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+#### Fitting Models 
+
+##### Linear Model
+
 Now, we will fit a linear model. Let's add the number of users, domestic collaborations, and the tech usage and economy variables. 
 
 ```{r}
-fit1 <- lm(collabs_per_capita ~ year + users_per_capita + commits_per_capita + dom_collabs_per_capita + 
-            gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports,
-          data=completedData)
-summary(fit1) # show results
+fit1 <- lm(collabs_per_capita ~ users_per_capita + commits_per_capita + dom_collabs_per_capita + us_collabs_per_capita +
+            gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports + net_diversity, data=transformed_data)
+summary(fit1) 
+car::vif(fit1)
 ```
 
-That looks pretty good, but I suspect that there is some multicollinearity in here.
+The R-squared looks good and lots of stars, but.... also lots of multicollinearity in here (several variables exceeding a VIF of 5).
 
-```{r}
-car::vif(fit)
+Overall, the model seems to fit pretty well but we should double-check all our assumptions to make sure this model is alright ([see this for an overview](http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/)).  
+
+```{r, fig.width=11}
+par(mfrow = c(2, 2))
+plot(fit1)
 ```
 
-And there is! We will remove those variables and then add in the US collaborations variable alongside the network diversity measures. 
+Looks like there are all kinds of violations of our assumptions, which probably means that a linear model is not the most appropriate selection. Let's try another model that accounts for the skewedness of our outcome variable. 
 
 ```{r}
-fit2 <- lm(collabs_per_capita ~ year + dom_collabs_per_capita + us_collabs_per_capita +  gdp_per_capita + servers_permil + 
-             prc_internet + prc_comp_exports + prc_comp_imports + net_diversity + fstgrdy_range,
-          data=completedData)
+fit2 <- glm(collabs_per_capita ~ users_per_capita + commits_per_capita + dom_collabs_per_capita + us_collabs_per_capita +
+            gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports + net_diversity, 
+            family = gaussian(link = "identity"), data=transformed_data)
 summary(fit2) 
 car::vif(fit2)
 ```
-
-Overall, the model seems to fit pretty well but we should double-check all our assumptions to make sure. 
-
 ```{r, fig.width=11}
 par(mfrow = c(2, 2))
 plot(fit2)
 ```
+```{r}
+cutoff <- 4/((nrow(transformed_data)-length(fit2$coefficients)-2)) 
+plot(fit2, which=4, cook.levels=cutoff) 
+```
 
 ```{r}
-fit3 <- lm(log(collabs_per_capita) ~ year + dom_collabs_per_capita + us_collabs_per_capita +  gdp_per_capita + servers_permil + 
-             prc_internet + prc_comp_exports + prc_comp_imports + net_diversity + fstgrdy_range,
-          data=completedData)
-summary(fit3) # show results
+glmnet
+```
+
+
+```{r}
+cooksd <- cooks.distance(fit2)
+influential <- as.numeric(names(cooksd)[(cooksd > (4/1356))])
+transformed_influential <- transformed_data[-influential,]
+```
+
+```{r}
+fit3 <- glm(collabs_per_capita ~ users_per_capita + commits_per_capita + dom_collabs_per_capita + us_collabs_per_capita +
+            gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports + net_diversity, 
+            family = gaussian(link = "identity"), data=transformed_influential)
+summary(fit3) 
 car::vif(fit3)
-
-
+```
+```{r}
+cutoff <- 4/((nrow(transformed_influential)-length(fit3$coefficients)-2)) 
+plot(fit3, which=4, cook.levels=cutoff) 
 ```
 
 
 ```{r}
-# notes 
-# country_name, year, population, all the network measures full there
-# gdp_per_capita, servers, prc_internet, prc_computers_imp + exp all less than 15% missing over time 
-# looks like HCI is only available for 2017 + 2018 (some have 2010)
-# dai and digital adoption is only available for 2014 + 2016 
-# gender and social inequality is only available for certain countries 
-# prc_rnd_expnd is there for all years (up to 2017/18) for major countries, but lots of missing for random countries 
+fit3 <- glm(collabs_per_capita ~ users_per_capita + commits_per_capita + dom_collabs_per_capita + us_collabs_per_capita +
+            gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports + net_diversity, 
+            family = gaussian(link = "log"), data=transformed_influential)
+summary(fit3) 
+car::vif(fit3)
+```
+```{r}
+
+
+
+glmIdentity <- glm(Y ~ X1 + X2, data = simdata, family = gaussian(link = "identity"))
+glmInverse<- glm(Y ~ X1 + X2, data = simdata, family = gaussian(link = "inverse"))
+glmLog<- glm(Y ~ X1 + X2, data = simdata, family = gaussian(link = "log"))
+
+
 ```
 
-### References 
+
+
+
+
+
+
+
+
+
+There is a small kink in the top-left figure is generally that is straight-ish, but not perfect. The Q-Q plot is a little bendy but the top-right figure is not that bad, suggesting that the distribution is relatively normal. The bottom-left figure should have a straight line with points equally distributed. That is not really the case, which means our data are heteroskedastic, especially in the top-right portion of that figure. The bottom-right figure also tells us that we have some outliers in the data that may be influencing our results a bit. 
+
+```{r}
+cutoff <- 4/((nrow(transformed_data)-length(fit2$coefficients)-2)) 
+plot(fit2, which=4, cook.levels=cutoff) 
+```
+
+```{r}
+model_diag_metrics <- broom::augment(fit2)
+model_diag_metrics %>%
+  top_n(5, wt = .cooksd)
+```
+
+#### References 
 
 https://ramorel.github.io/network-range/
 
 https://cran.r-project.org/web/packages/intergraph/vignettes/howto.html
+
+http://www.sthda.com/english/articles/39-regression-model-diagnostics/160-multicollinearity-essentials-and-vif-in-r/
+
+http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/
 
 ### World Technology Data 
 
@@ -428,7 +510,6 @@ https://datacatalog.worldbank.org/dataset/world-development-indicators
 https://www.worldbank.org/en/publication/wdr2016/Digital-Adoption-Index
 
 https://www.nber.org/research/data/historical-cross-country-technology-adoption-hccta-dataset
-
 
 
 
