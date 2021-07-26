@@ -55,6 +55,8 @@ institutions_hipolabs <- institutions_hipolabs %>%
   #add_row(institution = "wellcome trust sanger institute", country = "United Kingdom", domains = "sanger.ac.uk") %>%
   add_row(institution = "hasso plattner institute", country = "Germany", domains = "hpi.de") %>%
   dt_mutate(institution = if_else(institution == "xi'an university of electronic science and technology", "xidian university", institution))
+#setwd("~/git/oss-2020/data/academic/")
+#write_csv(institutions_hipolabs, "hipolabs.csv")
 ```
 
 Looking at the total numbers before any recoding.

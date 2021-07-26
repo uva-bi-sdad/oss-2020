@@ -16,6 +16,7 @@ First, we load our packages, the OSS data from the database, and the World Bank 
 # clear our env and load our packages 
 rm(list = ls())
 library(tidyverse)
+library(dplyr)
 library(reshape2)
 library(readxl)
 library(janitor)
@@ -36,6 +37,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                     port = 5432,
                     user = Sys.getenv("db_userid"),
                     password = Sys.getenv("db_pwd"))
+
 # query the bipartite edgelist data from github data
 ctry_github_activity <- dbGetQuery(conn, str_c("SELECT * FROM gh_sna.desc_intl_ctry_annual_sum"))  
 # disconnect from postgresql
@@ -43,13 +45,15 @@ dbDisconnect(conn)
 
 # in an earlier file, we ran some country-level network diversity measures (loading them now)
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
-all_diversity_analyses = read_rds("ctry_diversity_cum.rds") %>% 
+all_diversity_analyses = read_rds("ctry_diversity_cum.rds") 
+
+all_diversity_analyses$year <- plyr::mapvalues(all_diversity_analyses$year, 
+          from = c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "0816", "0817", "0818", "0819"), 
+          to = c("2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"))
+
+all_diversity_analyses <- all_diversity_analyses %>% 
   rename(country_name = country, net_diversity = diversity) %>% 
-  mutate(year = recode(year, `08` = "2008", `0809` = "2009", `0810` = "2010", 
-                             `0811` = "2011", `0812` = "2012", `0813` = "2013",
-                             `0814` = "2014", `0815` = "2015", `0816` = "2016", 
-                             `0817` = "2017", `0818` = "2018", `0819` = "2019"),
-         year = as.numeric(year)) %>% 
+  mutate(year = as.numeric(year)) %>% 
   distinct(id, country_name, year, net_diversity, 
            louvain_comm, fstgrdy_comm, louvain_range, fstgrdy_range)
 all_diversity_analyses
@@ -292,7 +296,8 @@ vis_miss(wdi_github_joined %>%
 ```{r}
 curated_data <- wdi_github_joined %>% 
            filter(year > 2009 & year < 2018) %>% 
-           select(country_name, year, users_per_capita, repos_per_capita, commits_per_capita, adds_per_capita, dels_per_capita, 
+           select(country_name, year, users_per_capita, repos_per_capita, commits_per_capita, 
+                  adds_per_capita, dels_per_capita, 
                   collabs_per_capita, dom_collabs_per_capita, us_collabs_per_capita, net_diversity, fstgrdy_range,
                   gdp_per_capita, servers_permil, prc_internet, prc_comp_exports, prc_comp_imports)
 curated_data
@@ -306,7 +311,7 @@ pbox(curated_data, pos = 2)
 
 #### Imputing the missing data 
 
-Next, we are going to impute some of the missing data using the `MICE` package ([van Buuren 2011](https://cran.r-project.org/web/packages/mice/mice.pdf); [see also Alice 2018](https://datascienceplus.com/imputing-missing-data-with-r-mice-package/)). We decided to impute over 5 datasets and to use the classification and regression trees approach (`cart`) approach, which ensures that imputed values are plausible by allocating values that are deemed most appropriate based on what a regression line would fit. The predictive mean matching (`pmm`) approach was not viable here because of unbalanced classes. To do this, we used the `mice()` function, then add it back to the original data with `complete()`, and visualize our now non-missing data. 
+Next, we are going to impute some of the missing data using the `MICE` package ([van Buuren 2011](https://cran.r-project.org/web/packages/mice/mice.pdf); [see also Alice 2018](https://datascienceplus.com/imputing-missing-data-with-r-mice-package/)). We decided to impute over 5 datasets and to use the classification and regression trees approach (`cart`) approach, which ensures that imputed values are plausible by allocating values that are deemed most appropriate "tree". This is similar to the predictive mean matching (`pmm`), which optimizes the imputed measure based on a regression line, but we needed to use the `cart` approach because of unbalanced classes. To do this, we used the `mice()` function, then add it back to the original data with `complete()`, and visualize our now non-missing data. 
 
 ```{r, fig.width=11}
 tempData <- mice(curated_data, m=5, maxit=50, meth='cart', seed=500)
@@ -335,24 +340,30 @@ describe(imputed_data) %>% select(-vars, -n, -trimmed, -mad)
 Indeed, the skewness and kurtosis are way off on almost all the variables. Let's apply a z-score standardization and some log transformations.
 
 ```{r}
-normalize2 <- function(x, na.rm = T) (x - min(x, na.rm = T)  / max(x, na.rm = T - min(x, na.rm = T)))
-#normalize2 <- function(x, na.rm = T)(x - mean(x, na.rm = T)) / sd(x, na.rm = T)
+ihs <- function(x) {
+  y <- log(x + sqrt(x^2 + 1))
+  return(y)
+}
+
+normalize <- function(x, na.rm = TRUE) {
+    return((x- min(x)) /(max(x)-min(x)))
+}
   
 transformed_data <- imputed_data %>% 
   # transform the data first 
   mutate(
-    users_per_capita = log(users_per_capita+1),
-    repos_per_capita = log(repos_per_capita+1), 
-    commits_per_capita = log(commits_per_capita+1), 
-    adds_per_capita = log(adds_per_capita+1), 
-    dels_per_capita = log(dels_per_capita+1), 
-    collabs_per_capita = log(collabs_per_capita+1), 
-    dom_collabs_per_capita = log(dom_collabs_per_capita+1), 
-    us_collabs_per_capita = log(us_collabs_per_capita+1),
-    gdp_per_capita = log(gdp_per_capita+1), 
-    servers_permil = log(servers_permil+1)  
+    users_per_capita = ihs(users_per_capita),
+    repos_per_capita = ihs(repos_per_capita), 
+    commits_per_capita = ihs(commits_per_capita), 
+    adds_per_capita = ihs(adds_per_capita), 
+    dels_per_capita = ihs(dels_per_capita), 
+    collabs_per_capita = ihs(collabs_per_capita), 
+    dom_collabs_per_capita = ihs(dom_collabs_per_capita), 
+    us_collabs_per_capita = ihs(us_collabs_per_capita),
+    gdp_per_capita = ihs(gdp_per_capita), 
+    servers_permil = ihs(servers_permil)  
   ) %>% 
-  #mutate_at(vars(users_per_capita:prc_comp_imports), normalize2) %>% 
+  mutate_at(vars(users_per_capita:prc_comp_imports), normalize) %>% 
   select(-fstgrdy_range)
 
 transformed_data
@@ -416,10 +427,11 @@ Looks like there are all kinds of violations of our assumptions, which probably 
 ```{r}
 fit2 <- glm(collabs_per_capita ~ users_per_capita + commits_per_capita + dom_collabs_per_capita + us_collabs_per_capita +
             gdp_per_capita + servers_permil + prc_internet + prc_comp_exports + prc_comp_imports + net_diversity, 
-            family = gaussian(link = "identity"), data=transformed_data)
+            family = inverse.gaussian(link = "1/mu^2"), data=transformed_data)
 summary(fit2) 
 car::vif(fit2)
 ```
+
 ```{r, fig.width=11}
 par(mfrow = c(2, 2))
 plot(fit2)
