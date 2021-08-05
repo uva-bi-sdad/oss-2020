@@ -1,0 +1,88 @@
+---
+title: "New Repos Created Over Time (GitHub, 2008-2018)"
+output: html_document
+---
+
+```{r, include=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", "treemap",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# grab the repos data 
+repos <- dbGetQuery(conn, "SELECT * FROM gh.desc_repos_annual_lchn")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+The first step is to graph the number of new repos created on GitHub each year. 
+
+```{r, fig.width=8.5}
+# filter out those before 2008 and after 2018
+repo_totals <- repos %>% 
+  filter(year > 2008 & year < 2020) 
+
+# graph those totals by year 
+ggplot(data=repo_totals, aes(x=year, y=repo_count)) +
+  geom_bar(stat="identity", width = 0.8, fill = "#232D4B")+
+  theme(plot.title = (element_text(colour="#232D4B", hjust = 2, size = 18)),
+        plot.caption = (element_text(colour="#232D4B", size = 10)),
+        panel.background = element_rect(fill = "white", colour = "white",
+                                        size = 2, linetype = "solid"),
+        panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                        colour = "white"),
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                        colour = "white"),
+        axis.title.x = element_blank(),
+        axis.text.y=element_text(colour="#232D4B", size = 18),
+        axis.text.x=element_text(colour="#232D4B", size = 18),
+        axis.title = element_text(colour="#232D4B", size = 20)) + 
+  labs(title="  Number of New Repositories Created on GitHub (2009-2019)", 
+       x="Year", y = "Repositories (in Millions)", 
+       caption= "Note: Repositories limited to those with machine detectable OSI-approved licenses") +
+  scale_y_continuous(limits = c(0, 2000000), breaks = seq(0, 2000000, by = 250000),
+                     labels = c("0","0.25","0.5","0.75","1.0","1.25","1.5","1.75","2.0")) +
+  scale_x_continuous(breaks = c(2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019), 
+                     labels = c(2009,"","","","",2014,"","","","",2019)) 
+
+#setwd("~/")
+#ggsave("bar_version1.png", width = 9.5)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

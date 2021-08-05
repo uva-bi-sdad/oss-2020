@@ -16,8 +16,8 @@ conn <- dbConnect(drv = PostgreSQL(),
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nbots WHERE YEAR = 2019;")
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc WHERE YEAR = 2019;")
 #counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_nbots WHERE YEAR = 2019;")
-#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc WHERE YEAR = 2019;")
-counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc_nbots WHERE YEAR = 2019;")
+counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc WHERE YEAR = 2019;")
+#counts_by_year <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_year_0919_dd_nmrc_jbsc_nbots WHERE YEAR = 2019;")
 
 # disconnect from postgresql database
 dbDisconnect(conn)
@@ -35,19 +35,19 @@ repos_by_year <- counts_by_year %>%
 # check all the dimensions to make sure
 dim(repos_by_year)
 
-repos_by_year <- as.data.table(repos_by_year)
-
-#COST BASED ON Additions
-repos_by_year[,adds_wo_gross := round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
-repos_by_year[,adds_w_gross := round(27797.24 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
-
-#COST BASED ON Additions + Deletions
-repos_by_year[,sum_wo_gross := round(22094.19 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
-repos_by_year[,sum_w_gross := round(27797.24 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
-
-#COST BASED ON Additions - Deletions
-repos_by_year[,net_wo_gross := round(22094.19 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
-repos_by_year[,net_w_gross := round(27797.24 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
+repos_by_year <- repos_by_year %>%
+  as_tidytable() %>%
+  #COST BASED ON Additions
+  mutate.(adds_wo_gross = round(22094.19 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2),
+          adds_w_gross = round(27797.24 * 2.5 * (2.4 * (additions/1000)^1.05)^0.38,2),
+          #COST BASED ON Additions + Deletions
+          sum_wo_gross = round(22094.19 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2),
+          sum_w_gross := round(27797.24 * 2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2),
+          #COST BASED ON Additions - Deletions
+          net_wo_gross := round(22094.19 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2),
+          net_w_gross := round(27797.24 * 2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)) %>%
+  arrange(-adds_w_gross)
+repos_by_year
 
 repos_by_year %>% count()
 repos_by_year %>% distinct(slug) %>% count()
@@ -80,3 +80,33 @@ setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations/07_cost_dd_nmr
 write_csv(summary_df, "cost_estimates_summary_2019.csv")
 write_csv(counts_by_year, "cost_by_year_2019.csv")
 write_csv(counts_by_year_top, "cost_by_year_top_2019.csv")
+
+### ---------------------------------------------------------------------------------
+
+
+setwd("/project/class/bii_sdad_dspg/uva_2021/dspg21oss/")
+top_repos <- read_csv("github_repos_157k.csv")  %>%
+  arrange(-stars)
+
+top_100 <- top_repos %>%
+  select(slug, stars, commits, forks, watchers) %>%
+  rename(commits_ever = commits, stars_ever = stars, forks_ever = forks, watchers_ever = watchers) %>%
+  slice(1:100) %>%
+  left_join(repos_by_year, by = "slug") %>%
+  rename(commits_2019 = commits, additions_2019 = additions, deletions_2019 = deletions) %>%
+  arrange(-adds_w_gross) %>%
+  select(slug, adds_w_gross, commits_2019, ends_with("_ever"), everything())
+
+
+
+
+
+
+
+
+
+
+
+
+
+

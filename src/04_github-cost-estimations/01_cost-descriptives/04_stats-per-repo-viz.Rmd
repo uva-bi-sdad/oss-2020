@@ -1,0 +1,176 @@
+---
+title: "Contributors per Repo (GitHub, 2009-2018)"
+output: html_document
+---
+
+Next, let's look at contributors per repo. 
+
+```{sql}
+-- longest_chain refinement / repo summary
+CREATE MATERIALIZED VIEW gh.desc_repos_sum_lchn_0919 AS (
+  WITH A AS (
+    select slug, login, additions, deletions, 
+		  EXTRACT(YEAR FROM committed_date)::int AS year
+    FROM gh.commits_dd_nmrc_jbsc
+    --limit 100
+  )
+  
+  SELECT slug, COUNT(*) AS commits, COUNT(DISTINCT login) AS logins,
+	  SUM(additions) AS additions, SUM(deletions) AS deletions
+  FROM A 
+  where year > 2008 and year < 2020 
+  GROUP BY slug
+  ORDER BY commits desc 
+  --limit 100
+); 
+ALTER TABLE gh.desc_repos_sum_lchn_0919 OWNER TO ncses_oss;
+
+```
+
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# grab the licenses data 
+repos_summary <- dbGetQuery(conn, "SELECT slug, logins, commits, additions, deletions  
+                                   FROM gh.desc_repos_sum_lchn_0919")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+Next, let's get the number of users per repo and re-categorize these totals into graphable groups and find the proportions. 
+
+```{r}
+# group_by login and get total users_per_repo
+users_per_repo <- repos_summary %>% 
+  group_by(logins) %>% 
+  count() %>% 
+  rename(totals = n) %>% 
+  filter(logins != 0) %>% 
+  mutate(new_logins = logins) 
+
+# recode user ranges into categories  
+users_per_repo$new_logins <- cut(users_per_repo$new_logins, 
+                                 breaks=c(0,1,2,5,10,100000), 
+                                 labels=c("1", "2", "3-5", "6-10", "11+"))
+# get the percentage breakdowns
+summarized_breakdown <- users_per_repo %>% 
+  group_by(new_logins) %>% 
+  mutate(new_totals = sum(totals)) %>% 
+  select(-logins, -totals) %>%   
+  distinct(new_logins, .keep_all = TRUE) %>% 
+  mutate(percent = round(new_totals * 100 / sum(users_per_repo$totals), 2))
+summarized_breakdown
+```
+
+Then, we graph those results and beautify the graph a little bit. 
+
+```{r users_per_repo_graph}
+
+# create a color palette
+uva_colors <- c(
+  `dark red`    = "#990000",
+  `orange`      = "#E57200",
+  `yellow`      = "#eaaa31",
+  `green`       = "#1d7c6b",
+  `dark blue`   = "#232D4B", 
+  `light blue`  = "#628ed8", 
+  `pink`        = "#7f345a",
+  `purple`      = "#4c1f36")
+
+# a function that extracts the hex codes from this vector by name
+uva_cols <- function(...) {
+  cols <- c(...)
+  if (is.null(cols))
+    return (uva_colors)
+  uva_colors[cols]
+}
+
+# create labels for our graph
+df <- cbind.data.frame(c(str_c("1 contributor\n(",summarized_breakdown$percent[1],"%)"),
+                         str_c("2 contributors\n(",summarized_breakdown$percent[2],"%)"),
+                         str_c("3-5 contributors\n(",summarized_breakdown$percent[3],"%)"),
+                         str_c("6-10\n(",summarized_breakdown$percent[4],"%)"), 
+                         str_c("11+\n(",summarized_breakdown$percent[5],"%)")),
+                         #str_c("51+ ",summarized_breakdown$percent[6],"%")),
+                         #str_c("101+ ",summarized_breakdown$percent[7],"")),
+                         summarized_breakdown$new_totals)
+colnames(df) <- c("contributors", "totals")
+
+# apply the palette to the graph 
+pal <- c(uva_cols("dark blue"),       # 1 ctr
+         #uva_cols("pink"),     # 2 ctrs
+         uva_cols("light blue"),
+         uva_cols("dark red"),
+         uva_cols("orange"),     # 11-50 ctrs  
+         uva_cols("yellow"),        # 201-1000
+         uva_cols("purple"),
+         uva_cols("yellow"))     # 3-5 ctrs
+
+# create the tree map 
+treemap::treemap(df, 
+        index="contributors", 
+        vSize="totals",
+        palette = pal, 
+        title="Number of contributors per repository (All GitHub Data, 2009-19)",
+        fontsize.labels=c(12,1,1,1,1,1,1,1), 
+        fontsize.title=15)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

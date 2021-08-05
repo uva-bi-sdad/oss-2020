@@ -1,0 +1,129 @@
+---
+title: "Top Licenses on GitHub, 2008-2018"
+output: html_document
+---
+
+```{r, include=FALSE}
+rm(list = ls())
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL", #"treemap",
+              "cowplot", "maditr", "lubridate")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# grab the licenses data 
+licenses <- dbGetQuery(conn, "SELECT name, spdx 
+                              FROM gh.desc_osi_licenses")
+
+# grab the repos data 
+repos <- dbGetQuery(conn, "SELECT slug, spdx, created
+                           FROM gh.desc_repos_info")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+The first step is to graph the number of repos by license.
+
+```{r, fig.width=8.5}
+# extract the year from the created column 
+repos <- repos %>% 
+  mutate(year = format(as.Date(created, format="%Y/%m/%d"),"%Y")) %>% 
+  filter(year != 2007 & year != 2008)
+
+repos %>% 
+  count(year)
+```
+
+```{r, fig.width=8.5}
+# creating total repos by license
+repos_by_license <- repos %>% 
+  group_by(spdx) %>% 
+  count() %>% 
+  rename(Total = n, License = spdx) %>% 
+  arrange(-Total) 
+
+# adding the percentages to each repo 
+repos_by_license$Proportion <- round(repos_by_license$Total/as.numeric(sum(repos_by_license$Total)) * 100, digits = 2)
+
+# filtering the top-5 (top_n will not work for the life of me)
+repos_by_license_all <- repos_by_license
+repos_by_license <- repos_by_license %>% filter(Total > 100000)
+positions <- c("BSD-3-Clause", "GPL-2.0", "GPL-3.0", "Apache-2.0", "MIT")
+
+# graphing outcomes
+
+ggplot(repos_by_license, aes(x=License, y=Proportion)) +
+  geom_segment( aes(x=License, xend=License, y=0, yend=Proportion), color="#232D4B", size=1.3) +
+  geom_point( color="#232D4B", size=7, alpha=1, pch=21, stroke = 1.5, fill="#E57200") +
+  theme_minimal() +
+  coord_flip() +
+  theme(plot.title = (element_text(colour="#232D4B", hjust = 0.25, size = 18)),
+        plot.caption = (element_text(colour="#232D4B", hjust = 1, size = 10)),
+        panel.border = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_text(hjust=1),
+        axis.title.x = element_blank(),
+        axis.text=element_text(colour="#232D4B", size = 14),
+        axis.title = element_text(colour="#232D4B", size = 16)) +
+  scale_x_discrete(limits = positions) +
+  labs(title="    Proportion of Repositories with \n Top Licenses on GitHub (2009-2019)"
+       , caption= "Note: Repositories limited to those with machine detectable OSI-approved licenses"
+       )
+
+```
+
+```{r}
+sum(repos_by_license$Proportion) / sum(repos_by_license_all$Proportion)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

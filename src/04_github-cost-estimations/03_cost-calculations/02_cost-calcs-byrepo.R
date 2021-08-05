@@ -16,8 +16,8 @@ conn <- dbConnect(drv = PostgreSQL(),
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nbots;")       # no bots
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc;")        # no multi-repo commits
 #counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_nbots;")  # nmrc + nbots
-#counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")
-counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc_nbots;")
+counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc;")
+# counts_by_repo <- dbGetQuery(conn, "SELECT * FROM gh_cost.cost_by_repo_0919_dd_nmrc_jbsc_nbots;")
 # disconnect from postgresql database
 dbDisconnect(conn)
 

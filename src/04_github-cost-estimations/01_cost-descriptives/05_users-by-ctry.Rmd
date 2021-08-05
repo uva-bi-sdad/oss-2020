@@ -1,0 +1,140 @@
+---
+title: "International Country Networks: Descriptive Analyses"
+author: "Brandon L. Kramer"
+output: html_document
+---
+
+```{sql}
+create materialized view gh.ctrs_for_cost_0919 AS (
+with A as (
+  	select login, EXTRACT(YEAR from committed_date)::int AS year
+  	from gh.commits_dd_nmrc_jbsc
+	--limit 100
+), B AS (
+	select distinct(login)
+	from A where year > 2008 and year < 2020 
+)
+select C.*
+from B 
+left join gh.ctrs_extra C
+on B.login = C.login 
+where C.login is not null 
+);
+ALTER TABLE gh.ctrs_for_cost_0919 OWNER TO ncses_oss;
+```
+
+```{r loading edgelist data, warning=FALSE, echo=FALSE}
+rm(list = ls())
+# install.packages(c("tidyverse", "igraph", "visNetwork", "bc3net", 
+# "data.table", "R.utils", "RPostgreSQL", "cowplot", "maditr", "linkprediction", "poweRlaw"))
+
+# load packages 
+for (pkg in c("tidyverse", "data.table", "R.utils", "RPostgreSQL",
+              "cowplot", "maditr", "lubridate", "countrycode")) {library(pkg, character.only = TRUE)}
+
+# connect to postgresql to get data (in rivanna)
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+
+# query the bipartite edgelist data from github data  
+user_data <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_for_cost_0919")
+
+# disconnect from postgresql
+dbDisconnect(conn)
+```
+
+```{r}
+user_totals <- user_data %>% 
+  drop_na(cc_viz)
+
+intl_stats <- user_data %>% 
+  drop_na(cc_viz) %>% 
+  filter(cc_viz != "multiple" ) %>% 
+  group_by(cc_viz) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  rename(users = n)
+```
+
+```{r, fig.width=11.5, fig.height=5, echo=FALSE}
+
+# pull out a character vector 
+users_ranking <- pull(intl_stats %>% 
+  top_n(10, users) %>% 
+  arrange(-users) %>%
+  select(country))
+
+# setting up a custom order graphing purposes 
+users_ranking <- c("USA", "China", "UK","Germany","India","Canada","France", "Brazil","Russia", "Japan")
+class(users_ranking)
+
+intl_stats %>% 
+  filter(users > 15000) %>% 
+  mutate(country = str_replace_all(cc_viz, c("us" = "USA", "cn" = "China", "de" = "Germany",
+                                             "gb" = "UK", "\\b(in)\\b" = "India", 
+                                             "ca" = "Canada", "br" = "Brazil", "fr" = "France", 
+                                             "ru" = "Russia", "jp" = "Japan"))) %>%
+  ggplot( aes(x = reorder(country, -users), y = users)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  #scale_x_discrete (limits = users_ranking) + 
+  theme(plot.title = element_text(size = 20, hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16)) +
+  labs(y = "Contributors (in Thousands)") +
+  scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000), 
+                                labels = c(0,  50, 100, 150,  200)) +
+  labs(title="Total Contributors for Top-10 Countries (GitHub, 2009-2019)")
+
+```
+
+```{sql}
+-- this summarizes all of the commits for 2009-2019
+create materialized view gh_cost.cost_commits_by_year_0919 as (
+with A as (
+  	select login, slug, additions, deletions,
+	EXTRACT(YEAR from committed_date)::int AS year
+  	from gh.commits_dd_nmrc_jbsc
+	--limit 100
+)
+select login, year, slug, count(*) as commits, 
+	sum(additions) as additions, sum(deletions) as deletions
+from A 
+where year > 2008 and year < 2020
+group by login, slug, year 
+order by year, commits desc 
+--limit 100
+);
+
+select sum(commits)
+from gh_cost.cost_commits_by_year_0919
+-- 303433945
+
+-- this summarizes all of the commits for 2009-2019 for those that have country codes 
+with C as (
+	select A.login, B.year, B.slug, B.commits, B.additions, B.deletions
+	from gh.ctrs_for_cost_0919 A
+	left join gh_cost.cost_commits_by_year_0919 B
+	ON A.login = B.login 
+	where cc_viz is not null and cc_viz != 'multiple'
+	--limit 100
+)
+
+select sum(commits) from C
+-- 133266855
+
+```
+
+```{r}
+133266855 / 303433945
+```
+
+
+
+
+
