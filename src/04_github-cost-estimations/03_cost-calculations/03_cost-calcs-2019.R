@@ -3,6 +3,7 @@ library(RPostgreSQL)
 library(dplyr)
 library(data.table)
 library(tidyverse)
+library(tidytable)
 
 conn <- dbConnect(drv = PostgreSQL(),
                   dbname = "sdad",
@@ -63,8 +64,13 @@ sum_wo_gross <- sum(repos_by_year$sum_wo_gross)
 sum_w_gross <- sum(na.omit(repos_by_year$sum_w_gross))
 net_wo_gross <- sum(na.omit(repos_by_year$net_wo_gross))
 net_w_gross <- sum(na.omit(repos_by_year$net_w_gross))
-measure <- c("adds_wo_gross", "adds_w_gross", "sum_wo_gross", "sum_w_gross", "net_wo_gross", "net_w_gross")
-cost <- c(adds_wo_gross, adds_w_gross, sum_wo_gross, sum_w_gross, net_wo_gross, net_w_gross)
+total_additions <- sum(na.omit(repos_by_year$additions))
+total_deletions <- sum(na.omit(repos_by_year$deletions))
+total_commits <- sum(na.omit(repos_by_year$commits))
+measure <- c("adds_wo_gross", "adds_w_gross", "sum_wo_gross", "sum_w_gross",
+             "net_wo_gross", "net_w_gross","additions", "deletions", "commits")
+cost <- c(adds_wo_gross, adds_w_gross, sum_wo_gross, sum_w_gross,
+          net_wo_gross, net_w_gross, total_additions, total_deletions, total_commits)
 summary_df <- data.frame(measure = measure, cost = cost)
 
 # get top-100 counts
@@ -90,7 +96,8 @@ top_repos <- read_csv("github_repos_157k.csv")  %>%
 
 top_100 <- top_repos %>%
   select(slug, stars, commits, forks, watchers) %>%
-  rename(commits_ever = commits, stars_ever = stars, forks_ever = forks, watchers_ever = watchers) %>%
+  rename(commits_ever = commits, stars_ever = stars,
+         forks_ever = forks, watchers_ever = watchers) %>%
   slice(1:100) %>%
   left_join(repos_by_year, by = "slug") %>%
   rename(commits_2019 = commits, additions_2019 = additions, deletions_2019 = deletions) %>%

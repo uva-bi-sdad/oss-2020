@@ -5,7 +5,7 @@ output: html_document
 ---
 
 ```{sql}
-create materialized view gh.ctrs_for_cost_0919 AS (
+create materialized view gh.ctrs_for_cost_0919_0821 AS (
 with A as (
   	select login, EXTRACT(YEAR from committed_date)::int AS year
   	from gh.commits_dd_nmrc_jbsc
@@ -16,11 +16,11 @@ with A as (
 )
 select C.*
 from B 
-left join gh.ctrs_extra C
+left join gh.ctrs_classified_0821 C
 on B.login = C.login 
 where C.login is not null 
 );
-ALTER TABLE gh.ctrs_for_cost_0919 OWNER TO ncses_oss;
+ALTER TABLE gh.ctrs_for_cost_0919_0821 OWNER TO ncses_oss;
 ```
 
 ```{r loading edgelist data, warning=FALSE, echo=FALSE}
@@ -41,7 +41,7 @@ conn <- dbConnect(drv = PostgreSQL(),
                   password = Sys.getenv("db_pwd"))
 
 # query the bipartite edgelist data from github data  
-user_data <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_for_cost_0919")
+user_data <- dbGetQuery(conn, "SELECT * FROM gh.ctrs_for_cost_0919_0821")
 
 # disconnect from postgresql
 dbDisconnect(conn)
@@ -49,15 +49,21 @@ dbDisconnect(conn)
 
 ```{r}
 user_totals <- user_data %>% 
-  drop_na(cc_viz)
+  #drop_na(cc_viz)
+  drop_na(country_name)
 
 intl_stats <- user_data %>% 
-  drop_na(cc_viz) %>% 
-  filter(cc_viz != "multiple" ) %>% 
-  group_by(cc_viz) %>% 
+  #drop_na(cc_viz) %>% 
+  #filter(cc_viz != "multiple" ) %>%
+  #group_by(cc_viz) %>% 
+  drop_na(country_name) %>% 
+  filter(!grepl("\\|", country_name)) %>%
+  group_by(country_name) %>% 
   count() %>% 
   arrange(-n) %>% 
   rename(users = n)
+sum(intl_stats$users)
+intl_stats
 ```
 
 ```{r, fig.width=11.5, fig.height=5, echo=FALSE}
@@ -66,18 +72,19 @@ intl_stats <- user_data %>%
 users_ranking <- pull(intl_stats %>% 
   top_n(10, users) %>% 
   arrange(-users) %>%
-  select(country))
+  select(country_name))
 
 # setting up a custom order graphing purposes 
 users_ranking <- c("USA", "China", "UK","Germany","India","Canada","France", "Brazil","Russia", "Japan")
 class(users_ranking)
 
 intl_stats %>% 
-  filter(users > 15000) %>% 
-  mutate(country = str_replace_all(cc_viz, c("us" = "USA", "cn" = "China", "de" = "Germany",
-                                             "gb" = "UK", "\\b(in)\\b" = "India", 
-                                             "ca" = "Canada", "br" = "Brazil", "fr" = "France", 
-                                             "ru" = "Russia", "jp" = "Japan"))) %>%
+  filter(users > 23000) %>% 
+  mutate(country = str_replace_all(country_name, c("united states" = "USA", "china" = "China",
+                                                   "united kingdom" = "UK", "germany" = "Germany",
+                                                   "india" = "India", "canada" = "Canada",
+                                                   "france" = "France", "brazil" = "Brazil",
+                                                   "russian federation" = "Russia", "japan"="Japan"))) %>%
   ggplot( aes(x = reorder(country, -users), y = users)) +
   geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
   theme_minimal() + 
@@ -87,8 +94,8 @@ intl_stats %>%
         axis.text=element_text(size=14),
         axis.title=element_text(size=16)) +
   labs(y = "Contributors (in Thousands)") +
-  scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000), 
-                                labels = c(0,  50, 100, 150,  200)) +
+  scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000, 250000, 300000), 
+                                labels = c(0, 50, 100, 150, 200,  250, 300)) +
   labs(title="Total Contributors for Top-10 Countries (GitHub, 2009-2019)")
 
 ```
@@ -118,21 +125,54 @@ from gh_cost.cost_commits_by_year_0919
 -- this summarizes all of the commits for 2009-2019 for those that have country codes 
 with C as (
 	select A.login, B.year, B.slug, B.commits, B.additions, B.deletions
-	from gh.ctrs_for_cost_0919 A
+	from gh.ctrs_for_cost_0919_0821 A
 	left join gh_cost.cost_commits_by_year_0919 B
 	ON A.login = B.login 
-	where cc_viz is not null and cc_viz != 'multiple'
+	where country_name is not null and country_name NOT LIKE '%|%'
 	--limit 100
 )
 
 select sum(commits) from C
--- 133266855
+-- 133266855 (originally)
+-- 153811375 (after updated classifications from tidyorgs)
 
 ```
 
 ```{r}
-133266855 / 303433945
+153811375 / 303433945
 ```
+
+```{r}
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+descriptives <- dbGetQuery(conn, "SELECT * FROM gh_cost.ctry_desc_2019")
+dbDisconnect(conn)
+
+```
+```{r}
+top10 <- descriptives %>% 
+  drop_na(country) %>% 
+  slice(1:10) 
+all <- descriptives
+
+sum(top10$repos) / sum(all$repos)
+sum(top10$commits) / sum(all$commits)
+sum(top10$additions) / sum(all$additions)
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
