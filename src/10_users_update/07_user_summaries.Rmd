@@ -1,0 +1,118 @@
+---
+author: "Brandon L. Kramer"
+date: "10/13/2021"
+output: html_document
+---
+
+```{css, echo=FALSE}
+/* this chunk of code centers all of the headings */
+h1, h2, h3, h4 {
+  text-align: center;
+}
+```
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+library(readr)
+library(tidyverse)
+library(DT)
+library(RPostgreSQL)
+
+# create csvs that output the past totals instead of doing it here! 
+
+setwd("~/Documents/git/oss-2020/data")
+uva_scraped_data <- readRDS("github_sectored_101321.rds") 
+```
+
+### Classifying Users on GitHub 
+
+#### Historical Overview (September 2019-October 2021)
+
+Over the past two years, the UVA NCSES OSS team has been developing methods to classify GitHub users into organizations, sectors, and geographies. The geographic classification progress spans from September 2019-Present while the sectoring classification ranges from Summer 2020-Present. This document provides an overview of the progress made as well as a number of pertinent links for understanding the development of this projet. 
+
+### GitHub User Data 
+
+```{r, echo=FALSE}
+github_data_summary <- data.frame(
+  dataset = c("GHTorrent", "SDAD Scrape + GHTorrent"),
+  date_scraped = c("2019-06-30", "2021-08-28"),
+  n_users = c("2,143,632", "3,212,546"),
+  w_company_data = c("422,517 (19.7%)", "764,781 (23.8%)"),
+  w_email_data = c("579,077 (27.0%)", "831,021 (25.9%)"),
+  w_location_data = c("735,441 (34.3%)", "1,260,266 (39.2%)")
+  ) 
+DT::datatable(github_data_summary, 
+              caption = 'Summary of Available GitHub User Data', rownames = FALSE)
+```
+
+As we have documented elsewhere, we collected all GitHub user activity in repositories that (1) have OSI-approved licenses, (2) were created between 2008-2019, and (3) had original content (not forked, not mirrored, and not archived) using the [GHOST.jl](https://github.com/uva-bi-sdad/GHOST.jl) package. Once the user activity data was collected, we procured user data from [GHTorrent](https://ghtorrent.org/), which was scraped sometime during June 2019, and then joined those users back to all users that were in our user activity dataset. We did not update this user data until August 2021 when we developed a [Python script](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/10_users_update/01_scrape_user_data.ipynb) to obtain all user-level data. Above, we have summarized the totals for each dataset, showing that the August 2021 scrape provides a much larger dataset that has roughly the same percentage coverage in the three main columns used to classify users. For those looking to use these tables internally, the GHTorrent data is named `gh.ctrs_extra` and the August 2021 data is named `gh.ctrs_clean_0821` on the database. 
+
+### Geographic Classification 
+
+```{r}
+uva_scraped_data %>%
+  unnest_legacy(country = base::strsplit(country, "\\|")) %>%
+  filter(country != "NA") %>%
+  group_by(country) %>%
+  count() %>%
+  arrange(-n)
+  
+
+```
+
+
+
+
+- Totals for: After 2020 DSPG, Indicator Report, Current Report 
+- Links to package information and meta-stable links 
+
+### Academic Classification 
+
+```{r}
+
+```
+
+- Totals for: After 2020 DSPG, Current Report
+- Links to package information, DSPG website, and meta-stable links 
+- Counts by Org Then and Now 
+- Counts by Country Then and Now 
+- Counts by Public/Private sector 
+
+### Government Classification 
+
+```{r}
+
+```
+
+- Totals for: After 2020 DSPG, Current Report
+- Links to package information, DSPG website, and meta-stable links 
+
+### Non-Profit Classification 
+
+```{r}
+
+```
+
+- Totals for: After 2020 DSPG, Current Report
+- Links to package information, DSPG website, and meta-stable links 
+
+
+
+As Gizem mentioned, the cost paper is on my to-do list. I have updated all of the tables and figures leading up to the final cost calculations section. When I sat down to do those calculations, I realized that we were still using the GHTorrent user data (n=2.1m) and I decided it was best to scrape new user data to increase those totals. I completed downloading the 3.2m users from GitHub and we increased the coverage of data from just around 800,000 users (~23%) with either organization or email data to around 1.2m users (~40%). That ~50% increase will help us make higher quality estimates. 
+
+As I have mentioned to Gizem and Carol on separate occasions, I have also developed a new approach for sector classification, which will be formalized into an R package tentatively called "tidyorgs" to support social science and economic work on organizations. I've tentatively completed the academic sector, and the preliminary results are considerably better. At the end of last summer, our academic counts were ~55,000 (of 750,000 with valid data). Our new count is 109,433 (of 1.2M users) in the academic sector, jumping from 3% to 9% of all classifiable users. I will be implementing a similar strategy for the country classification today with the hopes of increasing the accuracy there as well. Stephanie (our DSPG intern) will be helping me formalize, debug, and test the rest of the package in the coming months so that the classification of other sectors can inform our new cost estimates paper for the conference in London. 
+
+
+#### References 
+
+[2020 UVA DSPG Project Website](https://dspg-young-scholars-program.github.io/dspg20oss/?dspg)
+
+[2021 UVA DSPG Project Website](https://dspgtools.shinyapps.io/dspg21oss/)
+
+[tidysocial Documentation]()
+
+[tidyorgs Package]()
+
+[diverstidy Package]()
+
+
+
