@@ -16,18 +16,33 @@ library(readr)
 library(tidyverse)
 library(DT)
 library(RPostgreSQL)
+library(countrycode)
+library(tidyorgs)
 
+gh_country_totals <- read_csv("~/git/oss-2020/data/intl-totals/intl_totals_multiples_separated_1120.csv")
+gh_country_totals <- gh_country_totals %>% 
+  mutate(country = countrycode(country_code, origin = 'iso2c', destination = 'country.name')) %>% 
+  #rename(location = country) %>% 
+  #rowid_to_column() %>% 
+  #mutate(rowid = as.character(rowid)) %>% 
+  #diverstidy::detect_geographies(rowid, location, "country") %>% 
+  drop_na(country) %>% select(country, n) %>% 
+  mutate(method = "ncses_indicator", time = "01/21")
 # create csvs that output the past totals instead of doing it here! 
 
-setwd("~/Documents/git/oss-2020/data")
-uva_scraped_data <- readRDS("github_sectored_101321.rds") 
+#uva_scraped_data <- readRDS("~/Documents/git/oss-2020/data/github_sectored_101321.rds") 
+uva_scraped_data <- readRDS("~/git/oss-2020/data/github_sectored_100821.rds") 
 ```
 
 ### Classifying Users on GitHub 
 
 #### Historical Overview (September 2019-October 2021)
 
+#### Brandon L. Kramer (UVA Biocomplexity)
+
 Over the past two years, the UVA NCSES OSS team has been developing methods to classify GitHub users into organizations, sectors, and geographies. The geographic classification progress spans from September 2019-Present while the sectoring classification ranges from Summer 2020-Present. This document provides an overview of the progress made as well as a number of pertinent links for understanding the development of this projet. 
+
+<br>
 
 ### GitHub User Data 
 
@@ -46,49 +61,165 @@ DT::datatable(github_data_summary,
 
 As we have documented elsewhere, we collected all GitHub user activity in repositories that (1) have OSI-approved licenses, (2) were created between 2008-2019, and (3) had original content (not forked, not mirrored, and not archived) using the [GHOST.jl](https://github.com/uva-bi-sdad/GHOST.jl) package. Once the user activity data was collected, we procured user data from [GHTorrent](https://ghtorrent.org/), which was scraped sometime during June 2019, and then joined those users back to all users that were in our user activity dataset. We did not update this user data until August 2021 when we developed a [Python script](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/10_users_update/01_scrape_user_data.ipynb) to obtain all user-level data. Above, we have summarized the totals for each dataset, showing that the August 2021 scrape provides a much larger dataset that has roughly the same percentage coverage in the three main columns used to classify users. For those looking to use these tables internally, the GHTorrent data is named `gh.ctrs_extra` and the August 2021 data is named `gh.ctrs_clean_0821` on the database. 
 
-### Geographic Classification 
+<br>
 
-```{r}
-uva_scraped_data %>%
-  unnest_legacy(country = base::strsplit(country, "\\|")) %>%
-  filter(country != "NA") %>%
-  group_by(country) %>%
-  count() %>%
-  arrange(-n)
-  
+### Initial Approaches to Classifying GitHub Users  
 
+The initial classification processes were developed over the two-year period from 2019-2021. In Fall 2019, our team [developed an approach that used string matching with regular expressions](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/05_github-networks/02_international-networks/01_network-construction/01_github-to-ctry-code.Rmd) to probabalistically match users self-reported user information into country codes. This approach was developed a bit further in Fall 2020 when we [published a pipeline to evalutate international collaborations in OSS](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/07_ncses-indicators/02_intl_collaborations/02_github-users-to-ctry.Rmd) for the NCSES. In theory, this approach should work fine, but using regex requires a lot of time to match precise strings. Moreover, it requires regex strings to remove punctuation and other forms of variation in text. 
+
+One alternative to using a regex approach is probabalistic record linkage. During the [2020 UVA DSPG OSS Summer Project](https://dspg-young-scholars-program.github.io/dspg20oss/?dspg), we used this strategy to match users to academic, business, government, and non-profit agencies and finalized this during [Fall 2020](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/03_github-sectoring/02_sna_ctr_sectors.Rmd). Though this works pretty well overall, the main problem is that small variations in text ultimately lead to joins not coming together. While our team was working on a classification approach for software types in our [UVA DSPG OSS 2021 Summer Project](https://dspgtools.shinyapps.io/dspg21oss/), we conceptualized another possibility for matching users - one we call a "funnel matching" approach. This strategy basically uses the `R`'s `tidytext` package to unnest sequences of words in text and then match them to a curated dictionary of terms. Doing so, allows strings like "university of california berkeley" and "cal berkeley" to both match to a prepared dictionary and then be standardized to one common outcome for accurate counts. 
+
+### Improvements Made Using Packages
+
+To streamline the classification process, our team created two packages that facilitate the classification of GitHub users. The [`diverstidy`](https://github.com/brandonleekramer/diverstidy) package provides the capacity to detect and standardize users into different geographies while the [`tidyorgs`](https://github.com/brandonleekramer/tidyorgs/) package detects and standardizes organizations in the academic, business, government and nonprofit sectors. Both packages rely on a "funneling" strategy to matching messy text data that speeds up the process of classifying without adding significantly more computational burden. In addition to the obvious advantages of having public-facing software that can reproduce our analyses, the package reduced the lines of code that a user needs to reproduce these analyses from over 1,500 to just 5. Moreover, we observed marginal increases in the overall classification performance. For example, we now classify around 78.4% of all users with any valid location, email or company data into countries. 
+
+```{r, echo=FALSE}
+improvements_table <- data.frame(
+  dataset = c("Previous Approaches", "Packages"),
+  dev_date = c("2021-01-20", "2021-10-13"),
+  n_users = c("2,143,632", "3,212,546"),
+  w_any_data = c("1,019,189 (47.6%)", "1,576,284 (49.0%)"),
+  in_country = c("732,636 (71.8%/87.1%)*", "1,235,107 (78.4%/89.1%)*"),
+  in_academia = c("51,343 (6.42%/14.3%)**", "109,311 (9.0%/19.2%)**"),
+  time_to_run = c("NA", "39.2 mins")) 
+DT::datatable(improvements_table, 
+              caption = 'Summary of Improvements Made Using Packages', 
+              rownames = FALSE)
 ```
 
+<center>
 
+(*) The geographic percentages were originally calculated with denominators that included any text data in the location, email or company columns. However, not all text data is valid so the second percentage includes a more realistic estimate that removes non-classificable email domains (e.g., gmail.com) and geographic information (e.g. earth). 
 
+(**) Academic percentages were originally calculated using any data in email or company columns as the denominator.
 
-- Totals for: After 2020 DSPG, Indicator Report, Current Report 
-- Links to package information and meta-stable links 
+</center>
+
+<br>
+
+### Geographic Classification 
+
+```{r, fig.height=6, fig.align="center", echo=FALSE}
+counts_by_country <- uva_scraped_data %>%
+  filter(country != "NA" & !grepl("\\|", country)) %>%
+  group_by(country) %>%
+  count() %>% arrange(-n) %>% 
+  mutate(method = "diverstidy", time = "09/21") 
+country_information <- bind_rows(gh_country_totals, counts_by_country)
+
+country_information %>% 
+  filter(country %in% c("United States", "China", "India", "Germany", "United Kingdom", 
+                        "Canada", "Brazil", "France", "Russia", "Japan")) %>% 
+  ggplot(aes(x=country, y=n, fill=method)) + 
+    geom_bar(position="dodge", stat="identity") +
+  theme_minimal() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_text(angle = 45,hjust=1),
+        legend.position = "bottom") + 
+  ggtitle("GitHub Users Classified by Country (January 2021 vs. October 2021)")
+```
+```{r, echo=FALSE}
+DT::datatable(
+country_information %>% 
+  select(-time) %>% 
+  pivot_wider(names_from = method, values_from = n) %>% 
+  mutate(
+    diverstidy_sh = diverstidy / 1235107,
+    ncses_indicator_sh = ncses_indicator / 732636, 
+    prc_increase = round(((diverstidy / ncses_indicator)*100)-100, 2),
+    relative_change = round(((diverstidy_sh / ncses_indicator_sh)*100)-100, 2)) %>% 
+  select(country, diverstidy, ncses_indicator, prc_increase, relative_change), 
+              caption = 'Summary of Available GitHub User Data', rownames = FALSE)
+```
+
+The `diverstidy` approach to classifying geographies improves the overall accuracy with the overall totals increasing from 71.8% to 78.4% of all users with some self-reported data provided. The percentages get even higher when you account for the fact that much of the self-reported user data we scraped from GitHub is not helpful for classifying users. In the table above, we see notable upticks in the overall numbers for each country with especially large gains from non-Western countries like China, India, Indonesia and South Korea to name a few. The relative change column also indicates shows that the funneling approach helps to "debias" the original algorithm by doing better at classifying users into countries outside of the US, Germany, and the UK. 
+
+<br>
 
 ### Academic Classification 
 
-```{r}
+```{r, echo=FALSE}
+library(RPostgreSQL)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
+                  host = "10.250.124.195", port = 5432,
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+academic_original <- dbGetQuery(conn, "SELECT login, institution, is_academic FROM gh.sna_ctr_academic")
+dbDisconnect(conn)
 
+academic_original <- academic_original %>%
+  rename(organization = institution) %>% 
+  drop_na(organization) %>% 
+  unnest_legacy(organization = base::strsplit(organization, "\\|")) %>%
+  group_by(organization) %>%
+  count() %>%
+  arrange(-n)
+academic_original
 ```
 
-- Totals for: After 2020 DSPG, Current Report
-- Links to package information, DSPG website, and meta-stable links 
-- Counts by Org Then and Now 
-- Counts by Country Then and Now 
-- Counts by Public/Private sector 
+```{r, echo=FALSE}
+academic_counts <- uva_scraped_data %>%
+  drop_na(organization) %>% 
+  unnest_legacy(organization = base::strsplit(organization, "\\|")) %>%
+  group_by(organization) %>%
+  count() %>%
+  arrange(-n)
+academic_counts
+```
+```{r, fig.height=6, fig.align="center", echo=FALSE}
+academic_by_country <- uva_scraped_data %>%
+  filter(academic == 1) %>% 
+  drop_na(country) %>% 
+  unnest_legacy(country = base::strsplit(country, "\\|")) %>%
+  filter(country != "NA") %>% 
+  group_by(country) %>% 
+  count() %>% 
+  arrange(-n)
+academic_by_country %>% 
+  filter(country %in% c("United States", "China", "India", "Germany", "United Kingdom", 
+                        "Canada", "Brazil", "France", "Russia", "Japan", 
+                        "Switzerland", "Spain", "Australia", "South Korea", "Netherlands")) %>% 
+  ggplot(aes(x=country, y=n)) + 
+    geom_bar(position="dodge", stat="identity") +
+  theme_minimal() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_text(angle = 45,hjust=1),
+        legend.position = "bottom") + 
+  ggtitle("Academic Users by Country")
+```
+
+```{r, fig.height=6, fig.align="center", echo=FALSE}
+uva_scraped_data %>%
+  filter(academic == 1) %>% 
+  unnest_legacy(organization = base::strsplit(organization, "\\|")) %>%
+  drop_na(org_type) %>% 
+  group_by(org_type) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  ggplot(aes(x=org_type, y=n)) + 
+    geom_bar(position="dodge", stat="identity") +
+  theme_minimal() + 
+  theme(axis.title.x=element_blank(),
+        #axis.text.x = element_text(angle = 45,hjust=1),
+        legend.position = "bottom") + 
+  ggtitle("Academic Users by Organization Type")
+```
+
+<br>
 
 ### Government Classification 
 
-```{r}
+```{r, echo=FALSE}
 
 ```
 
 - Totals for: After 2020 DSPG, Current Report
 - Links to package information, DSPG website, and meta-stable links 
+
+<br>
 
 ### Non-Profit Classification 
 
-```{r}
+```{r, echo=FALSE}
 
 ```
 
@@ -97,22 +228,22 @@ uva_scraped_data %>%
 
 
 
-As Gizem mentioned, the cost paper is on my to-do list. I have updated all of the tables and figures leading up to the final cost calculations section. When I sat down to do those calculations, I realized that we were still using the GHTorrent user data (n=2.1m) and I decided it was best to scrape new user data to increase those totals. I completed downloading the 3.2m users from GitHub and we increased the coverage of data from just around 800,000 users (~23%) with either organization or email data to around 1.2m users (~40%). That ~50% increase will help us make higher quality estimates. 
+<br>
 
-As I have mentioned to Gizem and Carol on separate occasions, I have also developed a new approach for sector classification, which will be formalized into an R package tentatively called "tidyorgs" to support social science and economic work on organizations. I've tentatively completed the academic sector, and the preliminary results are considerably better. At the end of last summer, our academic counts were ~55,000 (of 750,000 with valid data). Our new count is 109,433 (of 1.2M users) in the academic sector, jumping from 3% to 9% of all classifiable users. I will be implementing a similar strategy for the country classification today with the hopes of increasing the accuracy there as well. Stephanie (our DSPG intern) will be helping me formalize, debug, and test the rest of the package in the coming months so that the classification of other sectors can inform our new cost estimates paper for the conference in London. 
-
-
-#### References 
+#### Important Links  
 
 [2020 UVA DSPG Project Website](https://dspg-young-scholars-program.github.io/dspg20oss/?dspg)
 
 [2021 UVA DSPG Project Website](https://dspgtools.shinyapps.io/dspg21oss/)
 
-[tidysocial Documentation]()
+[tidysocial Documentation](https://github.com/brandonleekramer/tidysocial-bookdown)
 
-[tidyorgs Package]()
+[`diverstidy` Package](https://github.com/brandonleekramer/diverstidy)
 
-[diverstidy Package]()
+[`tidyorgs` Package](https://github.com/brandonleekramer/tidyorgs/)
 
+[GHOST.jl Software Package](https://github.com/uva-bi-sdad/GHOST.jl)
+
+[Scraping Script for GitHub Users in Python](https://github.com/uva-bi-sdad/oss-2020/blob/master/src/10_users_update/01_scrape_user_data.ipynb)
 
 

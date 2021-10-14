@@ -33,8 +33,18 @@ time_to_classify = end_time - start_time; time_to_classify
 saveRDS(classified_users, "data/github_sectored_101321.rds")
 classified_users <- readRDS("data/github_sectored_101321.rds")
 
-with_some_info <- classified_users %>%
+with_some_info <- academic_original %>%
   filter(!is.na(location) | !is.na(company) | !is.na(email))
+
+with_valid_info <- classified_users %>%
+  mutate(location = tolower(location),
+         company = tolower(company)) %>%
+  filter((!is.na(location) & !grepl("^earth|^space|^milky way|^planet earth|^/dev|/home|/etc|/usr|^0x|^3rd rock|^/bin127.0.0.1|^world|^@|^anywhere|^somewhere|mars|remote|internet|the internet|localhost|everywhere|global|home|cyberspace|moon|online|null|hell|the world|unknown|behind you|the universe|universe", location)) |
+         (!is.na(company) & !grepl(" |  ", company)) |
+         (!is.na(email) & !grepl("gmail.com$|hotmail.com$|yahoo.com$|qq.com$|126.com$|icloud.com$|^@|^_", email))  )
+
+109311 / 568337
+1235107 / 1385746
 
 with_valid <- classified_users %>%
   drop_na(location)
@@ -148,10 +158,27 @@ academic_counts <- classified_users %>%
 
 
 
+conn <- dbConnect(drv = PostgreSQL(),
+                  dbname = "sdad",
+                  host = "10.250.124.195",
+                  port = 5432,
+                  user = Sys.getenv("db_userid"),
+                  password = Sys.getenv("db_pwd"))
+academic_original <- dbGetQuery(conn, "SELECT login, company, location, email
+                           FROM gh.ctrs_extra")
+dbDisconnect(conn)
 
 
+with_some_info <- academic_original %>%
+  filter(!is.na(company) | !is.na(email))
 
+with_valid_info_org <- academic_original %>%
+  mutate(location = tolower(location),
+         company = tolower(company)) %>%
+  filter((!is.na(location) & !grepl("^earth|^space|^milky way|^planet earth|^/dev|/home|/etc|/usr|^0x|^3rd rock|^/bin127.0.0.1|^world|^@|^anywhere|^somewhere|mars|remote|internet|the internet|localhost|everywhere|global|home|cyberspace|moon|online|null|hell|the world|unknown|behind you|the universe|universe", location)) |
+    (!is.na(company) & !grepl(" |  ", company)) |
+      (!is.na(email) & !grepl("gmail.com$|hotmail.com$|yahoo.com$|qq.com$|126.com$|icloud.com$|^@|^_", email))  )
 
-
-
+51343 / 359116
+732636 / 840787
 
