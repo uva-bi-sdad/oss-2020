@@ -153,7 +153,15 @@ academic_original <- academic_original %>%
   group_by(organization) %>%
   count() %>%
   arrange(-n)
-academic_original
+
+#academic_original %>% 
+#  rowid_to_column() %>% 
+#  detect_orgs()
+
+
+
+DT::datatable(academic_original, 
+              caption = 'Number of Academic Users by University (Original Method)', rownames = FALSE)
 ```
 
 ```{r, echo=FALSE}
@@ -163,7 +171,8 @@ academic_counts <- uva_scraped_data %>%
   group_by(organization) %>%
   count() %>%
   arrange(-n)
-academic_counts
+DT::datatable(academic_counts, 
+              caption = 'Number of Academic Users by University (diverstidy Method)', rownames = FALSE)
 ```
 ```{r, fig.height=6, fig.align="center", echo=FALSE}
 academic_by_country <- uva_scraped_data %>%
@@ -182,12 +191,12 @@ academic_by_country %>%
     geom_bar(position="dodge", stat="identity") +
   theme_minimal() + 
   theme(axis.title.x=element_blank(),
-        axis.text.x = element_text(angle = 45,hjust=1),
+        axis.text.x = element_text(angle = 45, hjust=1),
         legend.position = "bottom") + 
   ggtitle("Academic Users by Country")
 ```
 
-```{r, fig.height=6, fig.align="center", echo=FALSE}
+```{r, fig.height=5, fig.align="center", echo=FALSE}
 uva_scraped_data %>%
   filter(academic == 1) %>% 
   unnest_legacy(organization = base::strsplit(organization, "\\|")) %>%
@@ -203,6 +212,18 @@ uva_scraped_data %>%
         legend.position = "bottom") + 
   ggtitle("Academic Users by Organization Type")
 ```
+
+### Additional Updates (October 14, 2021)
+
+- Added additional output parameters in `detect_orgs()` ("country", "parent_org", and "org_type")
+
+- Added additional output parameters in `detect_geographies()` ("country", "iso_2", "iso_3", "flag", "continent", "region", "sub_region", "int_region", "country_chinese", "country_russian", "country_french", "country_spanish", "country_arabic") along with booleans and warnings for email, cities and denonyms  
+
+- Next steps are to use the preliminary results to calculate personal months to hand off to JSBC and CR 
+
+- After this, Brandon is going to integrate small sample examples for business, government, and nonprofit sectors to be sure the approach scales
+
+- Then Brandon will work through debranching and ranking system
 
 <br>
 
