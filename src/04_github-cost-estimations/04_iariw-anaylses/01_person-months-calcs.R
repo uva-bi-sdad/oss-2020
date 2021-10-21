@@ -68,17 +68,7 @@ dbDisconnect(conn)
 counts_by_year <- data.table::as.data.table(counts_by_year)
 
 #COST BASED ON Additions
-counts_by_year[,adds_wo_gross := round(2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
-counts_by_year[,adds_w_gross := round(2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
-
-#COST BASED ON Additions + Deletions
-counts_by_year[,sum_wo_gross := round(2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
-counts_by_year[,sum_w_gross := round(2.5 * (2.4 * (sum_adds_dels/1000)^1.05)^0.38,2)]
-
-#COST BASED ON Additions - Deletions
-counts_by_year[,net_wo_gross := round(2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
-counts_by_year[,net_w_gross := round(2.5 * (2.4 * (net_adds_dels/1000)^1.05)^0.38,2)]
-
+counts_by_year[,person_months := round(2.5 * (2.4 * (additions/1000)^1.05)^0.38,2)]
 
 conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
                   host = "10.250.124.195", port = 5432,
@@ -90,13 +80,13 @@ table(counts_by_country$country)
 
 # joints sector info and the cost estimates at repo level
 repos_geo_joined <- counts_by_country %>%
-  select(-year) %>%
+  #select(-year) %>%
   rename.(geo_commits = commits,
             geo_additions = additions,
             geo_deletions = deletions,
             geo_sum = sum_adds_dels,
             geo_net = net_adds_dels) %>%
-  left_join(counts_by_year, by = "slug") %>%
+  left_join(counts_by_year, by = c("slug", "year")) %>%
   select(slug, country, year, everything())
 
 # calculates the cost for sectors additions
@@ -104,15 +94,13 @@ repos_geo_joined <- repos_geo_joined %>%
   rename.(repo_additions = additions,
           repo_deletions = deletions) %>%
   mutate.(geo_fraction = round(geo_additions / repo_additions, 3),
-          geo_cost_wo_gross = geo_fraction * adds_wo_gross,
-          geo_cost_w_gross = geo_fraction * adds_w_gross) %>%
+          geo_person_months = geo_fraction * person_months) %>%
   arrange.(slug, country, geo_fraction)
-repos_geo_joined$geo_cost_wo_gross[is.nan(repos_geo_joined$geo_cost_wo_gross)] <- 0
-repos_geo_joined$geo_cost_w_gross[is.nan(repos_geo_joined$geo_cost_w_gross)] <- 0
+repos_geo_joined$geo_person_months[is.nan(repos_geo_joined$geo_person_months)] <- 0
 
 costs_by_country <- repos_geo_joined %>%
   group_by(country, year) %>%
-  summarize(person_months = sum(geo_cost_wo_gross)) %>%
+  summarize(person_months = sum(geo_person_months)) %>%
   arrange(country, year); costs_by_country
 
 costs_by_country_wide <- costs_by_country %>%
@@ -125,11 +113,10 @@ costs_by_country_wide <- costs_by_country %>%
   pivot_wider(names_from = year, values_from = person_months) %>%
   mutate(country = "All Countries") %>%
   select(country, everything()) %>%
-  bind_rows(costs_by_country_wide) %>%
-  filter(country != "Missing")
+  bind_rows(costs_by_country_wide)
 
 setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
-write_csv(costs_by_country_wide, "person_months_by_country_102021.csv")
+write_csv(costs_by_country_wide, "person_months_by_country_102121.csv")
 
 
 costs_by_country_simplified <- costs_by_country %>%
@@ -144,7 +131,7 @@ costs_by_country_simp_wide <- costs_by_country_simplified %>%
   pivot_wider(names_from = year, values_from = person_months)
 
 setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
-write_csv(costs_by_country_simp_wide, "person_months_by_country_simp_102021.csv")
+write_csv(costs_by_country_simp_wide, "person_months_by_country_simp_102121.csv")
 
 
 
