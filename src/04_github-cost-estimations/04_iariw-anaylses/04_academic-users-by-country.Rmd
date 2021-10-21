@@ -1,0 +1,238 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# load packages 
+for (pkg in c("tidyverse", "data.table", "countrycode",
+              "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
+ctrs_by_university <- readRDS("../data/github_sectored_101321.rds")
+
+ctrs_w_geo_unnested <- ctrs_by_university %>% 
+  drop_na(organization) %>% 
+  mutate(country = if_else(is.na(country), ac_country, country),
+         country = if_else(is.na(country), "NA", country),) %>%
+  mutate(country = str_replace(country, "Jersey\\|", ""),
+         country = str_replace(country, "Jersey", "United States"),
+         fraction = (1 / (str_count(country, "\\|") + 1))) %>%
+  select(login, country, fraction, company, organization, academic) %>% 
+  mutate(country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  arrange(fraction)
+
+# still some issues with tidyorgs but don't have time to fix 10/19/21
+users_totals <- ctrs_w_geo_unnested %>% 
+  mutate(organization = str_replace(organization, "Mcgill University", "McGill University"),
+         organization = str_replace(organization, "University of Wisconsin-Madison\\|University of Wisconsin-Madison madison", 
+                                    "University of Wisconsin-Madison"),
+         organization = str_replace(organization, "University of Wisconsin-Madison madison", 
+                                    "University of Wisconsin-Madison"),
+         organization = str_replace(organization, "Mcgill University", "McGill University"),
+         organization = str_replace(organization, "University of Wisconsin-Madison oshkosh", 
+                                    "University of Wisconsin-Oshkosh"),
+         organization = str_replace(organization, "University of Wisconsin-Madison-Eau Claire", 
+                                    "University of Wisconsin-Eau Claire"),
+         organization = str_replace(organization, "University of Wisconsin-Madison-Green Bay", 
+                                    "University of Wisconsin-Green Bay"),
+         organization = str_replace(organization, "South University of Science and Technology Of China", 
+                                    "South University of Science and Technology of China"),
+         organization = str_replace(organization, "University of Science and Technology Of China", 
+                                    "University of Science and Technology of China"),
+         organization = str_replace(organization, "Yale University National University of Singapore", 
+                                    "Yale-Nus"),
+         organization = str_replace(organization, "New York University, Arlington Baptist University Dhabi", 
+                                    "New York University, Abu Dhabi"),
+         organization = str_replace(organization, "university of University of Michigan-Ann Arbor", 
+                                    "University of Michigan-Ann Arbor"),
+         organization = str_replace(organization, "it Copenhagen University", "Copenhagen University"),
+         organization = str_replace(organization, "sciences po", "Institut d'Études Politiques de Paris"),
+         organization = str_replace(organization, "notre dame", "University of Notre Dame"),
+         organization = str_replace(organization, "university of northern University of Iowa", "University of Northern Iowa"),
+         organization = str_replace(organization, "federal Universidade de São Paulo", "Universidade de São Paulo"),
+         organization = str_replace(organization, "università degli studi di parma", "University of Parma"),
+         organization = str_replace(organization, "Anderson University-University of South Carolina-Columbia", "NA"),
+         organization = str_replace(organization, "The University of Texas at Austin southwestern medical center|University of Texas Southwestern Medical Center", "The University of Texas Southwestern Medical Center"),
+         organization = str_replace(organization, 
+         "CUNY Hunter College Bernard M Baruch College college|CUNY Hunter College Bernard M Baruch College", 
+                                    "CUNY Bernard M Baruch College"),
+         organization = str_replace(organization, "College of Staten Island CUNY Hunter College", 
+                                    "College of Staten Island CUNY"),
+         organization = str_replace(organization, "CUNY Hunter College Brooklyn College", 
+                                    "CUNY Brooklyn College"),
+         organization = str_replace(organization, "University of Iowa State University", 
+                                    "Iowa State University"),
+         organization = str_replace(organization, "Universidad Carlos Iii de Madrid", 
+                                    "Universidad Carlos III de Madrid"),
+         organization = str_replace(organization, "University of Maryland-College Park-Baltimore County", 
+                                    "University of Maryland-Baltimore County")) 
+  
+# probably still not perfect but it will work 
+# neex to replace "/" with space 
+
+users_totals %>% 
+  filter(academic == 1) %>% 
+  distinct(login) %>% 
+  count()
+
+users_totals %>% 
+  filter(academic == 1 & !is.na(country)) %>% 
+  distinct(login) %>% 
+  count()
+
+counts_by_orgs <- users_totals %>% 
+  select(login, organization) %>% 
+  distinct(login, organization) %>% 
+  mutate(fraction = (1 / (str_count(organization, "\\|") + 1)),
+         organization = strsplit(as.character(organization), "\\|")) %>% 
+  unnest(organization) %>% 
+  filter(organization != "NA") %>% 
+  group_by(organization) %>% 
+  summarize(users = sum(fraction)) %>% 
+  arrange(-users)
+
+counts_by_orgs 
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
+write_csv(counts_by_orgs, "academic_user_counts_101921.csv")
+```
+
+```{r, fig.width=11.5, fig.height=6}
+
+users_ranking <- c("Cal-Berkeley", "Mass Institute of Tech", "Carnegie Mellon Univ", 
+                   "Stanford Univ", "Univ of Washington", "Univ of So California", 
+                   "Univ of Michigan", "New York Univ", "Cornell Univ", "Harvard Univ", "Columbia Univ", 
+                   "Cal-San Diego", "Univ of Texas", "Univ of Illinois", "Georgia Tech")
+
+counts_by_orgs %>% 
+  filter(organization != "Misc. Academic") %>% 
+  mutate(organization = str_replace(organization, "University of California-Berkeley", "Cal-Berkeley"),
+         organization = str_replace(organization, "Massachusetts Institute of Technology", "Mass Institute of Tech"),
+         organization = str_replace(organization, "Carnegie Mellon University", "Carnegie Mellon Univ"),
+         organization = str_replace(organization, "Stanford University", "Stanford Univ"),
+         organization = str_replace(organization, "University of Washington-Seattle Campus", "Univ of Washington"),
+         organization = str_replace(organization, "University of Southern California", "Univ of So California"),
+         organization = str_replace(organization, "University of Michigan-Ann Arbor", "Univ of Michigan"),
+         organization = str_replace(organization, "New York University", "New York Univ"),
+         organization = str_replace(organization, "Cornell University", "Cornell Univ"),
+         organization = str_replace(organization, "Harvard University", "Harvard Univ"),
+         organization = str_replace(organization, "Columbia University in the City of New York", "Columbia Univ"),
+         organization = str_replace(organization, "University of California-San Diego", "Cal-San Diego"),
+         organization = str_replace(organization, "The University of Texas at Austin", "Univ of Texas"),
+         organization = str_replace(organization, "University of Illinois at Urbana-Champaign", "Univ of Illinois"),
+         organization = str_replace(organization, "Georgia Institute of Technology-Main Campus", "Georgia Tech")
+         ) %>% 
+  top_n(15, users) %>% 
+  ggplot( aes(x = organization, y = users)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = users_ranking) + 
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        axis.text=element_text(size=10),
+        axis.title=element_text(size=16)) +
+  labs(y = "Contributors",
+       caption = "Note: Totals calculated using tidyorgs package (10/2021)") +
+  scale_y_continuous(breaks = c(0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000)) +
+  labs(title="Total Contributors for Top-15 Academic Institutions (GitHub, 2009-2019)")
+
+```
+
+```{r}
+counts_by_orgs
+
+library(tidyorgs)
+data(academic_institutions)
+academic_org_types <- academic_institutions %>% 
+  select(organization_name, org_type) %>% 
+  drop_na(org_type) %>% 
+  rename(organization = organization_name)
+
+counts_by_orgs %>% 
+  left_join(academic_org_types, by = "organization") %>% 
+  drop_na(org_type) %>% 
+  group_by(org_type) %>%
+  summarize(users = sum(users)) %>% 
+  rename(sector = org_type)
+```
+
+```{r}
+academic_user_counts_by_country <- users_totals %>% 
+  select(country, fraction) %>% 
+  group_by(country) %>% 
+  summarise(users = sum(fraction)) %>% 
+  arrange(-users)
+  
+academic_user_counts_by_country
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
+write_csv(academic_user_counts_by_country, "academic_users_by_country_101921.csv")
+```
+
+```{r, fig.width=11.5, fig.height=6}
+
+users_ranking <- c("USA", "China", "UK", "Canada", "Germany", "India", 
+                   "Brazil", "Japan", "France", "Spain", "South Korea", 
+                   "Switzerland", "Australia", "Netherlands", "Italy")
+
+academic_user_counts_by_country %>% 
+  mutate(country = str_replace(country, "United States", "USA"),
+         country = str_replace(country, "United Kingdom", "UK")) %>% 
+  top_n(15, users) %>% 
+  ggplot( aes(x = country, y = users)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = users_ranking) + 
+  theme(plot.title = element_text(size = 20),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=20)) +
+  labs(y = "Contributors (in Thousands)",
+       caption = "Note: Totals calculated using diverstidy package (10/2021)") +
+  scale_y_continuous(breaks = c(0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000), 
+                                labels = c(0,  5, 10, 15, 20, 25,30,35,40,  45)) +
+  labs(title="Total Academic Contributors for Top-10 Countries (GitHub, 2009-2019)")
+
+```
+
+```{r}
+user_country_fractions <- users_totals %>% 
+  select(login, country, fraction)
+
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+dbWriteTable(conn, c("gh_cost", "user_country_fractions"), user_country_fractions, row.names = FALSE)
+dbDisconnect(conn)
+
+```
+
+
+```{r}
+user_academic_fractions <- users_totals %>% 
+  select(login, organization) %>% 
+  distinct(login, organization) %>% 
+  mutate(fraction = (1 / (str_count(organization, "\\|") + 1)),
+         organization = strsplit(as.character(organization), "\\|")) %>% 
+  unnest(organization) %>% 
+  filter(organization != "NA")
+
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", 
+                  host = "10.250.124.195", 
+                  port = 5432, 
+                  user = Sys.getenv("db_userid"), 
+                  password = Sys.getenv("db_pwd"))
+dbWriteTable(conn, c("gh_cost", "user_academic_fractions"), user_academic_fractions, row.names = FALSE)
+dbDisconnect(conn)
+
+```

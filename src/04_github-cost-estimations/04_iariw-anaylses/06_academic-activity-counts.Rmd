@@ -1,0 +1,41 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r cars}
+library(tidyverse)
+library(RPostgreSQL)
+
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
+                  host = "10.250.124.195", port = 5432,
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+academic_counts <- dbGetQuery(conn, "SELECT * FROM gh_cost.desc_academic_counts_102021;")
+country_counts <- dbGetQuery(conn, "SELECT * FROM gh_cost.desc_country_counts_102021;")
+dbDisconnect(conn)
+```
+
+```{r, echo=FALSE}
+academic_counts_alt <- academic_counts %>% 
+  mutate(sum_adds_dels = additions + deletions, 
+         net_adds_dels = additions - deletions)
+academic_counts_alt
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
+write_csv(academic_counts_alt, "academic_counts_by_activity_102021.csv")
+```
+```{r}
+country_counts_alt <- country_counts %>% 
+  mutate(sum_adds_dels = additions + deletions, 
+         net_adds_dels = additions - deletions)
+country_counts_alt
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
+write_csv(country_counts_alt, "country_counts_by_activity_102021.csv")
+```
+
+
+
+
+
+

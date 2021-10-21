@@ -1,0 +1,83 @@
+---
+title: "GitHub Totals, By Country"
+output: html_document
+---
+
+After running `02_commits_by_cc_repo.sql` to create the table, we pull that data into R for repos_by_ctry and the nodelist with valid country_code only.
+
+```{r setup, include=FALSE}
+#rm(list = ls())
+# load packages 
+for (pkg in c("tidyverse", "data.table", "countrycode",
+              "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
+ctrs_by_ctry <- readRDS("../data/github_sectored_101321.rds")
+
+user_country_fractions <- ctrs_by_ctry %>% 
+  filter(!is.na(country) | !is.na(ac_country)) %>%
+  mutate(country = if_else(is.na(country), ac_country, country)) %>%
+  mutate(country = str_replace(country, "Jersey\\|", ""),
+         country = str_replace(country, "Jersey", "United States"),
+         fraction = (1 / (str_count(country, "\\|") + 1))) %>%
+  select(login, country, fraction) %>% 
+  mutate(country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  drop_na(country) %>% 
+  arrange(fraction)
+
+users_totals <- user_country_fractions %>% 
+  mutate(country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  group_by(country) %>% 
+  summarise(users = sum(fraction)) %>% 
+  arrange(-users)
+
+ctrs_by_ctry %>% 
+  drop_na(country) %>% 
+  distinct(login) %>% 
+  count()
+
+users_totals
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
+write_csv(users_totals, "users_by_country_101821.csv")
+```
+
+```{r, fig.width=11.5, fig.height=6}
+
+users_ranking <- c("USA", "China", "India", "Germany", "UK", 
+                   "Canada", "Brazil", "France", "Russia", "Japan",
+                   "Australia", "Netherlands", "Spain", "Poland", "Sweden")
+
+users_totals %>% 
+  mutate(country = str_replace(country, "United States", "USA"),
+         country = str_replace(country, "United Kingdom", "UK")) %>% 
+  top_n(15, users) %>% 
+  ggplot( aes(x = country, y = users)) +
+  geom_bar(stat="identity", fill = "#000058", width = 0.6) + 
+  theme_minimal() + 
+  scale_x_discrete (limits = users_ranking) + 
+  theme(plot.title = element_text(size = 24),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=20)) +
+  labs(y = "Contributors (in Thousands)",
+       caption = "Note: Totals calculated using diverstidy package (10/2021)") +
+  scale_y_continuous(breaks = c(0, 50000, 100000, 150000, 200000, 250000, 300000), 
+                                labels = c(0,  50, 100, 150,  200, 250,  300)) +
+  labs(title="Total Contributors for Top-15 Countries (GitHub, 2009-2019)")
+
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,163 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+# load packages 
+for (pkg in c("tidyverse", "data.table", "countrycode",
+              "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
+
+setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
+raw_ctr_data <- readRDS("../data/github_sectored_101321.rds") %>% 
+  rename(is_academic = academic)
+
+academic_users <- raw_ctr_data %>% 
+  select(login, organization, is_academic, org_type) %>% 
+  filter(is_academic == 1) 
+academic_users
+```
+
+```{r}
+# implementing daniel's approaches 
+legal_entities <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/curatedLegalEntitesRaw.csv", header=FALSE)
+legal_entities <- legal_entities %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+legal_entities$strings <- substring(legal_entities$strings, 2)
+legal_entities$strings <- substr(legal_entities$strings,1, nchar(legal_entities$strings)-1)
+
+symbol_strings <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/symbolRemove.csv", header=FALSE)
+symbol_strings <- symbol_strings %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+symbol_strings$strings <- substring(symbol_strings$strings, 2)
+symbol_strings$strings <- substr(symbol_strings$strings,1, nchar(symbol_strings$strings)-1)
+symbol_strings <- symbol_strings %>% slice(-17:-20)
+
+curated_domains <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/curatedDomains.csv", header=FALSE)
+curated_domains <- curated_domains %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+curated_domains$strings <- substring(curated_domains$strings, 2)
+curated_domains$strings <- substr(curated_domains$strings,1, nchar(curated_domains$strings)-1)
+
+data_to_classify <- raw_ctr_data %>% 
+  select(login, company, location, email, parent_org, is_academic) %>% 
+  filter(!is.na(company) | !is.na(email))
+
+data_to_classify <- data_to_classify %>%
+  mutate(company = tolower(company)) %>% 
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(legal_entities$strings), 
+                                                    "zqx|, Inc.)"), collapse = "|"), "")) %>% 
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(symbol_strings$strings), 
+                                                    ", $|,$|zqx)"), collapse = "|"), "")) %>%
+  mutate(company = str_replace_all(company, paste(c("(?i)(zqx", na.omit(curated_domains$strings), 
+                                                    "zqx)"), collapse = "|"), "")) 
+# null values 
+null_values <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/nullKeys.csv", header=FALSE)
+null_values <- null_values %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+null_values$strings <- substring(null_values$strings, 2)
+null_values$strings <- substr(null_values$strings,1, nchar(null_values$strings)-1)
+
+data_to_classify <- data_to_classify %>% 
+  mutate(is_null = ifelse(test = str_detect(string = company, 
+         pattern = paste(c("\\b(?i)(z3x", na.omit(null_values$strings), "z3x)\\b"), collapse = "|")), 
+         yes = 1, no = NA)) %>% 
+  mutate(is_null = replace_na(is_null, 0))
+
+null_users <- data_to_classify %>% 
+  filter(is_null == 1)
+null_users; rm(null_values, legal_entities, curated_domains, symbol_strings)
+```
+
+```{r}
+# household 
+household <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/individualKeys.csv", header=FALSE)
+household <- household %>% 
+  rename(strings = V1) %>% 
+  mutate(strings = as.character(strings))
+household$strings <- substring(household$strings, 2)
+household$strings <- substr(household$strings,1, nchar(household$strings)-1)
+
+data_to_classify <- data_to_classify %>% 
+  mutate(company = tolower(company),
+         #company = str_replace_all(company, "\\/", " "),
+         is_household = ifelse(test = str_detect(string = company, 
+         pattern = paste(c("\\b(?i)(z3x", na.omit(household$strings), 
+         "z3x|^self-employed$|^self employed$|^unemployed$|^available for hire$|for hire$|^home office$)\\b"), collapse = "|")), 
+         yes = 1, no = 0)) %>% 
+  mutate(is_household = replace_na(is_household, 0))  
+
+household_users <- data_to_classify %>% 
+  filter(is_household == 1)
+household_users; rm(household)
+```
+
+```{r}
+# connect to postgresql to get nonprofit data
+conn <- dbConnect(drv = PostgreSQL(), 
+                  dbname = "sdad", host = "10.250.124.195", port = 5432, 
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+charities_list <- dbGetQuery(conn, "SELECT * FROM forbes.charities2019_top100")
+nonprofit_govadmins <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/non-profit/nonprofits_gov_admins.csv")
+ngo_list <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/non-profit/united_nations_ngos.csv")
+dbDisconnect(conn)
+
+charities_list <- charities_list %>% filter(name != "PATH")
+charities_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(charities_list$name)), 
+                            na.omit(tolower(charities_list$alt_names)), "zxz)\\b"), collapse = "|")
+ngo_list <- ngo_list %>% filter(organization != "Collective")
+ngo_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(ngo_list$organization)), 
+                                     #na.omit(tolower(ngo_list$acronym)), 
+                                     "zxz)\\b"), collapse = "|")
+govadmins_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(nonprofit_govadmins$nonprofit_organization)), 
+                                           na.omit(tolower(nonprofit_govadmins$alt_names)),
+                                           na.omit(tolower(nonprofit_govadmins$associated_centers)), "zxz)\\b"), collapse = "|")
+former_academic_list <- "\\b(?i)(^broad institute$|^broadinstitute$|^cern$|^european organization for nuclear research$|wellcome trust sanger institute|^wellcome trust$|wellcome|^mitre$|^gates foundation$|^chan zuckerberg$|^nonprofit$|^non profit$|^non-profit$)\\b"
+
+data_to_classify <- data_to_classify %>% 
+  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
+            pattern = charities_vector), yes = 1, no = NA)) %>%
+  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
+            pattern = ngo_vector), yes = 1, no = is_nonprofit)) %>%
+  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
+           pattern = govadmins_vector), yes = 1, no = is_nonprofit)) %>%
+  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
+           pattern = former_academic_list), yes = 1, no = is_nonprofit)) %>% 
+  mutate(is_nonprofit = replace_na(is_nonprofit, 0)) 
+
+nonprofit_users <- data_to_classify %>%
+  filter(is_nonprofit == 1)
+nonprofit_users; rm(charities_list, nonprofit_govadmins, ngo_list, 
+                    charities_vector, ngo_vector, govadmins_vector, former_academic_list)
+```
+
+```{r}
+government_list <- "government|governmental|gov|govt|alphagov|cdcgov|governement|military|air force|national guard|commercegov"
+
+gov_testing <- data_to_classify %>% 
+  mutate(is_gov = ifelse(test = str_detect(string = company, pattern = government_list), yes = 1, no = NA)) %>% 
+  mutate(is_gov = if_else(str_detect(email, "\\b(?i)(.gov|fed.us|.mil|.gob)\\b") == T, 1, is_gov)) %>% 
+  mutate(is_gov = replace_na(is_gov, 0)) 
+
+explore_more <- gov_testing %>% 
+  filter(is_gov == 0 )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
