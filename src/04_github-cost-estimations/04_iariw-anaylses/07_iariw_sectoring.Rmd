@@ -4,19 +4,13 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-rm(list = ls())
+#rm(list = ls())
 # load packages 
 for (pkg in c("tidyverse", "data.table", "countrycode", "tidyorgs",
               "R.utils", "RPostgreSQL")) {library(pkg, character.only = TRUE)}
 
 setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
-raw_ctr_data <- readRDS("../data/github_sectored_101321.rds") %>% 
-  rename(is_academic = academic)
-
-academic_users <- raw_ctr_data %>% 
-  select(login, organization, is_academic, org_type) %>% 
-  filter(is_academic == 1) 
-academic_users
+raw_ctr_data <- readRDS("../data/github_sectored_101321.rds") 
 ```
 
 ```{r}
@@ -44,7 +38,7 @@ curated_domains$strings <- substring(curated_domains$strings, 2)
 curated_domains$strings <- substr(curated_domains$strings,1, nchar(curated_domains$strings)-1)
 
 data_to_classify <- raw_ctr_data %>% 
-  select(login, company, location, email, parent_org, is_academic) %>% 
+  select(login, company, location, email) %>% 
   mutate(email = tolower(email)) %>% 
   filter(!is.na(company) | (!is.na(email) & 
          !grepl("gmail.com$|hotmail.com$|protonmail.com$|qq.com$|yahoo.com$|163.com$|126.com$|outlook.com$|live.com$|foxmail.com$|me.com$|icloud.com$", email)))
@@ -71,16 +65,13 @@ data_to_classify <- data_to_classify %>%
          pattern = paste(c("\\b(?i)(z3x", na.omit(null_values$strings), "z3x)\\b"), collapse = "|")), 
          yes = 1, no = NA)) %>% 
   mutate(is_null = ifelse(!str_detect(company, "[a-z]"), 1, is_null)) %>% 
-  mutate(is_null = ifelse(str_detect(company, "^china$|^japan$|^indonesia$|^retired$|^germany$|^test$|^anonymous$|^open source$|^full stack developer$|^developer$|^software engineer$|^software$|^undefined$|^own$|^secret$|^nope$"), 1, is_null)) %>% 
-  mutate(is_null = replace_na(is_null, 0)) #%>% 
+  mutate(is_null = ifelse(str_detect(company, "\\b(?i)(^china$|^japan$|^taiwan$|^indonesia$|^beijing$|^retired$|^germany$|^test$|^anonymous$|^open source$|^full stack developer$|^developer$|^software engineer$|^software$|^undefined$|^own$|^secret$|^nope$|^nil$|^unknown$|^nothing$|^non$|^dev$|^localhost$|^confidential$|^data scientist$|^null$|null|data scientist|localhost|dev|confidential|internet|(?<![a-z])no(?![a-z]))\\b"), 1, is_null)) %>% mutate(is_null = replace_na(is_null, 0)) #%>% 
   #filter(is_null != 1)
 
 null_users <- data_to_classify %>% 
   filter(is_null == 1)
 null_users; rm(null_values, legal_entities, curated_domains, symbol_strings)
-```
 
-```{r}
 # household 
 household <- read.csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/ossPy-files/individualKeys.csv", header=FALSE)
 household <- household %>% 
@@ -94,98 +85,66 @@ data_to_classify <- data_to_classify %>%
          #company = str_replace_all(company, "\\/", " "),
          is_household = ifelse(test = str_detect(string = company, 
          pattern = paste(c("\\b(?i)(z3x", na.omit(household$strings), 
-         "z3x|^self-employed$|^self employed$|^unemployed$|^available for hire$|for hire$|^home office$|free|my own)\\b"), collapse = "|")), 
-         yes = 1, no = 0)) %>% 
+         "^self-employed$|self-employed|^self employed$|^unemployed$|^available for hire$|for hire$|^home office$|free|my own|^home$|^independant$|^private$|private|^self$|self|independent|indie|independiente)\\b"), collapse = "|")), yes = 1, no = 0)) %>% 
   mutate(is_household = replace_na(is_household, 0))  
 
 household_users <- data_to_classify %>% 
   filter(is_household == 1)
 household_users; rm(household)
-```
-
-```{r}
-# connect to postgresql to get nonprofit data
-conn <- dbConnect(drv = PostgreSQL(), 
-                  dbname = "sdad", host = "10.250.124.195", port = 5432, 
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-charities_list <- dbGetQuery(conn, "SELECT * FROM forbes.charities2019_top100")
-nonprofit_govadmins <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/non-profit/nonprofits_gov_admins.csv")
-ngo_list <- read_csv("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/non-profit/united_nations_ngos.csv")
-
-dbDisconnect(conn); rm(conn)
-
-charities_list <- charities_list %>% filter(name != "PATH")
-charities_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(charities_list$name)), 
-                            na.omit(tolower(charities_list$alt_names)), "zxz)\\b"), collapse = "|")
-ngo_list <- ngo_list %>% filter(organization != "Collective")
-ngo_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(ngo_list$organization)), 
-                                     #na.omit(tolower(ngo_list$acronym)), 
-                                     "zxz)\\b"), collapse = "|")
-govadmins_vector <- paste(c("\\b(?i)(zcx", na.omit(tolower(nonprofit_govadmins$nonprofit_organization)), 
-                                           na.omit(tolower(nonprofit_govadmins$alt_names)),
-                                           na.omit(tolower(nonprofit_govadmins$associated_centers)), "zxz)\\b"), collapse = "|")
-former_academic_list <- "\\b(?i)(^broad institute$|^broadinstitute$|^cern$|^european organization for nuclear research$|wellcome trust sanger institute|^wellcome trust$|wellcome|^mitre$|^gates foundation$|^chan zuckerberg$|^nonprofit$|^non profit$|^non-profit$|^inria$|wikimedia foundation|wikimedia)\\b"
 
 data_to_classify <- data_to_classify %>% 
-  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
-            pattern = charities_vector), yes = 1, no = NA)) %>%
-  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
-            pattern = ngo_vector), yes = 1, no = is_nonprofit)) %>%
-  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
-           pattern = govadmins_vector), yes = 1, no = is_nonprofit)) %>%
-  mutate(is_nonprofit = ifelse(test = str_detect(string = company, 
-           pattern = former_academic_list), yes = 1, no = is_nonprofit)) %>% 
-  mutate(is_nonprofit = replace_na(is_nonprofit, 0)) 
+  detect_academic(login, company, organization, email) %>% 
+  rename(is_academic = academic) 
 
-nonprofit_users <- data_to_classify %>%
-  filter(is_nonprofit == 1)
-nonprofit_users; rm(charities_list, nonprofit_govadmins, ngo_list, 
-                    charities_vector, ngo_vector, govadmins_vector, former_academic_list)
-```
-
-```{r}
-government_list <- "\\b(?i)(^government$|^governmental$|^gov$|^govt$|^alphagov$|^cdcgov$|^military$|^air force$|^national guard$|^commercegov$|^cnrs$|^llnl$|^nasa$|^ncar$|oak ridge national laboratory|sandia national laboratories|space telescope science institute|los alamos national laboratory|lawrence livermore national laboratory|lawrence livermore national laboratory, llnl|argonne national laboratory|argonne|national laboratory|oak ridge national laboratory|sandia national laboratories|lawrence berkeley national laboratory|los alamos national laboratory|lawrence livermore national laboratory, llnl|pacific northwest national laboratory|brookhaven national laboratory|lawrence livermore national laboratory|lawrence berkeley national lab|slac national accelerator laboratory|idaho national laboratory|national center for atmospheric research|national institutes of health|office for national statistics|sandia national labs|fermi national accelerator laboratory|national institute of informatics|national renewable energy lab|national center for supercomputing applications|national library of sweden|national radio astronomy observatory|national research council canada|national research council of canada|national snow and ice data center|argonne national lab|lawrence livermore national lab|national cancer institute|national library of norway)\\b"
+academic_users <- data_to_classify %>% 
+  filter(is_academic == 1); academic_users 
 
 data_to_classify <- data_to_classify %>% 
-  mutate(company = trimws(company))  %>% 
-  mutate(is_gov = ifelse(test = str_detect(
-    string = company, pattern = government_list), yes = 1, no = NA)) %>% 
-  mutate(is_gov = if_else(str_detect(email, "\\b(?i)(.gov|fed.us|.mil|.gob)\\b") == T, 1, is_gov)) %>% 
-  mutate(is_gov = replace_na(is_gov, 0)) 
+  select(-organization) %>% 
+  detect_nonprofit(login, company, organization, email) %>% 
+  rename(is_nonprofit = nonprofit) 
+
+nonprofit_users <- data_to_classify %>% 
+  filter(is_nonprofit == 1); nonprofit_users 
+
+#data_to_classify <- data_to_classify %>% select(-organization, -is_gov)
+
+data_to_classify <- data_to_classify %>% 
+  select(-organization) %>% 
+  detect_government(login, company, organization, email) %>% 
+  rename(is_gov = government) 
 
 government_users <- data_to_classify %>% 
   filter(is_gov == 1); government_users
 
-nongov <- data_to_classify %>% 
-  filter(is_gov != 1 & grepl("argonne", company))
-```
-
-```{r}
-#data_to_classify <- data_to_classify %>% select(-organization, -is_business)
+# data_to_classify <- data_to_classify %>% select(-organization, -is_business)
 
 data_to_classify <- data_to_classify %>% 
+  select(-organization) %>% 
+  mutate(company = sub(".*\\|", "", company),
+         company = trimws(company, which = "both")) %>% 
   detect_business(login, company, organization, email) %>% 
   rename(is_business = business) %>% 
   select(everything(), organization)
 
 business_users <- data_to_classify %>% 
   filter(is_business == 1); business_users
-```
 
-```{r}
 leftovers <- data_to_classify %>% 
-  filter(is_academic != 1 & is_null != 1 & is_nonprofit != 1 
-         & is_gov != 1 & is_business != 1 & is_household != 1)
+  filter(!is.na(company) & is_academic != 1 & is_null != 1 & is_nonprofit != 1 
+         & is_gov != 1 & is_business != 1 & is_household != 1 
+         & !grepl("blockchain|hse|hust|none|mail group|unam|uiuc", company))
 
 leftover_counts <- leftovers %>% 
   mutate(company = sub(".*\\|", "", company),
-         company = trimws(company)) %>% 
+         company = trimws(company, which = "both")) %>% 
   count(company) %>% 
+  filter(n < 26) %>% 
   arrange(-n); leftover_counts
-```
-```{r}
+
+# 
 above_five <- leftover_counts %>% 
-  filter(n > 5 & !grepl("cern|oak ridge national laboratory|sandia national laboratories|space telescope science institute|los alamos national laboratory|lawrence livermore national laboratory|lawrence livermore national laboratory, llnl|argonne national laboratory|argonne|national laboratory|oak ridge national laboratory|sandia national laboratories|lawrence berkeley national laboratory|los alamos national laboratory|lawrence livermore national laboratory, llnl|los alamos national lab|pacific northwest national laboratory|brookhaven national laboratory|lawrence livermore national laboratory|lawrence berkeley national lab|slac national accelerator laboratory|idaho national laboratory|national center for atmospheric research|national institutes of health|office for national statistics|sandia national labs|fermi national accelerator laboratory|national institute of informatics|national renewable energy lab|national center for supercomputing applications|national library of sweden|national radio astronomy observatory|national research council canada|national research council of canada|national snow and ice data center|argonne national lab|lawrence livermore national lab|national cancer institute|national library of norway|government digital service|government of canada|united states air force", company)) 
+  filter(n > 5) 
 
 data_to_classify <- data_to_classify %>% 
   mutate(company = sub(".*\\|", "", company)) %>% 
@@ -194,10 +153,14 @@ data_to_classify <- data_to_classify %>%
          yes = 1, no = is_business))
 
 business_users <- data_to_classify %>% 
-  filter(is_business == 1); business_users
-```
+  mutate(company = sub(".*\\|", "", company),
+         company = trimws(company, which = "both")) %>%
+  filter(is_business == 1)
 
-```{r}
+business_users <- business_users %>% 
+  mutate(organization = replace_na(organization, "Misc. Business"))
+business_users
+
 leftovers <- data_to_classify %>% 
   filter(is_academic != 1 & is_null != 1 & is_nonprofit != 1 
          & is_gov != 1 & is_business != 1 & is_household != 1)
@@ -205,8 +168,9 @@ leftover_counts <- leftovers %>%
   count(company) %>% 
   arrange(-n); leftover_counts
 
-leftover_counts 
+sum(leftover_counts$n)
 ```
+
 ```{r}
 nrow(academic_users)
 nrow(business_users)
@@ -216,118 +180,298 @@ nrow(household_users)
 ```
 
 ```{r}
-setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
-users_with_countries <- readRDS("../data/github_wcountries_102521.rds") 
+orgs_combined <- bind_rows(
+  academic_users %>% select(login, organization),
+  business_users %>% select(login, organization),
+  government_users %>% select(login, organization),
+  nonprofit_users %>% select(login, organization)
+) %>% group_by(login) %>% 
+  summarise(organization = paste(organization, collapse = "|"))
+```
 
-counts_by_country <- data_to_classify %>% 
-  left_join(users_with_countries, by = "login") %>%
-  select(-is_null, -organization) %>% 
-  mutate(is_business = replace_na(is_business, 0),
-         sector_count = is_academic + is_business + is_gov + is_nonprofit + is_household,
-         is_academic = is_academic / sector_count,
-         is_business = is_business / sector_count,
-         is_gov = is_gov / sector_count,
-         is_nonprofit = is_nonprofit / sector_count,
-         is_household = is_household / sector_count)
+
+```{r}
+#setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data")
+#users_with_countries <- readRDS("../data/github_wcountries_102521.rds") 
+
+library(RPostgreSQL)
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
+                  host = "10.250.124.195", port = 5432,
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+users_with_countries <- dbGetQuery(conn, "SELECT * FROM gh_cost.users_geo_102021;")
+dbDisconnect(conn)
+
+users_with_countries_collapsed <- users_with_countries %>% 
+  group_by(login) %>% 
+  summarise(country = paste(country, collapse = "|"))
+
+users_with_countries_cleaned <- users_with_countries %>% 
+  mutate(country = if_else(country == "United States", "us_fraction", "frgn_fraction")) %>% 
+  group_by(login, country) %>% 
+  summarize(fraction = sum(fraction)) 
+
+user_with_org_data <- raw_ctr_data %>% 
+  select(login) %>% 
+  left_join(users_with_countries_cleaned, by = "login") %>% 
+  mutate(country = replace_na(country, "na_fraction"),
+         fraction = replace_na(fraction, 1)) %>% 
+  pivot_wider(names_from = country, values_from = fraction) %>% 
+  mutate(na_fraction = replace_na(na_fraction, 0),
+         frgn_fraction = replace_na(frgn_fraction, 0),
+         us_fraction = replace_na(us_fraction, 0)) %>% 
+  left_join(orgs_combined, by = "login") %>% 
+  left_join(data_to_classify %>% 
+              select(-organization), by = "login") %>% 
+  mutate(is_business = replace_na(is_business, 0)) %>% 
+  left_join(users_with_countries_collapsed, by = "login") %>% 
+  select(login, email, company, organization, location, country, is_null, 
+         contains("academic"), contains("business"), contains("gov"), 
+         contains("nonprofit"), contains("household"), contains("fraction")) %>% 
+  mutate(is_null = replace_na(is_null, 0)) %>% 
+  mutate_at(vars(is_academic:us_fraction),  ~ if_else(is.na(.), 0, .)) 
+
+table_for_postgres <- user_with_org_data %>%
+  mutate(sector_count = is_academic + is_business + is_gov + is_nonprofit + is_household,
+         academic_frac = is_academic / sector_count,
+         business_frac = is_business / sector_count,
+         gov_frac = is_gov / sector_count,
+         nonprofit_frac = is_nonprofit / sector_count,
+         household_frac = is_household / sector_count) %>% 
+  mutate_all(~replace(., is.infinite(.), 0)) %>% 
+  mutate_all(~replace(., is.nan(.), 0)) %>% 
+  mutate(us_academic = academic_frac * us_fraction,
+         frgn_academic = academic_frac * frgn_fraction,
+         us_business = business_frac * us_fraction,
+         frgn_business = business_frac * frgn_fraction,
+         us_gov = gov_frac * us_fraction,
+         frgn_gov = gov_frac * frgn_fraction,
+         us_nonprofit= nonprofit_frac * us_fraction,
+         frgn_nonprofit = nonprofit_frac * frgn_fraction,
+         us_household = household_frac * us_fraction,
+         frgn_household = household_frac * frgn_fraction) %>% 
+  mutate_all(~replace(., is.infinite(.), 0)) %>% 
+  mutate_all(~replace(., is.nan(.), 0)) %>% 
+  select(login, email, company, organization, location, country, is_null, 
+         contains("academic"), contains("business"), contains("gov"), 
+         contains("nonprofit"), contains("household"), contains("fraction")) 
+table_for_postgres
+```
+
+```{r}
+counts_by_country <- table_for_postgres
+  
+sum(counts_by_country$us_academic) + sum(counts_by_country$frgn_academic)
+sum(counts_by_country$us_business) + sum(counts_by_country$frgn_business)
+sum(counts_by_country$us_gov)
+sum(counts_by_country$us_nonprofit)
+sum(counts_by_country$us_household)
+
+sum(counts_by_country$frgn_academic)
+sum(counts_by_country$frgn_business)
+sum(counts_by_country$frgn_gov)
+sum(counts_by_country$frgn_nonprofit)
+sum(counts_by_country$frgn_household)
+```
+
+```{r}
+us_academic_counts <- counts_by_country %>%
+  filter(academic_frac > 0) %>% 
+  drop_na(country) %>% 
+  mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
+         country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA" & country == "United States") %>% 
+  mutate(academic_count = is_academic * fraction)
 
 non_us_academic_counts <- counts_by_country %>%
-  filter(is_academic != 0) %>% 
+  filter(academic_frac > 0) %>% 
   drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country != "United States") %>% 
   mutate(academic_count = is_academic * fraction)
-sum(non_us_academic_counts$academic_count)
+
+all_academic_counts <- counts_by_country %>%
+  filter(academic_frac > 0) %>% 
+  drop_na(country) %>% 
+  mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
+         country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  mutate(academic_count = is_academic * fraction)
 
 us_business_counts <- counts_by_country %>%
-  filter(is_business != 0) %>% 
+  filter(business_frac > 0) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country == "United States") %>% 
   mutate(business_count = is_business * fraction)
-sum(us_business_counts$business_count)
 
 non_us_business_counts <- counts_by_country %>%
-  filter(is_business != 0) %>% 
+  filter(business_frac > 0) %>% 
   drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country != "United States") %>% 
   mutate(business_count = is_business * fraction)
-sum(non_us_business_counts$business_count)
+
+all_business_counts <- counts_by_country %>%
+  filter(business_frac > 0) %>% 
+  drop_na(country) %>% 
+  mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
+         country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  mutate(business_count = is_business * fraction)
 
 us_gov_counts <- counts_by_country %>%
-  filter(is_gov != 0) %>% 
+  filter(gov_frac > 0) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country == "United States") %>% 
   mutate(gov_count = is_gov * fraction)
-sum(us_gov_counts$gov_count)
 
 non_us_gov_counts <- counts_by_country %>%
-  filter(is_gov != 0) %>% 
+  filter(gov_frac > 0) %>% 
   drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country != "United States") %>% 
   mutate(gov_count = is_gov * fraction)
-sum(non_us_gov_counts$gov_count)
+
+all_gov_counts <- counts_by_country %>%
+  filter(gov_frac > 0) %>% 
+  drop_na(country) %>% 
+  mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
+         country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  mutate(gov_count = is_gov * fraction)
 
 us_nonprofit_counts <- counts_by_country %>%
-  filter(is_nonprofit != 0) %>% 
+  filter(nonprofit_frac > 0) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country == "United States") %>% 
   mutate(nonprofit_count = is_nonprofit * fraction)
-sum(us_nonprofit_counts$nonprofit_count)
 
 non_us_nonprofit_counts <- counts_by_country %>%
-  filter(is_nonprofit != 0) %>% 
+  filter(nonprofit_frac > 0) %>% 
   drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country != "United States") %>% 
   mutate(nonprofit_count = is_nonprofit * fraction)
-sum(non_us_nonprofit_counts$nonprofit_count)
+
+all_nonprofit_counts <- counts_by_country %>%
+  filter(nonprofit_frac > 0) %>% 
+  drop_na(country) %>% 
+  mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
+         country = strsplit(as.character(country), "\\|")) %>% 
+  unnest(country) %>% 
+  filter(country != "NA") %>% 
+  mutate(nonprofit_count = is_nonprofit * fraction)
 
 us_household_counts <- counts_by_country %>%
-  filter(is_household != 0) %>% 
+  filter(household_frac > 0) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country == "United States") %>% 
   mutate(household_count = is_household * fraction)
-sum(us_household_counts$household_count)
 
 non_us_household_counts <- counts_by_country %>%
-  filter(is_household != 0) %>% 
+  filter(household_frac > 0) %>% 
   drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
   filter(country != "NA" & country != "United States") %>% 
   mutate(household_count = is_household * fraction)
-sum(non_us_household_counts$household_count)
 
-# not done yet 
-all_foreign_counts <- counts_by_country %>%
+all_household_counts <- counts_by_country %>%
+  filter(household_frac > 0) %>% 
+  drop_na(country) %>% 
   mutate(fraction = (1 / (str_count(country, "\\|") + 1)),
          country = strsplit(as.character(country), "\\|")) %>% 
   unnest(country) %>% 
-  filter(sector_count > 0 & (country != "NA" & country != "United States" | !is.na(country))) %>% 
+  filter(country != "NA") %>% 
   mutate(household_count = is_household * fraction)
-sum(all_foreign_counts$is_gov)
+
+sum(all_academic_counts$academic_count)
+sum(all_business_counts$business_count)
+sum(all_gov_counts$gov_count)
+sum(all_nonprofit_counts$nonprofit_count)
+sum(all_household_counts$household_count)
+
+sum(us_academic_counts$academic_count)
+sum(non_us_academic_counts$academic_count)
+sum(us_business_counts$business_count)
+sum(non_us_business_counts$business_count)
+sum(us_gov_counts$gov_count)
+sum(non_us_gov_counts$gov_count)
+sum(us_nonprofit_counts$nonprofit_count)
+sum(non_us_nonprofit_counts$nonprofit_count)
+sum(us_household_counts$household_count)
+sum(non_us_household_counts$household_count)
+```
+
+```{r}
+table_for_postgres %>% 
+  slice(1:10000) %>% 
+  select(login, country, sector_count, in_us, contains("nonprofit")) %>% 
+  filter(in_us == 1 & us_nonprofit != 0) %>% 
+  arrange(us_nonprofit)
+```
+
+```{r}
+
+conn <- dbConnect(drv = PostgreSQL(),
+                  dbname = "sdad",
+                  host = "10.250.124.195",
+                  port = 5432,
+                  user = Sys.getenv("db_userid"),
+                  password = Sys.getenv("db_pwd"))
+dbWriteTable(conn, c("gh_cost", "sectored_fractioned_103121"), table_for_postgres, row.names = FALSE)
+dbDisconnect(conn)
 
 ```
 
 
+```{r}
+
+conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
+                  host = "10.250.124.195", port = 5432,
+                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
+sectored_fractioned <- dbGetQuery(conn, "SELECT * FROM gh_cost.sectored_fractioned_103121")
+dbDisconnect(conn)
+
+```
+
+```{r}
+sum(sectored_fractioned$is_academic)
+sum(sectored_fractioned$academic_frac)
+sum(sectored_fractioned$us_academic)
+
+sum(sectored_fractioned$is_business)
+sum(sectored_fractioned$us_business)
+
+```
 
 
+```{r}
+sectored_fractioned %>% 
+  slice(1:100) %>%
+  select(login, company, contains("us_"), contains("nonus_")) %>% 
+  rowwise() %>% 
+  mutate(total = sum(us_academic+nonus_academic+us_business+nonus_business+us_gov+nonus_gov+
+                       us_nonprofit+nonus_nonprofit+us_household+nonus_household))
+```
 

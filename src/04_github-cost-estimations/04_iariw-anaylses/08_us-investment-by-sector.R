@@ -1,21 +1,5 @@
 
 
-# performed on 10/13/21
-conn <- dbConnect(drv = PostgreSQL(), dbname = "sdad",
-                  host = "10.250.124.195", port = 5432,
-                  user = Sys.getenv("db_userid"), password = Sys.getenv("db_pwd"))
-github_users <- dbGetQuery(conn, "SELECT login, company, location, email FROM gh.ctrs_clean_0821")
-dbDisconnect(conn)
-start_time = Sys.time()
-classified_users <- github_users %>%
-  detect_orgs(login, company, organization, academic, email,
-              country = TRUE, parent_org = TRUE, org_type = TRUE) %>%
-  rename(ac_country = country) %>%
-  detect_geographies(login, location, "country", email)
-end_time = Sys.time()
-time_to_classify = end_time - start_time; time_to_classify
-
-
 rm(list = ls())
 library(tidyverse)
 library(tidyorgs)
