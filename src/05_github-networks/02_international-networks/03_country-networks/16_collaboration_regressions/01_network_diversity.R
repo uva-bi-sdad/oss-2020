@@ -83,7 +83,32 @@ for (year in c("08", "0809", "0810", "0811", "0812", "0813", "0814", "0815", "08
 setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
 all_diversity_analyses <- list.files(pattern="ctry_diversity_*") %>%
   map_df(~read_rds(.)) %>%
-  rename(net_diversity = diversity, country_name = country) %>%
+  mutate(country_name = if_else(is.na(country), country_name, country),
+         net_diversity = if_else(is.na(diversity), net_diversity, diversity)) %>%
+  select(-country, -diversity) %>%
   distinct(id, country_name, year, net_diversity,
            louvain_comm, fstgrdy_comm, louvain_range, fstgrdy_range)
 write_rds(all_diversity_analyses, "ctry_diversity_cum.rds")
+
+setwd("/project/biocomplexity/sdad/projects_data/ncses/oss/oss_networks_2021/intl-ctry-nets-cum/wisos-lchn")
+nodelist_2008 <- readRDS("nodelist_08.rds") %>% mutate(year = 2008)
+nodelist_2009 <- readRDS("nodelist_0809.rds") %>% mutate(year = 2009)
+nodelist_2010 <- readRDS("nodelist_0810.rds") %>% mutate(year = 2010)
+nodelist_2011 <- readRDS("nodelist_0811.rds") %>% mutate(year = 2011)
+nodelist_2012 <- readRDS("nodelist_0812.rds") %>% mutate(year = 2012)
+nodelist_2013 <- readRDS("nodelist_0813.rds") %>% mutate(year = 2013)
+nodelist_2014 <- readRDS("nodelist_0814.rds") %>% mutate(year = 2014)
+nodelist_2015 <- readRDS("nodelist_0815.rds") %>% mutate(year = 2015)
+nodelist_2016 <- readRDS("nodelist_0816.rds") %>% mutate(year = 2016)
+nodelist_2017 <- readRDS("nodelist_0817.rds") %>% mutate(year = 2017)
+nodelist_2018 <- readRDS("nodelist_0818.rds") %>% mutate(year = 2018)
+nodelist_2019 <- readRDS("nodelist_0819.rds") %>% mutate(year = 2019)
+
+nodelist <- bind_rows(nodelist_2008, nodelist_2009, nodelist_2010,
+          nodelist_2011, nodelist_2012, nodelist_2013,
+          nodelist_2014, nodelist_2015, nodelist_2016,
+          nodelist_2017, nodelist_2012, nodelist_2019)
+setwd("~/git/oss-2020/data/network-analysis/intl-ctry-nets-cum/wisos-lchn/")
+write_rds(nodelist, "ctry_nodelist.rds")
+
+
