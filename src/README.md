@@ -35,3 +35,5 @@
         ├── 08_cran-maintainer-survey
             ├── CRAN Maintainer data tool
             ├── CRAN wrangling and descriptives
+        ├── 09_scrape-users
+        ├── 10_scrape-repos

@@ -24,6 +24,7 @@ academic_counts_alt
 setwd("/sfs/qumulo/qhome/kb7hp/git/oss-2020/data/cost_estimations")
 write_csv(academic_counts_alt, "academic_counts_by_activity_102021.csv")
 ```
+
 ```{r}
 country_counts_alt <- country_counts %>% 
   mutate(sum_adds_dels = additions + deletions, 

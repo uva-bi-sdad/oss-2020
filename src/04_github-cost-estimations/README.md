@@ -11,6 +11,10 @@ To run these calculations, the `commits` and `users` data are needed. However, b
 
 Once these general tables are present in the database, the tables for the cost estimates can be made by using the code for producing tables in the `/src/02_github-cost-estimations/0X_cost-calcs-X/01_cost-calcs-tables/` folders. After all of the tables are produced, the cost estimates can be calculated in `R` under the `/src/02_github-cost-estimations/0X_cost-calcs-X` folders. A summary of these differences has been outlined in this [Google sheet](https://docs.google.com/document/d/1L9HEeY1V-jeGwGdyBx41eKjx2oH94dWkYGqfdczZUkY/edit). 
 
+#### Cost Estimates as of November 2021
+
+In November 2021, our team presented at the annual IARIW conference. These are [the tables](https://docs.google.com/spreadsheets/d/1BIJW64iJLUVHCphX3I7UtOy1TMkDjICqx5erXlucrTA/edit#gid=0) used for that conference. A draft of the paper is scheduled to be published in early 2022.
+
 #### Repository Overview 
 
     ├── oss-2020/src

@@ -320,16 +320,91 @@ ALTER TABLE codegov.gh_torrent_orgs OWNER TO ncses_oss;
 \copy (SELECT * FROM gh_2007_2020.usr_to_get_login_full) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh_2007_2020/usr_to_get_login_full.csv' with csv;
 \copy (SELECT * FROM gh_2007_2020.commits) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh_2007_2020/commits.csv' with csv;
 
--- STILL TO DO: gh_2007_2020 + lastly download all tables to synology
+-- oss and oss_universe on the database
 
--- both or just one?
+\copy (SELECT * FROM oss.CDN_authors_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CDN_authors_info.csv' with csv;
+\copy (SELECT * FROM oss.CDN_dependencies_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CDN_dependencies_info.csv' with csv;
+\copy (SELECT * FROM oss.cdn_author_info_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_author_info_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_contributions) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_contributions.csv' with csv;
+\copy (SELECT * FROM oss.cdn_contributions_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_contributions_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_dependencies_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_dependencies_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_dependencies_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_dependencies_info.csv' with csv;
+\copy (SELECT * FROM oss.cdn_final) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_final.csv' with csv;
+\copy (SELECT * FROM oss.cdn_general_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_general_info.csv' with csv;
+\copy (SELECT * FROM oss.cdn_general_info_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_general_info_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_keywords_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_keywords_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_license_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_license_info.csv' with csv;
+\copy (SELECT * FROM oss.cdn_package_lines) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_package_lines.csv' with csv;
+\copy (SELECT * FROM oss.cdn_package_lines_deduped) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_package_lines_deduped.csv' with csv;
+\copy (SELECT * FROM oss.cdn_value_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cdn_value_info.csv' with csv;
+\copy (SELECT * FROM oss.codgov_contributors) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/codgov_contributors.csv' with csv;
+\copy (SELECT * FROM oss.codgov_licenses) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/codgov_licenses.csv' with csv;
+\copy (SELECT * FROM oss.cran_dependencies) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cran_dependencies.csv' with csv;
+\copy (SELECT * FROM oss.cran_export) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/cran_export.csv' with csv;
+\copy (SELECT * FROM oss.extremes) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/extremes.csv' with csv;
+\copy (SELECT * FROM oss.geocoded) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/geocoded.csv' with csv;
+\copy (SELECT * FROM oss.julia_contributions) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_contributions.csv' with csv;
+\copy (SELECT * FROM oss.julia_contributors_commits) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_contributors_commits.csv' with csv;
+\copy (SELECT * FROM oss.julia_cost_estimates) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_cost_estimates.csv' with csv;
+\copy (SELECT * FROM oss.julia_licenses) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_licenses.csv' with csv;
+\copy (SELECT * FROM oss.julia_licenses_github) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_licenses_github.csv' with csv;
+\copy (SELECT * FROM oss.julia_pkg_status) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/julia_pkg_status.csv' with csv;
+\copy (SELECT * FROM oss.licenses) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/licenses.csv' with csv;
+\copy (SELECT * FROM oss.python_contributors) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_contributors.csv' with csv;
+\copy (SELECT * FROM oss.python_cost_estimates) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_cost_estimates.csv' with csv;
+\copy (SELECT * FROM oss.python_final) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_final.csv' with csv;
+\copy (SELECT * FROM oss.python_general_pkg_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_general_pkg_info.csv' with csv;
+\copy (SELECT * FROM oss.python_loc_contributors) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_loc_contributors.csv' with csv;
+\copy (SELECT * FROM oss.python_pkg_dependencies) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/python_pkg_dependencies.csv' with csv;
+
+
+-- issues
+\copy (SELECT * FROM oss.CDN_licenses_info) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CDN_licenses_info.csv' with csv;
+\copy (SELECT * FROM oss.CRAN_OSI_CI_passing) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CRAN_OSI_CI_passing.csv' with csv;
+\copy (SELECT * FROM oss.CRAN_analysis) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CRAN_analysis.csv' with csv;
+\copy (SELECT * FROM oss.CRAN_direct_download_costs) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CRAN_direct_download_costs.csv' with csv;
+\copy (SELECT * FROM oss.CRAN_name_slugs_keys) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/CRAN_name_slugs_keys.csv' with csv;
+\copy (SELECT * FROM oss.code_gov_contributions) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_db/code_gov_contributions.csv' with csv;
+
+
+
+
+
+\copy (SELECT * FROM oss_universe.all_repos_commits_2012) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2012.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2013) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2013.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2014) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2014.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2015) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2015.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2016) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2016.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2017) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2017.csv' with csv;
+\copy (SELECT * FROM oss_universe.all_repos_commits_2018) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/all_repos_commits_2018.csv' with csv;
+\copy (SELECT * FROM oss_universe.bad_repos) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/bad_repos.csv' with csv;
+\copy (SELECT * FROM oss_universe.contributions) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/contributions.csv' with csv;
+\copy (SELECT * FROM oss_universe.copyright) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/copyright.csv' with csv;
+\copy (SELECT * FROM oss_universe.errors) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/errors.csv' with csv;
+\copy (SELECT * FROM oss_universe.github_commits) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/github_commits.csv' with csv;
+\copy (SELECT * FROM oss_universe.github_repos) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/github_repos.csv' with csv;
+\copy (SELECT * FROM oss_universe.github_repos_tracker) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/github_repos_tracker.csv' with csv;
+\copy (SELECT * FROM oss_universe.licenses) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/licenses.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2008) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2008.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2012) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2012.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2013) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2013.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2014) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2014.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2015) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2015.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2016) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2016.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2017) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2017.csv' with csv;
+\copy (SELECT * FROM oss_universe.reponames_2018) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/reponames_2018.csv' with csv;
+\copy (SELECT * FROM oss_universe.slug_cnt) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/slug_cnt.csv' with csv;
+\copy (SELECT * FROM oss_universe.slugcreatedon) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/slugcreatedon.csv' with csv;
+\copy (SELECT * FROM oss_universe.tooMany) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/oss_universe/tooMany.csv' with csv;
+
+
 
 
 
 
 \dn
 \dt gh_2007_2020.*
-SELECT pg_size_pretty( pg_total_relation_size('gh_2007_2020.commits_2019') );
+SELECT pg_size_pretty( pg_total_relation_size('oss_universe.all_repos_commits_2012') );
 SELECT pg_size_pretty( pg_total_relation_size('gh.commits') );
 
 

@@ -378,7 +378,8 @@ ggplot(data=sector_counts, aes(x=sector, y=total)) +
   labs(subtitle = "Based on 27.2% of Total GitHub Users Classified into Sectors",
        caption = "Note: Totals Fractioned When Multiple Sectors or Countries Reported") +
   ggtitle("Total GitHub Users Classified by Economic Sector") +
-  scale_y_continuous(name="Total GitHub Users within Sector", limits=c(0, 275000), breaks = c(0, 50000, 100000, 150000, 200000, 250000))
+  scale_y_continuous(name="Total GitHub Users within Sector", limits=c(0, 275000), 
+                     breaks = c(0, 50000, 100000, 150000, 200000, 250000))
 ```
 
 ```{r}
@@ -389,7 +390,8 @@ country_total <- nrow(with_countries)
 with_geo_info <- nrow(data_for_countries)
 
 total_counts <- data.frame(label = c("Total Users", "With Potential Geographic Data", "With Country Code", 
-                                     "With Potential Sector Data", "Business", "Academic", "Household", "Government", "Non-Profit"),
+                                     "With Potential Sector Data", "Business", "Academic", 
+                                     "Household", "Government", "Non-Profit"),
                            totals = c(total_users, with_geo_info, country_total, users_with_info, 
                                       bus_n, ac_n, hh_n, gov_n, np_n),
                            of_total = c(100, (with_geo_info/total_users*100), country_total/total_users*100, 
