@@ -130,6 +130,20 @@ psql -U username -d sdad -h postgis1
 \copy (SELECT * FROM gh.sna_ctr_sectors_hbs) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/sna_ctr_sectors_hbs.csv' with csv;
 \copy (SELECT * FROM gh.users) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/users.csv' with csv;
 \copy (SELECT * FROM gh.usr_email) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/usr_email.csv' with csv;
+-- not done yet
+\copy (SELECT * FROM gh.ctrs_classified_0821) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_classified_0821.csv' with csv;
+\copy (SELECT * FROM gh.ctrs_clean_0821) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_clean_0821.csv' with csv;
+\copy (SELECT * FROM gh.ctrs_extra) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_extra.csv' with csv;
+\copy (SELECT * FROM gh.ctrs_extra_dspg) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_extra_dspg.csv' with csv;
+\copy (SELECT * FROM gh.ctrs_raw) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_raw.csv' with csv;
+\copy (SELECT * FROM gh.ctrs_raw_0821) TO '/project/biocomplexity/sdad/projects_data/ncses/oss/data/gh/ctrs_raw_0821.csv' with csv;
+
+
+
+
+
+
+
 
 -- gh_cost
 -- materialized views
